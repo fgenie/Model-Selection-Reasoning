@@ -30,7 +30,7 @@ fewshots:
   \n    # Calculate the total cost of the bagels\n    total_cost = bagel_cost * num_bagels\n\
   \n    # Calculate the remaining money\n    remaining_money = initial_deposit - total_cost\n\
   \n    # Return the remaining money\n    return remaining_money\n\n# Test the solution\n\
-  # print(solution())"
+  # print(solution())\n"
 - "Question: Find the prime number that is larger than 11.\n# solution in Python:\n\
   \n\ndef solution():\n    \"\"\"\n    1. Start by setting a variable `num` to the\
   \ value 12, since we want the number to be larger than 11.\n    2. Create a while\

@@ -19,9 +19,7 @@ import yaml
 from pprint import pprint
 
 # after 6 times of retry, it raises exception. waits between retries are specified inside the `wait_chain`
-@retry(wait=wait_chain(*[wait_fixed(3) for i in range(3)] +
-                       [wait_fixed(5) for i in range(2)] +
-                       [wait_fixed(10)])) #defining backoff for retrying.
+@retry(wait=wait_chain(*[wait_fixed(3) for i in range(3)])) #defining backoff for retrying.
 def completion_with_backoff(**kwargs):
     return openai.ChatCompletion.create(**kwargs)
 
@@ -179,7 +177,7 @@ def query_cot(data: dict, key: str, cot_temperature: float, backbone: str):
 
 
 @retry(wait=wait_chain(*[wait_fixed(3) for i in range(2)])) 
-def _query(key, model_name='gpt-3.5-turbo', max_tokens=3060, messages=None, temperature=0., top_p=1.0, n=1, mode='plan', docstring_def:str=''): # mode = plan or code
+def _query(key, model_name='gpt-3.5-turbo', max_tokens=2048, messages=None, temperature=0., top_p=1.0, n=1, mode='plan', docstring_def:str=''): # mode = plan or code
     # print("_query")
     resp = openai.ChatCompletion.create(api_key=key,
                                 model=model_name,
@@ -225,19 +223,19 @@ def query_plancode(data: dict, key: str='', plan_temperature: float=.0, code_tem
 
     # generate plan (retry included)
     plan_query_msg = get_plan_prompt(data, k_fewshot=k_fewshot)
-    kvprint(plan_query_msg)
-    print(f"{k_fewshot=}")
-    plan = _query(key, model_name=model_name, max_tokens=3060, messages=plan_query_msg, temperature=plan_temperature, top_p=1.0, n=1, mode='plan')
-    print(f"{plan=}")
+    # kvprint(plan_query_msg)
+    # print(f"{k_fewshot=}")
+    plan = _query(key, model_name=model_name, max_tokens=1024, messages=plan_query_msg, temperature=plan_temperature, top_p=1.0, n=1, mode='plan')
+    # print(f"{plan=}")
 
     # generate code
     code_query_msg = get_plan2code_prompt(data, plan=plan, k_fewshot=k_fewshot)
-    kvprint(code_query_msg)
-    print(f"{k_fewshot=}")
+    # kvprint(code_query_msg)
+    # print(f"{k_fewshot=}")
     indent = " "*4
     docdef = f'def solution():\n{indent}"""{add_indents2plan(plan)}"""'
-    code = _query(key, model_name=model_name, max_tokens=3060, messages=code_query_msg, temperature=code_temperature, top_p=1.0, n=1, mode='code', docstring_def=docdef)
-    print(f"{code=}")
+    code = _query(key, model_name=model_name, max_tokens=1024, messages=code_query_msg, temperature=code_temperature, top_p=1.0, n=1, mode='code', docstring_def=docdef)
+    # print(f"{code=}")
     # wrapup
     completions = [code]
 
@@ -257,7 +255,7 @@ def query_pal(data: dict, key: str, pal_temperature: float, backbone: str):
         completions: a list containing the PAL solution
     '''
     query_message = get_pal_prompt(data, backbone=backbone)
-    for m in query_message: print(len(m['content']));
+    # for m in query_message: print(len(m['content']));
     # pprint(query_message)
     if backbone == 'gpt4':
         model_name = 'gpt-4'
@@ -514,7 +512,7 @@ if __name__ == '__main__':
         os.makedirs(output_path)
 
     save_path = os.path.join(output_path,
-                             f'{dataset_name}_sc{sc_num}_s{start_index}_e{end_index}_{dt_string}.jsonl')
+                             f'{dataset_name}_k{args.k_fewshot}_sc{sc_num}_s{start_index}_e{end_index}_{dt_string}.jsonl')
 
 
     # === run experiments ===

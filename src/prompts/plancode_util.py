@@ -22,11 +22,11 @@ def get_plan_prompt(data: dict, k_fewshot:int=0)->str:
     user = user_tmp.replace('{NEWLINE2_FEWSHOTS}', fewshots_concat).replace('{QUESTION}', f"Question: {q}")
     assistant = assistant_start
 
-    print(system)
-    print(user)
-    print(assistant)
-    print(k_fewshot)
-    print()
+    # print(system)
+    # print(user)
+    # print(assistant)
+    # print(k_fewshot)
+    # print()
     
     msgs = [
         {'role': 'system', 'content': system},
@@ -50,11 +50,11 @@ def get_plan2code_prompt(data:dict, plan:str='', k_fewshot:int=0):
     user = user_tmp.replace('{QUESTION}', f"Question: {q}")
     user = user.replace('{NEWLINE2_FEWSHOTS}', fewshots_concat)
     assistant = assistant.replace('{PROCESSEDPLAN}', add_indents2plan(plan)) 
-    print(system)
-    print(user)
-    print(assistant)
-    print(k_fewshot)
-    print()
+    # print(system)
+    # print(user)
+    # print(assistant)
+    # print(k_fewshot)
+    # print()
 
     msgs = [
         {'role': 'system', 'content': system},
@@ -99,12 +99,13 @@ def postprocess_code_answer(rawanswer:str, docdef:str=''):
             if code.startswith('def solution():'):
                 code = "\n".join(code.split('\n')[1:]) # avoid def solution twice
             code = docdef+'\n'+code # when continuates from the prompt only add docdef with newline
+        code = remove_prints(code)
         exec(code) # check if it is executable
     except: 
         print('code gen fails (unexecutable or funcname?)')
         print(f"code:\n{rawanswer}")
         code = ''
-    return remove_prints(code)
+    return code
 
 def remove_prints(code:str)->str:
     lines = code.split("\n")
