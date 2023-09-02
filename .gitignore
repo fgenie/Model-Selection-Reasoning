@@ -2,6 +2,9 @@
 claude_key.txt
 openai_key.txt
 
+# scripts might include apikeys.
+scripts/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
