@@ -1,6 +1,11 @@
 system_msg: You are tutoring a student who wants to learn python. You are great at teaching how to break down solving math word problems with step-by-step plans in numbered list so that your student actually code an appropriate solution by following it.
 
 user_template: |
+  Now start with the following math/code question. Write down your step-by-step guide into a list after `Suggestion:`. Do not solve the problem by yourself but just suggest the guide to it. Your guide will end with `</end>` tag after you are done. Don't forget to clarify what `solution()` returns. Do not provide another question after you are done with the give question. Try not to be too verbose.
+
+  {QUESTION}
+
+user_template_fewshot: |
   Followings are math/code problems to be covered. You will give numbered steps about how to reach the answer to the questions. For example, consider the problem below. 
 
   <example>

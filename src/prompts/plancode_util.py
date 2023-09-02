@@ -1,11 +1,11 @@
 import yaml 
 from typing import Sequence, Mapping, Any, Union, Callable
-PLAN_F = 'prompts_plan.yaml'
-CODE_F = 'prompts_code.yaml'
+PLAN_F = '/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prompts_plan.yaml'
+CODE_F = '/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prompts_code.yaml'
 import openai
 KEY = open('/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/openai_key.txt').read().strip()
 
-def get_plan_prompt(data: dict, k_fewshot:int=1)->str:
+def get_plan_prompt(data: dict, k_fewshot:int=0)->str:
     '''
     prep prompt for plan generation
     '''
@@ -13,14 +13,21 @@ def get_plan_prompt(data: dict, k_fewshot:int=1)->str:
     
     q = data['question']
     system = prompt_d['system_msg']
-    user_tmp = prompt_d['user_template']
+    user_tmp = prompt_d['user_template'] if k_fewshot==0 else prompt_d['user_template_fewshot']
     fewshots = prompt_d['fewshots'][:k_fewshot] # list of fewshot strings include </end> tag included.
     fewshots_concat = "\n\n".join(fewshots)
     assistant_start = prompt_d['assistant_start']
 
 
-    user = user_tmp.replace('{NEWLINE2_FEWSHOTS}', fewshots_concat).replace('{QUESTION}', q)
+    user = user_tmp.replace('{NEWLINE2_FEWSHOTS}', fewshots_concat).replace('{QUESTION}', f"Question: {q}")
     assistant = assistant_start
+
+    print(system)
+    print(user)
+    print(assistant)
+    print(k_fewshot)
+    print()
+    
     msgs = [
         {'role': 'system', 'content': system},
         {'role': 'user', 'content': user},
@@ -29,18 +36,26 @@ def get_plan_prompt(data: dict, k_fewshot:int=1)->str:
     return msgs
     
     
-def get_plan2code_prompt(data:dict, plan:str=''):
+def get_plan2code_prompt(data:dict, plan:str='', k_fewshot:int=0):
     # little bit revision from PAL prompt.
     # `solution()` is returned (can execute with solution() call w/o argument
     q = data['question']
     prompt_d = yaml.full_load(open(CODE_F))
     system = prompt_d['system_msg']
-    user_tmp = prompt_d['user_template']
+    user_tmp = prompt_d['user_template'] if k_fewshot==0 else prompt_d['user_template_fewshot']
     assistant = prompt_d['assistant_start']
-    
-    user = user_tmp.replace('{QUESTION}', q)
+    fewshots = prompt_d['fewshots'][:k_fewshot] # list of fewshot strings include </end> tag included.
+    fewshots_concat = "\n\n".join(fewshots)
+
+    user = user_tmp.replace('{QUESTION}', f"Question: {q}")
+    user = user.replace('{NEWLINE2_FEWSHOTS}', fewshots_concat)
     assistant = assistant.replace('{PROCESSEDPLAN}', add_indents2plan(plan)) 
-    
+    print(system)
+    print(user)
+    print(assistant)
+    print(k_fewshot)
+    print()
+
     msgs = [
         {'role': 'system', 'content': system},
         {'role': 'user', 'content': user},
@@ -58,11 +73,21 @@ def add_indents2plan(plan:str)->str:
     processed = f"\n{processed}\n" + indent
     return processed
 
+def postprocess_plan(rawanswer:str):
+    lines = [l for l in rawanswer.split('\n') if '</end>' not in l]
+    if len(lines)>=1:
+        plan_ = "\n".join(lines)
+    else:
+        print('plan gen failed')
+        print(f"{rawanswer=}")
+        plan_ = ''
+    return plan_
+
 def postprocess_code_answer(rawanswer:str, docdef:str=''):
     try:
         # removing starting wrap ```
         if "```python" in rawanswer:
-            code = rawanswer.split("```python")[1].split("```")[0]
+            code = rawanswer.split("```python")[-1]
         elif rawanswer.startswith('```'):
             rawanswer = rawanswer.split('```')[-1]
         # removing ``` at the end
@@ -73,10 +98,11 @@ def postprocess_code_answer(rawanswer:str, docdef:str=''):
         else: # docstring not contained
             if code.startswith('def solution():'):
                 code = "\n".join(code.split('\n')[1:]) # avoid def solution twice
-            code = docdef+'\n'+code # when continuates from the prompt (containint def)
-                 
+            code = docdef+'\n'+code # when continuates from the prompt only add docdef with newline
+        exec(code) # check if it is executable
     except: 
-        print(f"{rawanswer=}")
+        print('code gen fails (unexecutable or funcname?)')
+        print(f"code:\n{rawanswer}")
         code = ''
     return remove_prints(code)
 
@@ -143,10 +169,14 @@ def make_code_examples()->Sequence[str]:
             print(fs)
     return code_fewshots
  
+def kvprint(record):
+    for r in record:
+        print(r['role'])
+        print(r['content'])
 
 
 if __name__ == '__main__':
-    prompt_dd = yaml.full_load(open('prompts_code_fewshot.yaml'))
+    prompt_dd = yaml.full_load(open('prompts_code.yaml'))
     print()
 
 #     data = {"question": "Question: What do you do for a living?"}
@@ -159,10 +189,7 @@ if __name__ == '__main__':
 # </end>'''
 #     cp0 = get_plan2code_prompt(data, plan=plan)
     
-#     def kvprint(record):
-#         for r in record:
-#             print(r['role'])
-#             print(r['content'])
+
 
 #     print("pp3")
 #     kvprint(pp3)
