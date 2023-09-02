@@ -38,9 +38,10 @@ if __name__ == '__main__':
     m_cor = (df.answer == df.majority_ans)
     m_wro = ~m_cor
     assert (m_cor.sum() + m_wro.sum()) == len(df)
-    fname = f"{Path(input_path).stem}_$$.csv"
+    ip = Path(input_path)
+    fname = f"{ip.parent/ip.stem}_$$.csv"
     fcor = fname.replace("$$", 'correct')
-    fwro = fname.replace("$$", 'wrong')7
+    fwro = fname.replace("$$", 'wrong')
     df_cor = df[m_cor].loc[:, ['index', 'majority_ans', 'answer', 'question']]
     df_wro = df[m_wro].loc[:, ['index', 'majority_ans', 'answer', 'question']]
 

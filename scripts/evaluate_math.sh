@@ -6,7 +6,7 @@ EXEHOME=/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src
 cd ${EXEHOME}
 
 # Specify the input path
-INPUTPATH1='../output/chatgpt/gsm8k_sc1_s0_e1319_08_31_00_19.jsonl'
+INPUTPATH1='/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/chatgpt_plancode/dbg_sc2_s0_e2_09_03_01_05.jsonl'
 
 
 python evaluate.py --input_path ${INPUTPATH1}\

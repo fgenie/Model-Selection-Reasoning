@@ -7,6 +7,7 @@ import argparse
 from tqdm import tqdm
 # from typing import Union
 from prompts import math_prompt
+from prompts.plancode_util import *
 from collections import OrderedDict, Counter
 from tool import *
 from tenacity import (
@@ -15,6 +16,7 @@ from tenacity import (
     wait_fixed
 ) 
 import yaml
+from pprint import pprint
 
 # after 6 times of retry, it raises exception. waits between retries are specified inside the `wait_chain`
 @retry(wait=wait_chain(*[wait_fixed(3) for i in range(3)] +
@@ -176,8 +178,35 @@ def query_cot(data: dict, key: str, cot_temperature: float, backbone: str):
     return completions
 
 
+@retry(wait=wait_chain(*[wait_fixed(3) for i in range(2)])) 
+def _query(key, model_name='gpt-3.5-turbo', max_tokens=3060, messages=None, temperature=0., top_p=1.0, n=1, mode='plan', docstring_def:str=''): # mode = plan or code
+    # print("_query")
+    resp = openai.ChatCompletion.create(api_key=key,
+                                model=model_name,
+                                max_tokens=max_tokens,
+                                messages=messages,
+                                temperature=temperature,
+                                top_p=top_p,
+                                n=n)
+                                # stop=stop,
+    # print('apicall reached')
+    content = resp['choices'][0]['message']['content'] # str
+    if mode == 'plan':
+        plan = postprocess_plan(content) # it will complain when failing
+        if not plan: 
+            print('retrying plangen')
+            raise ValueError
+        return plan
+    elif mode == 'code':
+        assert docstring_def
+        code = postprocess_code_answer(content, docdef=docstring_def)
+        if not code: 
+            print('retrying codegen')
+            raise ValueError
+        return code
 
-def query_plancode(data: dict, key: str, plan_temperature: float, code_temperature: float, backbone: str):
+
+def query_plancode(data: dict, key: str='', plan_temperature: float=.0, code_temperature: float=.0, backbone: str='gpt-3.5-turbo', k_fewshot:int=0):
     '''
     PAL variant: 1. generate planning for the given question 2. based on 1, generate code like PAL does.
 
@@ -185,43 +214,32 @@ def query_plancode(data: dict, key: str, plan_temperature: float, code_temperatu
         mostly same arguments with `query_pal()` below
     returns: 
         completions: Sequence[
-                dict(
-                    plan = str:plan for coding generated,
-                    code_solution = str:code generated (contains plan)
-                    )
+                code_solution:str
                 ]
     '''
-    plan_query_msg = get_plan_prompt(data, backbone=backbone)
+    # specify model
     if backbone == 'gpt4':
         model_name = 'gpt-4'
     elif backbone == 'chatgpt':
         model_name = 'gpt-3.5-turbo'
 
-    # generate plan
-    response = completion_with_backoff(api_key=key,
-                                model=model_name,
-                                max_tokens=1024,
-                                stop='\n\n\n',
-                                messages=plan_query_msg,
-                                temperature=plan_temperature,
-                                top_p=1.0,
-                                n=1)
-    plan = response['choices'][0]['message']['content'] # str
-    plan = postprocess_plan(plan)
+    # generate plan (retry included)
+    plan_query_msg = get_plan_prompt(data, k_fewshot=k_fewshot)
+    kvprint(plan_query_msg)
+    print(f"{k_fewshot=}")
+    plan = _query(key, model_name=model_name, max_tokens=3060, messages=plan_query_msg, temperature=plan_temperature, top_p=1.0, n=1, mode='plan')
+    print(f"{plan=}")
 
     # generate code
-    code_query_msg = get_code_prompt(data, plan_str=plan, backbone=backbone)
-
-    code = completion_with_backoff(api_key=key,
-                                model=model_name,
-                                max_tokens=1024,
-                                stop='\n\n\n',
-                                messages=code_query_msg,
-                                temperature=code_temperature,
-                                top_p=1.0,
-                                n=1)
+    code_query_msg = get_plan2code_prompt(data, plan=plan, k_fewshot=k_fewshot)
+    kvprint(code_query_msg)
+    print(f"{k_fewshot=}")
+    indent = " "*4
+    docdef = f'def solution():\n{indent}"""{add_indents2plan(plan)}"""'
+    code = _query(key, model_name=model_name, max_tokens=3060, messages=code_query_msg, temperature=code_temperature, top_p=1.0, n=1, mode='code', docstring_def=docdef)
+    print(f"{code=}")
     # wrapup
-    completions = [dict(plan = plan, code_solution = code)]
+    completions = [code]
 
     return completions
 
@@ -239,6 +257,8 @@ def query_pal(data: dict, key: str, pal_temperature: float, backbone: str):
         completions: a list containing the PAL solution
     '''
     query_message = get_pal_prompt(data, backbone=backbone)
+    for m in query_message: print(len(m['content']));
+    # pprint(query_message)
     if backbone == 'gpt4':
         model_name = 'gpt-4'
     elif backbone == 'chatgpt':
@@ -297,7 +317,20 @@ def query_selection(data: dict, key: str, cot_solution: list, pal_solution: list
     return completions
 
 
-def query_math(data: dict, key: str, cot_temperature: float, pal_temperature: float, sc_num: int, backbone: str):
+# def query_math(data: dict, key: str, cot_temperature: float, pal_temperature: float, sc_num: int, backbone: str, use_plancode:bool=False):
+def query_math(
+        data: dict, 
+        key: str, 
+        cot_temperature: float, 
+        pal_temperature: float, 
+        sc_num: int, 
+        backbone: str, 
+        
+        plan_temperature: float=.0, # when use_plancode == True
+        code_temperature: float=.0,
+        k_fewshot:int=0,
+        use_plancode:bool=False
+        ):
     '''
     This function is used to query OpenAI for answers in arithmetic tasks. It contains three steps:
     1. Query CoT for solutions
@@ -318,6 +351,9 @@ def query_math(data: dict, key: str, cot_temperature: float, pal_temperature: fl
 
     Returns:
         to_dump_data: a dict containing the question, answer, the final answer and other information
+    
+        
+    added query_plancode routine inside
     '''
 
     cot_answers = []
@@ -341,9 +377,11 @@ def query_math(data: dict, key: str, cot_temperature: float, pal_temperature: fl
             cot_ans = extract_num_turbo(cot_solution[0])
             cot_answers.append(cot_ans)
             cot_solutions.append(cot_solution[0])
-
-        pal_solution = query_pal(
-            data, key, pal_temperature, backbone=backbone)
+        if use_plancode:
+            pal_solution = query_plancode(data, key=key, plan_temperature=plan_temperature, code_temperature=code_temperature, backbone=backbone, k_fewshot=k_fewshot)
+        else:
+            pal_solution = query_pal(
+                data, key, pal_temperature, backbone=backbone)
         if pal_solution is None:
             print('Time out')
             return None
@@ -411,6 +449,13 @@ if __name__ == '__main__':
     parser.add_argument(
         '--key', type=str, default='sk-', required=True)
 
+    # plancode options
+    parser.add_argument('--use_plancode', action='store_true')
+    parser.add_argument('--plan_temperature', type=float, default=0.)
+    parser.add_argument('--code_temperature', type=float, default=0.)
+    parser.add_argument('--k_fewshot', type=int, default=0) #  >= 0
+
+
     args = parser.parse_args()
 
     start_index = args.start
@@ -462,6 +507,8 @@ if __name__ == '__main__':
     unfinished_tasks = []
 
     output_path = os.path.join(output_dir, f'{backbone}/')
+    if args.use_plancode:
+        output_path = os.path.join(output_dir, f"{backbone}_plancode/")
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)
@@ -469,17 +516,26 @@ if __name__ == '__main__':
     save_path = os.path.join(output_path,
                              f'{dataset_name}_sc{sc_num}_s{start_index}_e{end_index}_{dt_string}.jsonl')
 
+
     # === run experiments ===
     progress_bar = tqdm(range(task_num))
     for i in range(task_num):
         task = tasks[i]
-        wait_time = min(sc_num * 100, 360)
+        wait_time = min(sc_num * 300, 360)
         start_time = time.time()
         while True:
             try:
+                if dataset_name=='dbg':
+                    print(f"""{args.plan_temperature=}\n{args.code_temperature=}\n{args.use_plancode=}\n{args.k_fewshot=}""")
                 ans = query_math(
                     task, key=key, cot_temperature=cot_temperature,
-                    pal_temperature=pal_temperature, sc_num=sc_num, backbone=backbone)
+                    pal_temperature=pal_temperature, sc_num=sc_num,backbone=backbone,
+                    plan_temperature=args.plan_temperature,
+                    code_temperature=args.code_temperature,
+                    k_fewshot=args.k_fewshot,
+                    use_plancode=args.use_plancode,
+                    )
+                
             except Exception as e:
                 print(e)
                 ans = None
