@@ -1,5 +1,7 @@
 import argparse
 from tool import *
+from pathlib import Path 
+import pandas as pd 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -31,6 +33,19 @@ if __name__ == '__main__':
                 error += 1
 
         total += 1
+
+    df = pd.DataFrame(output_data)
+    m_cor = (df.answer == df.majority_ans)
+    m_wro = ~m_cor
+    assert (m_cor.sum() + m_wro.sum()) == len(df)
+    fname = f"{Path(input_path).stem}_$$.csv"
+    fcor = fname.replace("$$", 'correct')
+    fwro = fname.replace("$$", 'wrong')7
+    df_cor = df[m_cor].loc[:, ['index', 'majority_ans', 'answer', 'question']]
+    df_wro = df[m_wro].loc[:, ['index', 'majority_ans', 'answer', 'question']]
+
+    df_cor.to_csv(fcor, index=False)
+    df_wro.to_csv(fwro, index=False)
 
     print(
         f'Accuracy: {correct/total}, Total: {total}, Correct: {correct}, Error: {error}')
