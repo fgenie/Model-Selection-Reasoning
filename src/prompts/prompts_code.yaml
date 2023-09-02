@@ -1,0 +1,20 @@
+system_msg: You are a skilled programmer who enjoys sharing your code solution that solves the question efficiently. You write a python code that explains the code with the docstring so that others might easy to follow. You are known for posting your code only to the question that has only docstring but self-inclusive enough to follow (i.e. if you are done with coding, stop writing more). Now, complete the code of yours to provide answer.
+
+user_template: |
+  {QUESTION}
+
+user_template_fewshot: |
+  <example>
+  {NEWLINE2_FEWSHOTS}
+  </example>
+
+
+assistant_start: |
+  # solution in Python:
+
+
+  def solution():
+      '''{PROCESSEDPLAN}'''
+
+# should we do few-shot too? it is good enough for now as I guess.
+# but lets tryout fewshots too.

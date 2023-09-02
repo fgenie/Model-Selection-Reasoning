@@ -1,15 +1,29 @@
 import json
 import os
 import openai
-import random
 import time
 from datetime import datetime
 import argparse
 from tqdm import tqdm
-from typing import Union
+# from typing import Union
 from prompts import math_prompt
 from collections import OrderedDict, Counter
 from tool import *
+from tenacity import (
+    retry,
+    wait_chain,
+    wait_fixed
+) 
+import yaml
+
+# after 6 times of retry, it raises exception. waits between retries are specified inside the `wait_chain`
+@retry(wait=wait_chain(*[wait_fixed(3) for i in range(3)] +
+                       [wait_fixed(5) for i in range(2)] +
+                       [wait_fixed(10)])) #defining backoff for retrying.
+def completion_with_backoff(**kwargs):
+    return openai.ChatCompletion.create(**kwargs)
+
+
 
 
 def get_user_assistant_messages(system_message: str, user_message: str, assistant_message: str):
@@ -18,9 +32,9 @@ def get_user_assistant_messages(system_message: str, user_message: str, assistan
     '''
     messages = []
     messages.append({"role": "system", "content": system_message})
-    split_user_messages = user_message.split('\n\n\n\n')
-    split_assistant_messages = assistant_message.split('\n\n\n\n')
-    for i in range(len(split_user_messages)):
+    split_user_messages = user_message.split('\n'*4)
+    split_assistant_messages = assistant_message.split('\n'*4) # delim==4*\n... 
+    for i in range(len(split_user_messages)): # user messages and assistant messages are paired... actually. This should have been `zip()`.
         question = split_user_messages[i]
         answer = split_assistant_messages[i]
         messages += [
@@ -49,6 +63,7 @@ def get_cot_prompt(data: dict, backbone: str):
     messages += [{"role": "user", "content": f"Question: {question_message}"}]
 
     return messages
+
 
 
 def get_pal_prompt(data: dict, backbone: str):
@@ -143,34 +158,72 @@ def query_cot(data: dict, key: str, cot_temperature: float, backbone: str):
     elif backbone == 'chatgpt':
         model_name = 'gpt-3.5-turbo'
 
-    start_time = time.time()
+    # start_time = time.time()
     completions = []
-    while True:
-        try:
-            cot_solution = openai.ChatCompletion.create(
-                api_key=key,
-                model=model_name,
-                max_tokens=500,
-                stop='\n\n\n',
-                messages=query_message,
-                temperature=cot_temperature,
-                top_p=1.0,
-                n=1)
-        except Exception as e:
-            cot_solution = None
+    cot_solution = completion_with_backoff(
+            api_key=key,
+            model=model_name,
+            max_tokens=500,
+            stop='\n\n\n',
+            messages=query_message,
+            temperature=cot_temperature,
+            top_p=1.0,
+            n=1)
 
-        if cot_solution is not None:
-            completions.extend([choice['message']['content']
-                                for choice in cot_solution['choices']])
-            completions = completions[:1]
-            return completions
-        else:
-            sleep_time = random.uniform(3, 5)
-            time.sleep(sleep_time)
+    # completions.extend([choice['message']['content']
+    #                     for choice in cot_solution['choices']])
+    completions = [cot_solution['choices'][0]['message']['content']]
+    return completions
 
-        if time.time() - start_time > 60:
-            return None
 
+
+def query_plancode(data: dict, key: str, plan_temperature: float, code_temperature: float, backbone: str):
+    '''
+    PAL variant: 1. generate planning for the given question 2. based on 1, generate code like PAL does.
+
+    args:
+        mostly same arguments with `query_pal()` below
+    returns: 
+        completions: Sequence[
+                dict(
+                    plan = str:plan for coding generated,
+                    code_solution = str:code generated (contains plan)
+                    )
+                ]
+    '''
+    plan_query_msg = get_plan_prompt(data, backbone=backbone)
+    if backbone == 'gpt4':
+        model_name = 'gpt-4'
+    elif backbone == 'chatgpt':
+        model_name = 'gpt-3.5-turbo'
+
+    # generate plan
+    response = completion_with_backoff(api_key=key,
+                                model=model_name,
+                                max_tokens=1024,
+                                stop='\n\n\n',
+                                messages=plan_query_msg,
+                                temperature=plan_temperature,
+                                top_p=1.0,
+                                n=1)
+    plan = response['choices'][0]['message']['content'] # str
+    plan = postprocess_plan(plan)
+
+    # generate code
+    code_query_msg = get_code_prompt(data, plan_str=plan, backbone=backbone)
+
+    code = completion_with_backoff(api_key=key,
+                                model=model_name,
+                                max_tokens=1024,
+                                stop='\n\n\n',
+                                messages=code_query_msg,
+                                temperature=code_temperature,
+                                top_p=1.0,
+                                n=1)
+    # wrapup
+    completions = [dict(plan = plan, code_solution = code)]
+
+    return completions
 
 def query_pal(data: dict, key: str, pal_temperature: float, backbone: str):
     '''
@@ -190,34 +243,22 @@ def query_pal(data: dict, key: str, pal_temperature: float, backbone: str):
         model_name = 'gpt-4'
     elif backbone == 'chatgpt':
         model_name = 'gpt-3.5-turbo'
-    start_time = time.time()
     completions = []
-    while True:
-        try:
-            pal_solution = openai.ChatCompletion.create(
-                api_key=key,
-                model=model_name,
-                max_tokens=500,
-                stop='\n\n\n',
-                messages=query_message,
-                temperature=pal_temperature,
-                top_p=1.0,
-                n=1)
-        except Exception as e:
-            pal_solution = None
+    pal_solution = completion_with_backoff(
+                                api_key=key,
+                                model=model_name,
+                                max_tokens=500,
+                                stop='\n\n\n',
+                                messages=query_message,
+                                temperature=pal_temperature,
+                                top_p=1.0,
+                                n=1)
 
-        if pal_solution is not None:
-            completions.extend([choice['message']['content']
-                                for choice in pal_solution['choices']])
-            completions = completions[:1]
-            return completions
-        else:
-            sleep_time = random.uniform(3, 5)
-            time.sleep(sleep_time)
 
-        if time.time() - start_time > 60:
-            return None
-
+    completions.extend([choice['message']['content']
+                        for choice in pal_solution['choices']]) # wtf this code...
+    completions = completions[:1]
+    return completions
 
 def query_selection(data: dict, key: str, cot_solution: list, pal_solution: list, backbone: str):
     '''
@@ -239,33 +280,21 @@ def query_selection(data: dict, key: str, cot_solution: list, pal_solution: list
         model_name = 'gpt-4'
     elif backbone == 'chatgpt':
         model_name = 'gpt-3.5-turbo'
-    start_time = time.time()
     completions = []
-    while True:
-        try:
-            selection_solution = openai.ChatCompletion.create(
-                api_key=key,
-                model=model_name,
-                max_tokens=200,
-                stop='\n\n',
-                messages=selection_message,
-                temperature=0.,
-                top_p=1.0,
-                n=1)
-        except Exception as e:
-            selection_solution = None
-
-        if selection_solution is not None:
-            completions.extend([choice['message']['content']
-                                for choice in selection_solution['choices']])
-            completions = completions[:1]
-            return completions
-        else:
-            sleep_time = random.uniform(3, 5)
-            time.sleep(sleep_time)
-
-        if time.time() - start_time > 60:
-            return None
+    selection_solution = completion_with_backoff(
+        api_key=key,
+        model=model_name,
+        max_tokens=200,
+        stop='\n\n',
+        messages=selection_message,
+        temperature=0.,
+        top_p=1.0,
+        n=1)
+    
+    completions.extend([choice['message']['content']
+                            for choice in selection_solution['choices']])
+    completions = completions[:1]
+    return completions
 
 
 def query_math(data: dict, key: str, cot_temperature: float, pal_temperature: float, sc_num: int, backbone: str):
@@ -369,7 +398,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--start', type=int, default=0)
     parser.add_argument('--end', type=int, default=-1)
-    parser.add_argument('--dataset', type=str, choices=[
+    parser.add_argument('--dataset', type=str, choices=['dbg', 
                         'gsm8k', 'svamp', 'asdiv', 'singleeq', 'singleop',
                         'singleaddsub', 'multiarith'], default='gsm8k')
     parser.add_argument('--backbone', type=str,
@@ -402,6 +431,8 @@ if __name__ == '__main__':
 
     if dataset_name == 'gsm8k':
         dataset = jsonlines_load('../dataset/gsm8K_test.jsonl')
+    elif dataset_name == 'dbg':
+        dataset = jsonlines_load('../dataset/dbg.jsonl') # 2 lines of gsm8k test
     elif dataset_name == 'svamp':
         dataset = jsonlines_load('../dataset/svamp.jsonl')
     elif dataset_name == 'asdiv':
@@ -459,8 +490,10 @@ if __name__ == '__main__':
                 progress_bar.update(1)
                 break
             else:
-                sleep_time = random.uniform(3, 5)
-                time.sleep(sleep_time)
+                pass
+                print("retrying (main)")
+                # sleep_time = random.uniform(3, 5)
+                # time.sleep(sleep_time)
 
             if time.time() - start_time > wait_time:
                 print('Time out')
@@ -468,8 +501,8 @@ if __name__ == '__main__':
                 unfinished_tasks.append(task)
                 break
 
-        sleep_time = random.uniform(3, 5)
-        time.sleep(sleep_time)
+        # sleep_time = random.uniform(3, 5)
+        # time.sleep(sleep_time)
 
     end_time_0 = time.time()
     print('Finish at time: ', time.strftime(

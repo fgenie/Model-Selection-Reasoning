@@ -1,0 +1,14 @@
+Accuracy: 0.7980922098569158, Total: 629, Correct: 502, Error: 0
+     629 ../output/chatgpt/gsm8k_sc1_s0_e1319_08_27_01_48.jsonl (논문 82.6)
+
+
+Accuracy: 0.851063829787234, Total: 94, Correct: 80, Error: 0
+      94 ../output/chatgpt/gsm8k_sc5_s0_e1319_08_27_03_09.jsonl (논문 88.2)
+
+
+Accuracy: 0.9546351084812623, Total: 507, Correct: 484, Error: 0
+     507 ../output/gpt4/gsm8k_sc1_s0_e1319_08_27_01_49.jsonl (논문 95.6)
+
+
+total gsm8k: 1319 examples 
+
