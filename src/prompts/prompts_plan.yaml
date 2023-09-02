@@ -46,6 +46,13 @@ fewshots:
     4. After the loop, return the final number of computers in the server room.
     </end>
   - |
+    Question: 235*12=?
+    
+    Suggestion:
+    1. Multiply the first number, 235, by the second number, 12.
+    2. Return the calculated product.
+    </end>
+  - |
     Question: There are 15 trees in the grove. Grove workers will plant trees in the grove today. After they are done, there will be 21 trees. How many trees did the grove workers plant today?
 
     Suggestion:
@@ -64,10 +71,4 @@ fewshots:
     5. Repeat steps 3 and 4 for all the natural numbers.
     6. After the loop ends, return the sum. 
     </end>
-  - |
-    Question: 235*12=?
-    
-    Suggestion:
-    1. Multiply the first number, 235, by the second number, 12.
-    2. Return the calculated product.
-    </end>
+
