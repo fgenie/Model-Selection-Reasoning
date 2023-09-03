@@ -36,7 +36,7 @@ def get_plan_prompt(data: dict, k_fewshot:int=0)->str:
     return msgs
     
     
-def get_plan2code_prompt(data:dict, plan:str='', k_fewshot:int=0):
+def get_plan2code_prompt(data:dict, plan:str='', k_fewshot:int=0, custom_idxs:list=None):
     # little bit revision from PAL prompt.
     # `solution()` is returned (can execute with solution() call w/o argument
     q = data['question']
@@ -44,7 +44,10 @@ def get_plan2code_prompt(data:dict, plan:str='', k_fewshot:int=0):
     system = prompt_d['system_msg']
     user_tmp = prompt_d['user_template'] if k_fewshot==0 else prompt_d['user_template_fewshot']
     assistant = prompt_d['assistant_start']
-    fewshots = prompt_d['fewshots'][:k_fewshot] # list of fewshot strings include </end> tag included.
+    if custom_idxs is None:
+        fewshots = prompt_d['fewshots'][:k_fewshot] # list of fewshot strings include </end> tag included.
+    else:
+        fewshots = [prompt_d['fewshots'][i] for i in custom_idxs]
     fewshots_concat = "\n\n".join(fewshots)
 
     user = user_tmp.replace('{QUESTION}', f"Question: {q}")
@@ -61,6 +64,9 @@ def get_plan2code_prompt(data:dict, plan:str='', k_fewshot:int=0):
         {'role': 'user', 'content': user},
         {'role': 'assistant', 'content': assistant}
     ]
+    # if k_fewshot>0:
+    #     msgs = msgs[:2] # do not force assistant head. it invokes repeated definition of solution() # dunno why...
+    # this is ridiculous. I need to pass the plan explicitly to the code generator.
 
 
     return  msgs
@@ -70,7 +76,7 @@ def add_indents2plan(plan:str)->str:
     plan_ = plan.split("\n")
     plan__ = [indent+p for p in plan_ if p!='</end>'] # remove </end> if exists
     processed = "\n".join(plan__)
-    processed = f"\n{processed}\n" + indent
+    processed = f"\n{processed}\n" #+ indent #added at postprocess
     return processed
 
 def postprocess_plan(rawanswer:str):
@@ -83,7 +89,7 @@ def postprocess_plan(rawanswer:str):
         plan_ = ''
     return plan_
 
-def postprocess_code_answer(rawanswer:str, docdef:str=''):
+def postprocess_code_answer(rawanswer:str, docdef:str='', k_fewshot:int=0):
     try:
         # removing starting wrap ```
         if "```python" in rawanswer:
@@ -92,13 +98,13 @@ def postprocess_code_answer(rawanswer:str, docdef:str=''):
             rawanswer = rawanswer.split('```')[-1]
         # removing ``` at the end
         code = rawanswer.split("```")[0] #ending ``` removal
-        # check if the code startswith docstring
-        if code.startswith(docdef) or code.startswith(docdef.replace('"""', "'''")):
-            pass
-        else: # docstring not contained
+        # remove possible starting repetition # solution in Python:\n\n\n
+        code = code.replace('# solution in Python:\n\n\n', '')
+        if k_fewshot>0: # just use output do not modif
             if code.startswith('def solution():'):
-                code = "\n".join(code.split('\n')[1:]) # avoid def solution twice
-            code = docdef+'\n'+code # when continuates from the prompt only add docdef with newline
+                pass
+            else:
+                code = docdef + '\n' + (code if code.startswith('\t') else f"\t{code}")
         code = remove_prints(code)
         exec(code) # check if it is executable
     except: 
