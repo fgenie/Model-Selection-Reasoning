@@ -19,7 +19,7 @@ import yaml
 from pprint import pprint
 
 # after 6 times of retry, it raises exception. waits between retries are specified inside the `wait_chain`
-@retry(wait=wait_chain(*[wait_fixed(3) for i in range(3)])) #defining backoff for retrying.
+# @retry(wait=wait_chain(*[wait_fixed(3) for i in range(3)])) #defining backoff for retrying.
 def completion_with_backoff(**kwargs):
     return openai.ChatCompletion.create(**kwargs)
 
@@ -113,9 +113,12 @@ def get_select_prompt(data: dict, cot_solution: list, pal_solution: list, backbo
         system_message, user_message, assistant_message)
 
     try:
-        pal_generated_list = pal_solution[0].split('"""')
-        pal_generated = pal_generated_list[0].strip(
-        ) + pal_generated_list[2]
+        pal_solution_lines_strip = [l.strip for l in pal_solution.split('\n')]
+        docstring_idxs = [i for i, x in enumerate(pal_solution_lines_strip) if x == '"""' or x == "'''"]
+        dsstart, dsend = min(docstring_idxs), max(docstring_idxs)
+
+        pallines = [l for l in pal_solution.split('\n')]
+        pal_generated = "\n".join(pallines[:dsstart] + pallines[dsend+1:])
     except Exception as e:
         pal_generated = pal_solution[0]
 
@@ -176,32 +179,34 @@ def query_cot(data: dict, key: str, cot_temperature: float, backbone: str):
     return completions
 
 
-@retry(wait=wait_chain(*[wait_fixed(3) for i in range(2)])) 
-def _query(key, model_name='gpt-3.5-turbo', max_tokens=2048, messages=None, temperature=0., top_p=1.0, n=1, mode='plan', docstring_def:str=''): # mode = plan or code
+# @retry(wait=wait_chain(*[wait_fixed(3) for i in range(2)])) 
+def _query(key, model_name='gpt-3.5-turbo', max_tokens=2048, stop='</end>', messages=None, temperature=0., top_p=1.0, n=1, mode='plan', docstring_def:str='', k_fewshot:int=0): # mode = plan or code
     # print("_query")
     resp = openai.ChatCompletion.create(api_key=key,
                                 model=model_name,
                                 max_tokens=max_tokens,
+                                stop=stop,
                                 messages=messages,
                                 temperature=temperature,
                                 top_p=top_p,
                                 n=n)
-                                # stop=stop,
     # print('apicall reached')
     content = resp['choices'][0]['message']['content'] # str
     if mode == 'plan':
         plan = postprocess_plan(content) # it will complain when failing
-        if not plan: 
-            print('retrying plangen')
-            raise ValueError
+        # if not plan: 
+        #     print('retrying plangen')
+        #     raise ValueError
         return plan
     elif mode == 'code':
-        assert docstring_def
-        code = postprocess_code_answer(content, docdef=docstring_def)
-        if not code: 
-            print('retrying codegen')
-            raise ValueError
-        return code
+        if len(docstring_def.strip().split('\n')) > 1:
+            code = postprocess_code_answer(content, docdef=docstring_def, k_fewshot=k_fewshot)
+            # if not code: 
+            #     print('retrying codegen')
+            #     raise ValueError
+            return code
+        else:
+            return ''
 
 
 def query_plancode(data: dict, key: str='', plan_temperature: float=.0, code_temperature: float=.0, backbone: str='gpt-3.5-turbo', k_fewshot:int=0):
@@ -225,21 +230,27 @@ def query_plancode(data: dict, key: str='', plan_temperature: float=.0, code_tem
     plan_query_msg = get_plan_prompt(data, k_fewshot=k_fewshot)
     # kvprint(plan_query_msg)
     # print(f"{k_fewshot=}")
-    plan = _query(key, model_name=model_name, max_tokens=1024, messages=plan_query_msg, temperature=plan_temperature, top_p=1.0, n=1, mode='plan')
+    plan = _query(key, model_name=model_name, max_tokens=1024, stop='</end>', messages=plan_query_msg, temperature=plan_temperature, top_p=1.0, n=1, mode='plan')
     # print(f"{plan=}")
 
-    # generate code
-    code_query_msg = get_plan2code_prompt(data, plan=plan, k_fewshot=k_fewshot)
-    # kvprint(code_query_msg)
-    # print(f"{k_fewshot=}")
-    indent = " "*4
-    docdef = f'def solution():\n{indent}"""{add_indents2plan(plan)}"""'
-    code = _query(key, model_name=model_name, max_tokens=1024, messages=code_query_msg, temperature=code_temperature, top_p=1.0, n=1, mode='code', docstring_def=docdef)
-    # print(f"{code=}")
-    # wrapup
-    completions = [code]
+    if plan:
+        # generate code
+        code_query_msg = get_plan2code_prompt(data, plan=plan, k_fewshot=k_fewshot)
+        # kvprint(code_query_msg)
+        # print(f"{k_fewshot=}")
+        indent = " "*4
+        docdef = f'def solution():\n{indent}"""{add_indents2plan(plan)}"""'
+        code = _query(key, model_name=model_name, max_tokens=1024, stop='# </end>', messages=code_query_msg, temperature=code_temperature, top_p=1.0, n=1, mode='code', docstring_def=docdef)
+        # print(f"{code=}")
+        # wrapup
+        completions = [code]
+        if not code:
+            return None
+        else: 
+            return completions
+    else:
+        return None 
 
-    return completions
 
 def query_pal(data: dict, key: str, pal_temperature: float, backbone: str):
     '''
@@ -452,6 +463,7 @@ if __name__ == '__main__':
     parser.add_argument('--plan_temperature', type=float, default=0.)
     parser.add_argument('--code_temperature', type=float, default=0.)
     parser.add_argument('--k_fewshot', type=int, default=0) #  >= 0
+    # parser.add_argument('--custom_idxs', type=list, default=None)
 
 
     args = parser.parse_args()
@@ -519,10 +531,12 @@ if __name__ == '__main__':
     progress_bar = tqdm(range(task_num))
     for i in range(task_num):
         task = tasks[i]
-        wait_time = min(sc_num * 300, 360)
+        wait_time = min(sc_num * 30 + args.k_fewshot * 5, 360)
         start_time = time.time()
+        count = 0
         while True:
             try:
+                count += 1
                 if dataset_name=='dbg':
                     print(f"""{args.plan_temperature=}\n{args.code_temperature=}\n{args.use_plancode=}\n{args.k_fewshot=}""")
                 ans = query_math(
@@ -549,11 +563,18 @@ if __name__ == '__main__':
                 # sleep_time = random.uniform(3, 5)
                 # time.sleep(sleep_time)
 
-            if time.time() - start_time > wait_time:
+            if (time.time() - start_time > wait_time):
                 print('Time out')
                 print('Current Task: ', i)
                 unfinished_tasks.append(task)
                 break
+            if count>4:
+                print(f'tried {count} times')
+                print('Current Task: ', i)
+                unfinished_tasks.append(task)
+                break
+
+
 
         # sleep_time = random.uniform(3, 5)
         # time.sleep(sleep_time)
