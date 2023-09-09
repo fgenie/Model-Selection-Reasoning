@@ -5,8 +5,8 @@ set -x
 EXEHOME=/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src
 cd ${EXEHOME}
 
-# Specify your API key
-APIKEY=/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/openai_key.txt
+# # Specify your API key
+# APIKEY=/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/openai_key.txt
 
 python selection_math.py --start 508 \
         --end -1 \

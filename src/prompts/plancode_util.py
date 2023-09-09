@@ -186,15 +186,21 @@ if __name__ == '__main__':
     prompt_dd = yaml.full_load(open('prompts_code.yaml'))
     print()
 
-#     data = {"question": "Question: What do you do for a living?"}
-#     pp1 = get_plan_prompt(data, k_fewshot=1)
-#     pp3 = get_plan_prompt(data, k_fewshot=3)
-#     plan = '''1. Check how much money Olivia had at first, and store it into some variable.
-# 2. She's consuming it to buy bagels. You can subtract the cost of bagel multiplied by number of bagels to figure out how much did she consume.
-# 3. Subtract the cost from initial deposit.
-# 4. Return the calculated number.
+    data = {"question": "Question: What do you do for a living?"}
+    pp2 = get_plan_prompt(data, k_fewshot=2)
+#     pp3 = get_plan_prompt(data, k_fewshot=5)
+    plan = '''1. Check how much money Olivia had at first, and store it into some variable.
+2. She's consuming it to buy bagels. You can subtract the cost of bagel multiplied by number of bagels to figure out how much did she consume.
+3. Subtract the cost from initial deposit.
+4. Return the calculated number.
 # </end>'''
-#     cp0 = get_plan2code_prompt(data, plan=plan)
+    cp2 = get_plan2code_prompt(data, plan=plan, k_fewshot=2)
+    print("===========")
+    kvprint(pp2)
+    print("===========")
+    kvprint(cp2)
+    print("===========")
+
     
 
 

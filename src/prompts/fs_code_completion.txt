@@ -1,0 +1,75 @@
+    # Olivia's initial deposit
+    initial_deposit = 23
+
+    # Cost of each bagel
+    bagel_cost = 3
+
+    # Number of bagels bought
+    num_bagels = 5
+
+    # Calculate the total cost of the bagels
+    total_cost = bagel_cost * num_bagels
+
+    # Calculate the remaining money
+    remaining_money = initial_deposit - total_cost
+
+    # Return the remaining money
+    return remaining_money
+
+# Test the solution
+# print(solution())
+=====================================
+    num = 12
+
+    def is_prime(n):
+        '''
+        Helper function to check if a number is prime.
+        '''
+        if n <= 1:
+            return False
+        for i in range(2, int(n ** 0.5) + 1):
+            if n % i == 0:
+                return False
+        return True
+
+    while True:
+        num += 1
+        if is_prime(num):
+            break
+
+    return num
+=====================================
+    # Start with the initial number of computers in the server room
+    computers = 9
+
+    # Iterate over the four days - Monday to Thursday
+    for _ in range(4):
+        # Add five to the current number of computers in the server room
+        computers += 5
+
+    # Return the final number of computers in the server room
+    return computers
+=====================================
+    product = 235 * 12
+    return product
+=====================================
+    initial_trees = 15
+    final_trees = 21
+
+    trees_planted = final_trees - initial_trees
+
+    return trees_planted
+=====================================
+    # Create a variable to keep track of the sum, initialized to 0.
+    sum_of_multiples = 0
+
+    # Loop through all the natural numbers below 1000.
+    for num in range(1000):
+        # Check if the number is a multiple of 3 or 5.
+        if num % 3 == 0 or num % 5 == 0:
+            # If it is, add the number to the sum variable.
+            sum_of_multiples += num
+
+    # Return the sum of all the multiples of 3 or 5 below 1000.
+    return sum_of_multiples
+=====================================
