@@ -39,6 +39,7 @@ bidx, k2idx, k5idx = map(set, [bidx, k2idx, k5idx ])
 common = k2idx&k5idx
 common = bidx & common 
 common = list(common)
+print()
 
 def filter(records:list, idx:list=None):
     return [record for record in records if record['index'] in idx]

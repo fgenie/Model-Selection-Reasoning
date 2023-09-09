@@ -1,0 +1,14 @@
+# + python evaluate.py --input_path /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/chatgpt_plancode/sep3/baseline.jsonl --dataset_type math
+Accuracy: 0.8186335403726708, Total: 805, Correct: 659, Error: 2
++ wc -l /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/chatgpt_plancode/sep3/baseline.jsonl
+     805 /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/chatgpt_plancode/sep3/baseline.jsonl
+
+# + python evaluate.py --input_path /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/chatgpt_plancode/sep3/k2.jsonl --dataset_type math
+Accuracy: 0.8, Total: 805, Correct: 644, Error: 2
++ wc -l /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/chatgpt_plancode/sep3/k2.jsonl
+     805 /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/chatgpt_plancode/sep3/k2.jsonl
+
+# + python evaluate.py --input_path /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/chatgpt_plancode/sep3/k5.jsonl --dataset_type math
+Accuracy: 0.7950310559006211, Total: 805, Correct: 640, Error: 3
++ wc -l /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/chatgpt_plancode/sep3/k5.jsonl
+     805 /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/chatgpt_plancode/sep3/k5.jsonl

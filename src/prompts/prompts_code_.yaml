@@ -1,0 +1,160 @@
+system_msg: You are a skilled programmer who enjoys sharing your code solution that solves the question efficiently. You write a python code that explains the code with the docstring so that others might easy to follow. Please complete the code according to the given `question` and step-by-step `plan` for implementing the solution for it.
+
+user_template: | # the following template has \n at the end 
+  {QUESTION}
+  # solution in Python:
+
+
+  def solution():
+      '''`plan`
+      {PROCESSEDPLAN}
+      '''
+fewshots_user:
+  - |
+    `Question`: Olivia has $23. She bought five bagels for $3 each. How much money does she have left?
+    # solution in Python:
+
+
+    def solution():
+        '''`plan`
+        1. Check how much money Olivia had at first, and store it into some variable.
+        2. She's consuming it to buy bagels. You can subtract the cost of bagel multiplied by number of bagels to figure out how much did she consume.
+        3. Subtract the cost from initial deposit.
+        4. Return the calculated number.
+        '''
+  - |
+    `Question`: Find the prime number that is larger than 11.
+    # solution in Python:
+
+
+    def solution():
+        '''`plan`
+        1. Start by setting a variable `num` to the value 12, since we want the number to be larger than 11.
+        2. Create a while loop that repeats until we find a prime number.
+        3. Inside the loop, create a helper function `is_prime(n)` that checks if a number is prime.
+        4. Starting from `num`, increment `num` by 1 in each iteration of the loop.
+        5. Inside the loop, check if `num` is prime using the `is_prime()` function.
+        6. If `num` is prime, break out of the loop.
+        7. After the loop, `num` will be the prime number that is larger than 11.
+        8. Return the value of `num`.
+        '''
+  - |
+    `Question`: There were nine computers in the server room. Five more computers were installed each day, from monday to thursday. How many computers are now in the server room?
+    # solution in Python:
+
+
+    def solution():
+        '''`plan`
+        1. Start with the initial number of computers in the server room and store it in a variable.
+        2. Create a loop to iterate over the four days - Monday to Thursday.
+        3. Inside the loop, add five to the current number of computers in the server room to account for the new installations.
+        4. After the loop, return the final number of computers in the server room.
+        '''
+  - |
+    `Question`: 235*12=?
+    # solution in Python:
+
+
+    def solution():
+        '''`plan`
+        1. Multiply the first number, 235, by the second number, 12.
+        2. Return the calculated product.
+        '''
+  - |
+    `Question`: There are 15 trees in the grove. Grove workers will plant trees in the grove today. After they are done, there will be 21 trees. How many trees did the grove workers plant today?
+    # solution in Python:
+
+
+    def solution():
+        '''`plan`
+        1. Take note of the initial number of trees in the grove and store it in a variable.
+        2. Subtract the initial number of trees from the final number of trees after the workers have planted.
+        3. Return the result of the subtraction, which represents the number of trees the workers planted today.
+        '''
+  - |
+    `Question`: If we list all the natural numbers below 10 that are multiples of 3 or 5, we get 3, 5, 6 and 9. The sum of these multiples is 23. Find the sum of all the multiples of 3 or 5 below 1000.
+    # solution in Python:
+
+
+    def solution():
+        '''`plan`
+        1. Create a variable to keep track of the sum, initialized to 0.
+        2. Loop through all the natural numbers below 1000.
+        3. Check if the number is a multiple of 3 or 5.
+        4. If it is, add the number to the sum variable.
+        5. Repeat steps 3 and 4 for all the natural numbers.
+        6. After the loop ends, return the sum. 
+        '''
+fewshots_assistant:
+  - |
+        # Olivia's initial deposit
+        initial_deposit = 23
+
+        # Cost of each bagel
+        bagel_cost = 3
+
+        # Number of bagels bought
+        num_bagels = 5
+
+        # Calculate the total cost of the bagels
+        total_cost = bagel_cost * num_bagels
+
+        # Calculate the remaining money
+        remaining_money = initial_deposit - total_cost
+
+        # Return the remaining money
+        return remaining_money
+  - |
+        num = 12
+
+        def is_prime(n):
+            '''
+            Helper function to check if a number is prime.
+            '''
+            if n <= 1:
+                return False
+            for i in range(2, int(n ** 0.5) + 1):
+                if n % i == 0:
+                    return False
+            return True
+
+        while True:
+            num += 1
+            if is_prime(num):
+                break
+
+        return num
+  - |
+        # Start with the initial number of computers in the server room
+        computers = 9
+
+        # Iterate over the four days - Monday to Thursday
+        for _ in range(4):
+            # Add five to the current number of computers in the server room
+            computers += 5
+
+        # Return the final number of computers in the server room
+        return computers
+  - |
+        product = 235 * 12
+        return product
+  - |
+        initial_trees = 15
+        final_trees = 21
+
+        trees_planted = final_trees - initial_trees
+
+        return trees_planted
+  - |
+        # Create a variable to keep track of the sum, initialized to 0.
+        sum_of_multiples = 0
+
+        # Loop through all the natural numbers below 1000.
+        for num in range(1000):
+            # Check if the number is a multiple of 3 or 5.
+            if num % 3 == 0 or num % 5 == 0:
+                # If it is, add the number to the sum variable.
+                sum_of_multiples += num
+
+        # Return the sum of all the multiples of 3 or 5 below 1000.
+        return sum_of_multiples

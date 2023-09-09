@@ -18,13 +18,11 @@ from tenacity import (
 import yaml
 from pprint import pprint
 
+
 # after 6 times of retry, it raises exception. waits between retries are specified inside the `wait_chain`
 # @retry(wait=wait_chain(*[wait_fixed(3) for i in range(3)])) #defining backoff for retrying.
 def completion_with_backoff(**kwargs):
     return openai.ChatCompletion.create(**kwargs)
-
-
-
 
 def get_user_assistant_messages(system_message: str, user_message: str, assistant_message: str):
     '''
@@ -268,6 +266,9 @@ def query_pal(data: dict, key: str, pal_temperature: float, backbone: str):
     query_message = get_pal_prompt(data, backbone=backbone)
     # for m in query_message: print(len(m['content']));
     # pprint(query_message)
+    # for r in query_message:
+    #     print(r['role'])
+    #     print(r['content'])
     if backbone == 'gpt4':
         model_name = 'gpt-4'
     elif backbone == 'chatgpt':
@@ -338,7 +339,8 @@ def query_math(
         plan_temperature: float=.0, # when use_plancode == True
         code_temperature: float=.0,
         k_fewshot:int=0,
-        use_plancode:bool=False
+        use_plancode:bool=False,
+        ablation:str='',
         ):
     '''
     This function is used to query OpenAI for answers in arithmetic tasks. It contains three steps:
@@ -373,57 +375,99 @@ def query_math(
     final_answers = []
 
     for i in range(sc_num):
-        cot_ans = None
-        pal_ans = None
-        selection_ans = None
-        final_ans = None
-        cot_solution = query_cot(
-            data, key, cot_temperature, backbone=backbone)
-        if cot_solution is None:
-            print('Time out')
-            return None
-        else:
-            cot_ans = extract_num_turbo(cot_solution[0])
-            cot_answers.append(cot_ans)
-            cot_solutions.append(cot_solution[0])
-        if use_plancode:
-            pal_solution = query_plancode(data, key=key, plan_temperature=plan_temperature, code_temperature=code_temperature, backbone=backbone, k_fewshot=k_fewshot)
-        else:
-            pal_solution = query_pal(
-                data, key, pal_temperature, backbone=backbone)
-        if pal_solution is None:
-            print('Time out')
-            return None
-        else:
-            pal_ans = safe_execute_turbo(pal_solution[0])
-            pal_answers.append(pal_ans)
-            pal_solutions.append(pal_solution[0])
+        if not ablation: # doing model-selection way of inference (includes plancode variate when use_plancode==True)
+            cot_ans = None
+            pal_ans = None
+            selection_ans = None
+            final_ans = None
+            cot_solution = query_cot(
+                data, key, cot_temperature, backbone=backbone)
+            if cot_solution is None:
+                print('Time out')
+                return None
+            else:
+                cot_ans = extract_num_turbo(cot_solution[0])
+                cot_answers.append(cot_ans)
+                cot_solutions.append(cot_solution[0])
+            if use_plancode:
+                pal_solution = query_plancode(data, key=key, plan_temperature=plan_temperature, code_temperature=code_temperature, backbone=backbone, k_fewshot=k_fewshot)
+            else:
+                pal_solution = query_pal(
+                    data, key, pal_temperature, backbone=backbone)
+            if pal_solution is None:
+                print('Time out')
+                return None
+            else:
+                pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
+                pal_answers.append(pal_ans)
+                pal_solutions.append(pal_solution[0])
 
-        if cot_ans is not None and pal_ans is not None:
+            if cot_ans is not None and pal_ans is not None:
+                # ==== Only select when CoT and PAL are different ====
+                if abs(cot_ans - pal_ans) > 1e-3:
+                    selection_ans = query_selection(
+                        data, key, cot_solution=cot_solution, pal_solution=pal_solution, backbone=backbone)
+                    if selection_ans is None:
+                        print('Time out')
+                        return None
+                    else:
+                        selection_choice = extract_choice_turbo(selection_ans[0])
+                        selection_solutions.append(selection_ans[0])
+                        if selection_choice == '(A)':
+                            final_ans = cot_ans
+                        elif selection_choice == '(B)':
+                            final_ans = pal_ans
+                else:
+                    final_ans = cot_ans
 
-            # ==== Only select when CoT and PAL are different ====
-            if abs(cot_ans - pal_ans) > 1e-3:
-                selection_ans = query_selection(
-                    data, key, cot_solution=cot_solution, pal_solution=pal_solution, backbone=backbone)
-                if selection_ans is None:
+            elif cot_ans is not None and pal_ans is None:
+                final_ans = cot_ans
+            elif cot_ans is None and pal_ans is not None:
+                final_ans = pal_ans
+            else:
+                final_ans = None
+        else: # ablation != ''
+            if ablation == 'cot':
+                cot_solution = query_cot(
+                                    data, 
+                                    key, 
+                                    cot_temperature, 
+                                    backbone=backbone)
+                if cot_solution is None:
                     print('Time out')
                     return None
                 else:
-                    selection_choice = extract_choice_turbo(selection_ans[0])
-                    selection_solutions.append(selection_ans[0])
-                    if selection_choice == '(A)':
-                        final_ans = cot_ans
-                    elif selection_choice == '(B)':
-                        final_ans = pal_ans
-            else:
-                final_ans = cot_ans
+                    cot_ans = extract_num_turbo(cot_solution[0]) # number parsed
+                    cot_answers.append(cot_ans) # parsed answers stacked --> cot_executed
+                    cot_solutions.append(cot_solution[0]) # unparsed answers --> cot_generated
+                    final_ans = cot_ans
 
-        elif cot_ans is not None and pal_ans is None:
-            final_ans = cot_ans
-        elif cot_ans is None and pal_ans is not None:
-            final_ans = pal_ans
-        else:
-            final_ans = None
+            elif ablation == 'pal':
+                pal_solution = query_pal(
+                        data, key, pal_temperature, backbone=backbone)
+                if pal_solution is None:
+                    print('Time out')
+                    return None
+                else:
+                    pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
+                    pal_answers.append(pal_ans)
+                    pal_solutions.append(pal_solution[0])
+                    final_ans = pal_ans 
+
+            elif ablation == 'plancode':
+                pal_solution = query_plancode(data, key=key, 
+                                              plan_temperature=plan_temperature, 
+                                              code_temperature=code_temperature, 
+                                              backbone=backbone, 
+                                              k_fewshot=k_fewshot)
+                if pal_solution is None:
+                    print('Time out')
+                    return None
+                else:
+                    pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
+                    pal_answers.append(pal_ans)
+                    pal_solutions.append(pal_solution[0])
+                    final_ans = pal_ans 
 
         final_answers.append(final_ans)
 
@@ -441,6 +485,17 @@ def query_math(
     return to_dump_data
 
 
+def just_prompt(**kwargs):
+    user_inp = 'Could you recommend name for a new product? Like... 10 candids will go for me.'
+    msgs = [
+        {'role': 'system', 'content': 'You are a helpful assistant'},
+        {'role': 'user', 'content': user_inp}
+    ]
+    response = openai.ChatCompletion.create(messages=msgs, temperature=0.0, api_key=key, model='gpt-3.5-turbo')
+    generation = response['choices'][0]['message']['content']
+    print(generation)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--start', type=int, default=0)
@@ -455,90 +510,100 @@ if __name__ == '__main__':
     parser.add_argument('--sc_num', type=int, default=1,
                         help='Self-consistency samples. 1 indicates greedy decoding')
     parser.add_argument('--output_dir', type=str, default='../output/')
-    parser.add_argument(
-        '--key', type=str, default='sk-', required=True)
+    # parser.add_argument(
+        # '--key', type=str, default='sk-', required=True)
 
     # plancode options
     parser.add_argument('--use_plancode', action='store_true')
     parser.add_argument('--plan_temperature', type=float, default=0.)
     parser.add_argument('--code_temperature', type=float, default=0.)
     parser.add_argument('--k_fewshot', type=int, default=0) #  >= 0
-    # parser.add_argument('--custom_idxs', type=list, default=None)
-
-
+    # ablative options
+    parser.add_argument('--ablation', type=str, default='', choices=['cot', 'plancode', 'pal'], 
+                        help='for ablation study: use only one method to reason on gsm8k')
+    # for prompting test (dev) options
+    parser.add_argument('--justprompt', action='store_true',
+                        help='this flag will just run openai api.')
     args = parser.parse_args()
 
-    start_index = args.start
-    end_index = args.end
-    dataset_name = args.dataset
-    cot_temperature = args.cot_temperature
-    pal_temperature = args.pal_temperature
-    backbone = args.backbone
-    sc_num = args.sc_num
-    output_dir = args.output_dir
-    key = args.key
+    key = open('../openai_key.txt').read().strip()
+    # print(key)
+    if args.justprompt:
+        just_prompt(key = key)
+    else: 
+        start_index = args.start
+        end_index = args.end
+        dataset_name = args.dataset
+        cot_temperature = args.cot_temperature
+        pal_temperature = args.pal_temperature
+        backbone = args.backbone
+        sc_num = args.sc_num
+        output_dir = args.output_dir
+        # key = args.key
 
-    start_time_0 = time.time()
-    print('Current time: ', time.strftime(
-        "%Y-%m-%d %H:%M:%S", time.localtime()))
+        start_time_0 = time.time()
+        print('Current time: ', time.strftime(
+            "%Y-%m-%d %H:%M:%S", time.localtime()))
 
-    dt_string = datetime.now().strftime("%m_%d_%H_%M")
+        dt_string = datetime.now().strftime("%m_%d_%H_%M")
 
-    if dataset_name == 'gsm8k':
-        dataset = jsonlines_load('../dataset/gsm8K_test.jsonl')
-    elif dataset_name == 'dbg':
-        dataset = jsonlines_load('../dataset/dbg.jsonl') # 2 lines of gsm8k test
-    elif dataset_name == 'svamp':
-        dataset = jsonlines_load('../dataset/svamp.jsonl')
-    elif dataset_name == 'asdiv':
-        dataset = jsonlines_load('../dataset/asdiv.jsonl')
-    elif dataset_name == 'singleeq':
-        dataset = jsonlines_load('../dataset/single_eq.jsonl')
-    elif dataset_name == 'singleop':
-        dataset = jsonlines_load('../dataset/single_op.jsonl')
-    elif dataset_name == 'singleaddsub':
-        dataset = jsonlines_load('../dataset/single_addsub.jsonl')
-    elif dataset_name == 'multiarith':
-        dataset = jsonlines_load('../dataset/multiarith.jsonl')
+        if dataset_name == 'gsm8k':
+            dataset = jsonlines_load('../dataset/gsm8K_test.jsonl')
+        elif dataset_name == 'dbg':
+            dataset = jsonlines_load('../dataset/dbg.jsonl') # 2 lines of gsm8k test
+        elif dataset_name == 'svamp':
+            dataset = jsonlines_load('../dataset/svamp.jsonl')
+        elif dataset_name == 'asdiv':
+            dataset = jsonlines_load('../dataset/asdiv.jsonl')
+        elif dataset_name == 'singleeq':
+            dataset = jsonlines_load('../dataset/single_eq.jsonl')
+        elif dataset_name == 'singleop':
+            dataset = jsonlines_load('../dataset/single_op.jsonl')
+        elif dataset_name == 'singleaddsub':
+            dataset = jsonlines_load('../dataset/single_addsub.jsonl')
+        elif dataset_name == 'multiarith':
+            dataset = jsonlines_load('../dataset/multiarith.jsonl')
 
-    # === slice data based on start and end ===
-    total_num = len(dataset)
-    print('total data: ', total_num)
-    if end_index == -1:
-        end_index = total_num
+        # === slice data based on start and end ===
+        total_num = len(dataset)
+        print('total data: ', total_num)
+        if end_index == -1:
+            end_index = total_num
 
-    if end_index > total_num:
-        end_index = total_num
+        if end_index > total_num:
+            end_index = total_num
 
-    tasks = dataset[start_index:end_index]
-    task_num = len(tasks)
-    print('Current total tasks: ', task_num)
+        tasks = dataset[start_index:end_index]
+        task_num = len(tasks)
+        print('Current total tasks: ', task_num)
 
-    unfinished_tasks = []
+        unfinished_tasks = []
 
-    output_path = os.path.join(output_dir, f'{backbone}/')
-    if args.use_plancode:
-        output_path = os.path.join(output_dir, f"{backbone}_plancode/")
+        output_path = os.path.join(output_dir, f'{backbone}/')
+        if args.use_plancode:
+            output_path = os.path.join(output_dir, f"{backbone}_cot_plancode/")
+        if args.ablation: # != ''
+            output_path = os.path.join(output_dir, f"ablation_{args.ablation}/")
 
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
 
-    save_path = os.path.join(output_path,
-                             f'{dataset_name}_k{args.k_fewshot}_sc{sc_num}_s{start_index}_e{end_index}_{dt_string}.jsonl')
+        save_path = os.path.join(output_path,
+                                f'{dataset_name}_k{args.k_fewshot}_sc{sc_num}_s{start_index}_e{end_index}_{dt_string}.jsonl')
 
-
-    # === run experiments ===
-    progress_bar = tqdm(range(task_num))
-    for i in range(task_num):
-        task = tasks[i]
-        wait_time = min(sc_num * 30 + args.k_fewshot * 5, 360)
-        start_time = time.time()
-        count = 0
-        while True:
-            try:
+        # === run experiments ===
+        progress_bar = tqdm(range(task_num))
+        for i in range(task_num):
+            task = tasks[i]
+            wait_time = min(sc_num * 30 + args.k_fewshot * 5, 360)
+            start_time = time.time()
+            count = 0
+            while True:
+                # try:
                 count += 1
                 if dataset_name=='dbg':
                     print(f"""{args.plan_temperature=}\n{args.code_temperature=}\n{args.use_plancode=}\n{args.k_fewshot=}""")
+                
                 ans = query_math(
                     task, key=key, cot_temperature=cot_temperature,
                     pal_temperature=pal_temperature, sc_num=sc_num,backbone=backbone,
@@ -546,46 +611,47 @@ if __name__ == '__main__':
                     code_temperature=args.code_temperature,
                     k_fewshot=args.k_fewshot,
                     use_plancode=args.use_plancode,
+                    ablation=args.ablation,
                     )
-                
-            except Exception as e:
-                print(e)
-                ans = None
+                    
+                # except Exception as e:
+                #     print(e)
+                #     ans = None
 
-            if ans is not None:
-                with open(save_path, "a+") as fout:
-                    fout.write(json.dumps(ans)+'\n')
-                progress_bar.update(1)
-                break
-            else:
-                pass
-                print("retrying (main)")
-                # sleep_time = random.uniform(3, 5)
-                # time.sleep(sleep_time)
+                if ans is not None:
+                    with open(save_path, "a+") as fout:
+                        fout.write(json.dumps(ans)+'\n')
+                    progress_bar.update(1)
+                    break
+                else:
+                    pass
+                    print("retrying (main)")
+                    # sleep_time = random.uniform(3, 5)
+                    # time.sleep(sleep_time)
 
-            if (time.time() - start_time > wait_time):
-                print('Time out')
-                print('Current Task: ', i)
-                unfinished_tasks.append(task)
-                break
-            if count>4:
-                print(f'tried {count} times')
-                print('Current Task: ', i)
-                unfinished_tasks.append(task)
-                break
+                if (time.time() - start_time > wait_time):
+                    print('Time out')
+                    print('Current Task: ', i)
+                    unfinished_tasks.append(task)
+                    break
+                if count>4:
+                    print(f'tried {count} times')
+                    print('Current Task: ', i)
+                    unfinished_tasks.append(task)
+                    break
 
 
 
-        # sleep_time = random.uniform(3, 5)
-        # time.sleep(sleep_time)
+            # sleep_time = random.uniform(3, 5)
+            # time.sleep(sleep_time)
 
-    end_time_0 = time.time()
-    print('Finish at time: ', time.strftime(
-        "%Y-%m-%d %H:%M:%S", time.localtime()))
-    print(f'Time used: {end_time_0 - start_time_0} seconds')
-    if len(unfinished_tasks) > 0:
-        print('Unfinished tasks: ')
-        for task in unfinished_tasks:
-            print(task)
+        end_time_0 = time.time()
+        print('Finish at time: ', time.strftime(
+            "%Y-%m-%d %H:%M:%S", time.localtime()))
+        print(f'Time used: {end_time_0 - start_time_0} seconds')
+        if len(unfinished_tasks) > 0:
+            print('Unfinished tasks: ')
+            for task in unfinished_tasks:
+                print(task)
 
-    print('Done')
+        print('Done')

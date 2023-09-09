@@ -92,15 +92,34 @@ def extract_num_turbo(solution: str):
 
 
 def safe_execute_turbo(code_string: str, keys=None):
+    def get_func_name_from_string(codestring:str)->str:
+        match = re.search(r'def (\w+)\(', codestring)
+        if match:
+            funcname = match.group(1)
+            # print(funcname)
+        else:
+            funcname = ''
+        return funcname
     def execute(x, code_return):
         try:
             exec(x)
             locals_ = locals()
+            # print(keys)
             if keys is not None:
                 return [locals_.get(k, None) for k in keys]
 
             solution = locals_.get('solution', None)
+            funcname = get_func_name_from_string(x) # for nontrivial code naming
             if solution is not None:
+                # print(x)
+                # print(solution)
+                return solution()
+            elif funcname: # if any function name appears
+                # print(x)
+                # print(funcname)
+                exec(x)
+                solution = locals_.get(funcname, None)
+                # print(solution)
                 return solution()
             else:
                 executed_code = 'import math\n' + 'import datetime\n' + \
@@ -123,17 +142,19 @@ def safe_execute_turbo(code_string: str, keys=None):
         code_return = 'ans'
 
         for i in range(len(code_list)):
-            if code_list[i].strip() == 'def solution():':
+            # if code_list[i].strip() == 'def solution():':
+            if re.search(r'def (\w+)\(', code_list[i]) and code_list[i].startswith('def '): # avoid including inner function definition
                 new_code_list.append(code_list[i])
                 for j in range(i+1, len(code_list)):
                     if code_list[j].startswith('    '):
                         new_code_list.append(code_list[j])
-                    if 'return ' in code_list[j]:
+                    # if 'return ' in code_list[j]:
+                    if code_list[j].startswith('    return'): # affirms outtermost return
                         code_return = code_list[j].split('return ')[1].strip()
                 all_codes.append('\n'.join(new_code_list))
                 new_code_list = []
         new_code = all_codes[-1]
-
+        ans = execute(new_code, code_return) 
         ans = func_timeout.func_timeout(
             3, execute, args=(new_code, code_return,))
         ans = ans if ans is not None else ans
