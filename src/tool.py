@@ -149,12 +149,12 @@ def safe_execute_turbo(code_string: str, keys=None):
                     if code_list[j].startswith('    '):
                         new_code_list.append(code_list[j])
                     # if 'return ' in code_list[j]:
-                    if code_list[j].startswith('    return'): # affirms outtermost return
+                    if code_list[j].startswith('    return '): # affirms outtermost return
                         code_return = code_list[j].split('return ')[1].strip()
                 all_codes.append('\n'.join(new_code_list))
                 new_code_list = []
         new_code = all_codes[-1]
-        ans = execute(new_code, code_return) 
+        # ans = execute(new_code, code_return) 
         ans = func_timeout.func_timeout(
             3, execute, args=(new_code, code_return,))
         ans = ans if ans is not None else ans
@@ -279,3 +279,4 @@ def execute_date_pal(code_string: str, keys=None):
         ans = None
 
     return ans
+

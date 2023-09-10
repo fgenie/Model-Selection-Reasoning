@@ -10,11 +10,11 @@ from prompts import math_prompt
 from prompts.plancode_util import *
 from collections import OrderedDict, Counter
 from tool import *
-from tenacity import (
-    retry,
-    wait_chain,
-    wait_fixed
-) 
+# from tenacity import (
+#     retry,
+#     wait_chain,
+#     wait_fixed
+# ) 
 import yaml
 from pprint import pprint
 
@@ -517,7 +517,7 @@ if __name__ == '__main__':
     parser.add_argument('--use_plancode', action='store_true')
     parser.add_argument('--plan_temperature', type=float, default=0.)
     parser.add_argument('--code_temperature', type=float, default=0.)
-    parser.add_argument('--k_fewshot', type=int, default=0) #  >= 0
+    parser.add_argument('--k_fewshot', type=int, default=6) #  >= 0
     # ablative options
     parser.add_argument('--ablation', type=str, default='', choices=['cot', 'plancode', 'pal'], 
                         help='for ablation study: use only one method to reason on gsm8k')
@@ -595,63 +595,58 @@ if __name__ == '__main__':
         progress_bar = tqdm(range(task_num))
         for i in range(task_num):
             task = tasks[i]
-            wait_time = min(sc_num * 30 + args.k_fewshot * 5, 360)
             start_time = time.time()
             count = 0
             while True:
-                # try:
-                count += 1
-                if dataset_name=='dbg':
-                    print(f"""{args.plan_temperature=}\n{args.code_temperature=}\n{args.use_plancode=}\n{args.k_fewshot=}""")
-                
-                ans = query_math(
-                    task, key=key, cot_temperature=cot_temperature,
-                    pal_temperature=pal_temperature, sc_num=sc_num,backbone=backbone,
-                    plan_temperature=args.plan_temperature,
-                    code_temperature=args.code_temperature,
-                    k_fewshot=args.k_fewshot,
-                    use_plancode=args.use_plancode,
-                    ablation=args.ablation,
-                    )
+                try:
+                    count += 1
+                    if dataset_name=='dbg':
+                        print(f"""{args.plan_temperature=}\n{args.code_temperature=}\n{args.use_plancode=}\n{args.k_fewshot=}""")
                     
-                # except Exception as e:
-                #     print(e)
-                #     ans = None
-
+                    ans = query_math(
+                        task, key=key, cot_temperature=cot_temperature,
+                        pal_temperature=pal_temperature, sc_num=sc_num,backbone=backbone,
+                        plan_temperature=args.plan_temperature,
+                        code_temperature=args.code_temperature,
+                        k_fewshot=args.k_fewshot,
+                        use_plancode=args.use_plancode,
+                        ablation=args.ablation,
+                        )
+                        
+                except Exception as e:
+                    print(e)
+                    ans = None
                 if ans is not None:
                     with open(save_path, "a+") as fout:
                         fout.write(json.dumps(ans)+'\n')
                     progress_bar.update(1)
                     break
                 else:
-                    pass
-                    print("retrying (main)")
-                    # sleep_time = random.uniform(3, 5)
-                    # time.sleep(sleep_time)
-
-                if (time.time() - start_time > wait_time):
-                    print('Time out')
-                    print('Current Task: ', i)
-                    unfinished_tasks.append(task)
-                    break
-                if count>4:
-                    print(f'tried {count} times')
-                    print('Current Task: ', i)
-                    unfinished_tasks.append(task)
-                    break
-
-
-
-            # sleep_time = random.uniform(3, 5)
-            # time.sleep(sleep_time)
+                    if count>3:
+                        print(f'tried {count} times, passing')
+                        print('Current Task: ', i)
+                        unfinished_tasks.append(task)
+                        count=0
+                        break
+                    else:
+                        print("retrying (main)")
+                        time.sleep(random.uniform(3, 5))
+                
+                
 
         end_time_0 = time.time()
         print('Finish at time: ', time.strftime(
             "%Y-%m-%d %H:%M:%S", time.localtime()))
         print(f'Time used: {end_time_0 - start_time_0} seconds')
         if len(unfinished_tasks) > 0:
-            print('Unfinished tasks: ')
-            for task in unfinished_tasks:
-                print(task)
+            unfinished_name = save_path.replace('.jsonl', '_unfinished.jsonl')
+            with jsl.open(unfinished_name, 'w') as writer:
+                writer.write_all(unfinished_tasks)
+                print(f'Unfinished tasks at: \n\t{unfinished_name}')
+            with open(f'{unfinished_name}.args', 'w') as f:
+                print(args, file=f)
+            print(f'Unfinished args at: \n\t{unfinished_name}.args')
+
+            
 
         print('Done')

@@ -1,0 +1,61 @@
+
+===================================
+1. Declare a variable to keep track of Olivia's money, initialized to 23.
+2. Declare another variable to store the cost of each bagel, set to 3.
+3. Multiply the cost of each bagel by the number of bagels Olivia bought (5) to get the total cost of bagels.
+4. Subtract the total cost of bagels from Olivia's initial money to get the remaining amount.
+5. Return the remaining amount of money.
+
+===================================
+1. Create a variable `golf_balls` and set it to 58 to represent the initial number of golf balls Michael had.
+2. Subtract 23 from `golf_balls` to account for the number of golf balls he lost on Tuesday.
+3. Subtract 2 from `golf_balls` again to account for the additional golf balls he lost on Wednesday.
+4. The final value of `golf_balls` represents the number of golf balls Michael had at the end of Wednesday.
+5. return `golf_balls` to get the result.
+
+
+===================================
+1. Create a variable, `n_computer`, to keep track of the total number of computers, initialized to 9.
+2. Create a variable, `n_days`, to represent the number of days installed, initialized to 4.
+3. Use a loop to iterate through the days from Monday to Thursday.
+4. For each day, add 5 to the total number of computers.
+5. Decrement the number of days installed by 1 after each iteration.
+6. After the loop ends, print the total number of computers in the server room.
+===================================
+1. Create a variable called "total_toys" and set it to 5 (initial number of toys Shawn has).
+2. Create a variable called "toys_from_mom" and set it to 2 (number of toys Shawn got from his mom).
+3. Create a variable called "toys_from_dad" and set it to 2 (number of toys Shawn got from his dad).
+4. Add the values of "toys_from_mom" and "toys_from_dad" and store the result in "total_toys".
+5. Print the value of "total_toys".
+6. [Optional] Add an appropriate message for clarity if desired.
+7. [Optional] Add a line break for better readability.
+8. [Optional] End the code with a message indicating the completion of the task.
+
+<end>
+===================================
+1. Create a variable called `jason_lollipops` and set it to 20.
+2. Create a variable called `denny_lollipops` and set it to unknown (`x`).
+3. Subtract `denny_lollipops` from `jason_lollipops` and set it to 12.
+4. Write an equation: `jason_lollipops - denny_lollipops = 12`.
+5. Solve the equation for `denny_lollipops`.
+6. Print the value of `denny_lollipops`.
+7. End. 
+===================================
+1. Create two variables, `leah_chocolates` and `sister_chocolates`, and assign them the initial numbers of chocolates (32 and 42, respectively).
+2. Make a variable `total_chocolates` and calculate the sum of `leah_chocolates` and `sister_chocolates`.
+3. Subtract the number of chocolates they ate (35) from `total_chocolates` and assign the result to `remaining_chocolates`.
+4. Print the value of `remaining_chocolates` to display the total number of chocolates they have left.
+5. `<end>`
+===================================
+1. Create a variable to keep track of the number of cars in the parking lot, initialized to 3.
+2. Add 2 to the variable to account for the 2 additional cars that arrived.
+3. Return the value of the variable.
+
+
+===================================
+1. Create a variable to keep track of the number of trees planted, initialized to 0.
+2. Subtract the initial number of trees in the grove (15) from the final number of trees in the grove (21) to get the number of trees the grove workers planted.
+3. Assign this value to the variable created in step 1.
+4. Print the value of the variable to display the number of trees planted by the grove workers.
+
+<end>
