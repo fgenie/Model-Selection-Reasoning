@@ -6,9 +6,9 @@ EXEHOME=/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src
 cd ${EXEHOME}
 
 # Specify the input path
-INPUTPATH1='/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/chatgpt_plancode/sep3/baseline.jsonl'
-INPUTPATH2='/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/chatgpt_plancode/sep3/k2.jsonl'
-INPUTPATH3='/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/chatgpt_plancode/sep3/k5.jsonl'
+INPUTPATH1='/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/cot.jsonl'
+INPUTPATH2='/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/pal.jsonl'
+INPUTPATH3='/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/plancode.jsonl'
 
 
 python evaluate.py --input_path ${INPUTPATH1}\

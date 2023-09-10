@@ -1,0 +1,8 @@
+cot
+Accuracy: 0.7883156297420334, Total: 1318, Correct: 1039, Error: 0
+
+pal
+Accuracy: 0.8021228203184231, Total: 1319, Correct: 1058, Error: 0
+
+plancode
+Accuracy: 0.6762917933130699, Total: 1316, Correct: 890, Error: 0

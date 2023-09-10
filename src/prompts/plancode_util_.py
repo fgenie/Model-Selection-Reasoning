@@ -8,27 +8,17 @@ PLAN_PROMPTS_D= yaml.full_load(open(PLAN_F))
 CODE_PROMPTS_D = yaml.full_load(open(CODE_F))
 
 
-def get_plan_prompt(data: dict, k_fewshot:int=0, specific_idx:int=-1)->str:
+def get_plan_prompt(data: dict, k_fewshot:int=0)->str:
     '''
     prep prompt for plan generation
     '''
     prompt_d = PLAN_PROMPTS_D
     
-    if specific_idx!=-1:
-        assert k_fewshot==1
-        assert specific_idx < len(prompt_d['fewshots'])
-    
     q = data['question']
     system = prompt_d['system_msg']
     user_tmp = prompt_d['user_template'] if k_fewshot==0 else prompt_d['user_template_fewshot']
-    if specific_idx==-1:
-        fewshots = prompt_d['fewshots'][:k_fewshot] # list of fewshot strings include </end> tag included.
-    else:
-        fewshots = prompt_d['fewshots'][specific_idx]
-    if k_fewshot >1:
-        fewshots_concat = "\n\n".join(fewshots)
-    else:
-        fewshots_concat = fewshots
+    fewshots = prompt_d['fewshots'][:k_fewshot] # list of fewshot strings include </end> tag included.
+    fewshots_concat = "\n\n".join(fewshots)
     assistant_start = prompt_d['assistant_start']
 
 
@@ -196,32 +186,44 @@ def kvprint(record):
 
 
 if __name__ == '__main__':
-    # making fewshot examples for 
-    plans = []
-    qs = []
-    for q_only in open('questions_in_pal_prompt.txt').readlines():
-        q = f"Question: {q_only.strip()}"
-        qs.append(q)
-        data = {'question': q}
-        # pp = get_plan_prompt(data, k_fewshot=1, specific_idx=5)
-        # kvprint(pp)
-        pp = [
-            {'role': 'system', 'content': "You are a helpful assistant."},
-            {'role': 'user', 'content': f"I'm now trying to implement a code (maybe python) for solving the following question. Please give me a step-by-step guide in numbered list so that it could hint me to solve. Do not solve it for me, and not to be too elaborate.\n\nQuestion: {q}\n\nYour guide:\n"}
-        ]
-        response = openai.ChatCompletion.create(api_key=KEY, messages=pp, model='gpt-3.5-turbo', stop='</end>')
-        rawanswer = response['choices'][0]['message']['content']
-        plan = postprocess_plan(rawanswer)
-        plans.append(plan)
-    with open('fs_plans.txt', 'w') as pf, open('fs_questions.txt', 'w') as qf:
-        sep = "\n===================================\n"
-        for q, p in zip(qs, plans):
-            pf.write(sep)
-            pf.write(p)
-            qf.write(sep)
-            qf.write(q)
-            
+    prompt_dd = yaml.full_load(open('prompts_code.yaml'))
+    print()
+
+    data = {"question": "Question: What do you do for a living?"}
+    pp2 = get_plan_prompt(data, k_fewshot=2)
+#     pp3 = get_plan_prompt(data, k_fewshot=5)
+    plan = '''1. Check how much money Olivia had at first, and store it into some variable.
+2. She's consuming it to buy bagels. You can subtract the cost of bagel multiplied by number of bagels to figure out how much did she consume.
+3. Subtract the cost from initial deposit.
+4. Return the calculated number.
+# </end>'''
+    cp2 = get_plan2code_prompt(data, plan=plan, k_fewshot=2)
+    print("===========")
+    kvprint(pp2)
+    print("===========")
+    kvprint(cp2)
+    print("===========")
+
     
+
+
+#     print("pp3")
+#     kvprint(pp3)
+#     print("===============================")
+#     print("pp1")
+#     kvprint(pp1)
+#     print("===============================")
+#     print("cp0")
+#     kvprint(cp0)
+#     print("===============================")
+#     # print(KEY);print(KEY)
+#     code_fewshots = make_code_examples()
+#     prompt_d = yaml.full_load(open(CODE_F))
+#     prompt_d.update({'fewshots': code_fewshots})
+#     with open('prompts_code_fewshot.yaml', 'w') as ymlf:
+#         yaml.dump(prompt_d, ymlf, default_flow_style=False)
+
+
 
     
 
