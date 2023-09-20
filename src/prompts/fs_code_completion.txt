@@ -60,16 +60,11 @@
 
     return trees_planted
 =====================================
-    # Create a variable to keep track of the sum, initialized to 0.
-    sum_of_multiples = 0
-
-    # Loop through all the natural numbers below 1000.
-    for num in range(1000):
-        # Check if the number is a multiple of 3 or 5.
-        if num % 3 == 0 or num % 5 == 0:
-            # If it is, add the number to the sum variable.
-            sum_of_multiples += num
-
-    # Return the sum of all the multiples of 3 or 5 below 1000.
+    multiples_of_3 = sum(range(0, 1000, 3))
+    multiples_of_5 = sum(range(0, 1000, 5))
+    multiples_of_15 = sum(range(0, 1000, 15))
+    
+    sum_of_multiples = multiples_of_3 + multiples_of_5 - multiples_of_15
+    
     return sum_of_multiples
 =====================================
