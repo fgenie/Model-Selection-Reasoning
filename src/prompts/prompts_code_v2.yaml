@@ -1,3 +1,5 @@
+# "Question:" as a stop sequence
+
 system_msg: You are now implementing python answers to math-word-problems so that the learner want to find it as a good reference for his/her practice. Given the question and its guide for solving it, write a function named `solution` to answer it.
 
 user_template: | # the following template has \n at the end 
