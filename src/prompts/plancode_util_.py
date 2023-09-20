@@ -203,28 +203,3 @@ if __name__ == '__main__':
     print("===========")
     kvprint(cp2)
     print("===========")
-
-    
-
-
-#     print("pp3")
-#     kvprint(pp3)
-#     print("===============================")
-#     print("pp1")
-#     kvprint(pp1)
-#     print("===============================")
-#     print("cp0")
-#     kvprint(cp0)
-#     print("===============================")
-#     # print(KEY);print(KEY)
-#     code_fewshots = make_code_examples()
-#     prompt_d = yaml.full_load(open(CODE_F))
-#     prompt_d.update({'fewshots': code_fewshots})
-#     with open('prompts_code_fewshot.yaml', 'w') as ymlf:
-#         yaml.dump(prompt_d, ymlf, default_flow_style=False)
-
-
-
-    
-
-    

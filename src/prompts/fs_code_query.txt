@@ -66,10 +66,9 @@ def solution():
 
 def solution():
     '''`plan`
-    1. Create a variable to keep track of the sum, initialized to 0.
-    2. Loop through all the natural numbers below 1000.
-    3. Check if the number is a multiple of 3 or 5.
-    4. If it is, add the number to the sum variable.
-    5. Repeat steps 3 and 4 for all the natural numbers.
-    6. After the loop ends, return the sum. 
+    1. Find the sum of multiples of 3 below 1000. You can pick multiples of 3 simply with `range()` with intervals.
+    2. Using `sum()`, you're done with finding multiples of 3.
+    3. Do similarly for finding the multiples of 5 below 1000.
+    4. Remove duplicates from the result (multiples of both 3 and 5 which is 15). You can achieve this similarly to above, but with subtraction.
+    5. Return the result.
     '''
