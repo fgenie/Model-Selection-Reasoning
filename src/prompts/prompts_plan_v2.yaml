@@ -31,42 +31,61 @@ fewshots_user:
     `Suggestion`:
 fewshots_assistant:
   - |
-    1. Check how much money Olivia had at first, and store it into some variable.
-    2. She's consuming it to buy bagels. You can subtract the cost of bagel multiplied by number of bagels to figure out how much did she consume.
-    3. Subtract the cost from initial deposit.
-    4. Return the calculated number.
+    1. Start by defining a variable to store Olivia's initial amount of money, let's call it "money_initial" and store 23 as a initial value.
+    2. Define another variable to store the cost of each bagel, let's call it "bagel_cost" initialized with 3.
+    3. Define another variable to keep track of the number of bagels Olivia bought, let's call it "num_bagels", and assign a value, 5.
+    4. Calculate the total amount of money spent on bagels by multiplying "bagel_cost" and "num_bagels".
+    5. Subtract the total amount spent on bagels from Olivia's initial amount of money to find out how much money she has left.
+    6. Return the result of the subtraction.
     <br/>
   - |
-    1. Start by setting a variable `num` to the value 12, since we want the number to be larger than 11.
-    2. Create a while loop that repeats until we find a prime number.
-    3. Inside the loop, create a helper function `is_prime(n)` that checks if a number is prime.
-    4. Starting from `num`, increment `num` by 1 in each iteration of the loop.
-    5. Inside the loop, check if `num` is prime using the `is_prime()` function.
-    6. If `num` is prime, break out of the loop.
-    7. After the loop, `num` will be the prime number that is larger than 11.
-    8. Return the value of `num`.
+    1. Start by defining a variable to represent the initial number of golf balls Michael had (e.g., `golf_balls_initial = 58`).
+    2. Subtract the number of balls lost on Tuesday from the initial number of balls (e.g., `remaining_balls = initial_balls - 23`).
+    3. Subtract the number of balls lost on Wednesday from the number of remaining balls (e.g., `final_balls = remaining_balls - 2`).
+    4. Return the `final_balls` which represents the number of golf balls Michael had at the end of Wednesday.
     <br/>
   - |
-    1. Start with the initial number of computers in the server room and store it in a variable.
-    2. Create a loop to iterate over the four days - Monday to Thursday.
-    3. Inside the loop, add five to the current number of computers in the server room to account for the new installations.
-    4. After the loop, return the final number of computers in the server room.
+    1. Start by setting a variable count_computers to represent the current number of computers in the server room.
+    2. Initialize count_computers to 9, as mentioned in the question.
+    3. Create a loop to iterate over the days from Monday to Thursday.
+    4. Inside the loop, increase count_computers by 5 each day.
+    5. After the loop finishes, the value of count_computers will represent the total number of computers in the server room. Return the final result.
     <br/>
   - |
-    1. Multiply the first number, 235, by the second number, 12.
-    2. Return the calculated product.
+    1. Start by storing the initial number of toys Shawn has as a variable, let's say `initial_toys`.
+    2. Initialize `initial_toys` to 5, since Shawn initially has 5 toys.
+    3. Create two variables, `toys_from_mom` and `toys_from_dad`, to represent the number of toys Shawn received from his mom and dad respectively.
+    4. Assign 2 to both `toys_from_mom` and `toys_from_dad`, since Shawn got 2 toys from each parent.
+    5. Create a new variable `total_toys` and assign it the sum of `initial_toys`, `toys_from_mom`, and `toys_from_dad`.
+    6. Return the value of `total_toys`.
     <br/>
   - |
-    1. Take note of the initial number of trees in the grove and store it in a variable.
-    2. Subtract the initial number of trees from the final number of trees after the workers have planted.
-    3. Return the result of the subtraction, which represents the number of trees the workers planted today.
+    1. Determine the unknown quantity in the problem: We need to find out how many lollipops Jason gave to Denny.
+    2. Let's represent the unknown quantity with a variable, like `x`.
+    3. Current number of lollipops summed with x need to be the same as initial number of lollipops Jason had.
+    4. That is, `initial_lollipops` - `x` = `current_lollipops`
+    5. Rearranging the equation above will return the value of `x`, the number of lollipops given to Denny.
     <br/>
   - |
-    1. Create a variable to keep track of the sum, initialized to 0.
-    2. Loop through all the natural numbers below 1000.
-    3. Check if the number is a multiple of 3 or 5.
-    4. If it is, add the number to the sum variable.
-    5. Repeat steps 3 and 4 for all the natural numbers.
-    6. After the loop ends, return the sum. 
+    1. Start by defining the initial number of chocolates Leah and her sister have.
+    2. Assign Leah's initial number of chocolates to a variable.
+    3. Assign her sisters's initial number of chocolates to a variable.
+    4. Calculate the total number of chocolates they have together.
+    5. Subtract the number of chocolates they ate from the total.
+    6. Return the total number of chocolates they have left.
     <br/>
-
+  - |
+    1. Start by initializing a variable `num_cars` with the initial number of cars in the parking lot.
+    2. Assign the value of 3 to `num_cars` since there are initially 3 cars in the parking lot.
+    3. Initialize another variable `new_cars` with the number of cars that arrive.
+    4. Assign the value of 2 to `new_cars` since 2 more cars arrive.
+    5. Add the value of `new_cars` to `num_cars` to get the total number of cars in the parking lot.
+    6. Return `num_cars`.
+    <br/>
+  - |
+    1. Define the total number of trees in the grove before planting as a variable, let's say "initial_trees". Set "initial_trees" equal to 15.
+    2. Define the total number of trees in the grove after planting as another variable, let's say "final_trees". Set "final_trees" equal to 21.
+    3. Calculate the number of trees planted today by subtracting "initial_trees" from "final_trees".
+    4. Store the result in a variable, let's say "trees_planted_today".
+    5. Return the value of "trees_planted_today" as an answer.
+    <br/>
