@@ -8,7 +8,7 @@ cd ${EXEHOME}
 
 python selection_math.py --start 0 \
         --end -1 \
-        --dataset 'gsm8k' \
+        --dataset 'dbg' \
         --backbone 'chatgpt' \
         --cot_temperature 0. \
         --pal_temperature 0. \

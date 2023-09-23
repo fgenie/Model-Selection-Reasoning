@@ -5,16 +5,10 @@ import time
 from datetime import datetime
 import argparse
 from tqdm import tqdm
-# from typing import Union
 from prompts import math_prompt
-from prompts.plancode_util import *
+from prompts.plancode_util_v2 import *
 from collections import OrderedDict, Counter
 from tool import *
-# from tenacity import (
-#     retry,
-#     wait_chain,
-#     wait_fixed
-# ) 
 import yaml
 from pprint import pprint
 
@@ -178,8 +172,8 @@ def query_cot(data: dict, key: str, cot_temperature: float, backbone: str):
 
 
 # @retry(wait=wait_chain(*[wait_fixed(3) for i in range(2)])) 
-def _query(key, model_name='gpt-3.5-turbo', max_tokens=2048, stop='</end>', messages=None, temperature=0., top_p=1.0, n=1, mode='plan', docstring_def:str='', k_fewshot:int=0): # mode = plan or code
-    # print("_query")
+# def _query(key, model_name='gpt-3.5-turbo', max_tokens=2048, stop='</end>', messages=None, temperature=0., top_p=1.0, n=1, mode='plan', docstring_def:str='', k_fewshot:int=0): # mode = plan or code
+def _query(key, model_name='gpt-3.5-turbo', max_tokens=2048, stop='</end>', messages=None, temperature=0., top_p=1.0, n=1, mode='plan', k_fewshot:int=0): # mode = plan or code
     resp = openai.ChatCompletion.create(api_key=key,
                                 model=model_name,
                                 max_tokens=max_tokens,
@@ -188,24 +182,13 @@ def _query(key, model_name='gpt-3.5-turbo', max_tokens=2048, stop='</end>', mess
                                 temperature=temperature,
                                 top_p=top_p,
                                 n=n)
-    # print('apicall reached')
     content = resp['choices'][0]['message']['content'] # str
     if mode == 'plan':
         plan = postprocess_plan(content) # it will complain when failing
-        # if not plan: 
-        #     print('retrying plangen')
-        #     raise ValueError
         return plan
     elif mode == 'code':
-        if len(docstring_def.strip().split('\n')) > 1:
-            code = postprocess_code_answer(content, docdef=docstring_def, k_fewshot=k_fewshot)
-            # if not code: 
-            #     print('retrying codegen')
-            #     raise ValueError
-            return code
-        else:
-            return ''
-
+        code = postprocess_code(content)
+        return code 
 
 def query_plancode(data: dict, key: str='', plan_temperature: float=.0, code_temperature: float=.0, backbone: str='gpt-3.5-turbo', k_fewshot:int=0):
     '''
@@ -226,28 +209,24 @@ def query_plancode(data: dict, key: str='', plan_temperature: float=.0, code_tem
 
     # generate plan (retry included)
     plan_query_msg = get_plan_prompt(data, k_fewshot=k_fewshot)
-    # kvprint(plan_query_msg)
-    # print(f"{k_fewshot=}")
-    plan = _query(key, model_name=model_name, max_tokens=1024, stop='</end>', messages=plan_query_msg, temperature=plan_temperature, top_p=1.0, n=1, mode='plan')
+    # kvprint(plan_query_msg) # checked ok
+    plan = _query(key, model_name=model_name, max_tokens=1024, stop='Question: ', messages=plan_query_msg, temperature=plan_temperature, top_p=1.0, n=1, mode='plan')
     # print(f"{plan=}")
 
     if plan:
         # generate code
+        # kvprint(code_query_msg) # done
+        # print(f"{k_fewshot=}") # done 
         code_query_msg = get_plan2code_prompt(data, plan=plan, k_fewshot=k_fewshot)
-        # kvprint(code_query_msg)
-        # print(f"{k_fewshot=}")
-        indent = " "*4
-        docdef = f'def solution():\n{indent}"""{add_indents2plan(plan)}"""'
-        code = _query(key, model_name=model_name, max_tokens=1024, stop='# </end>', messages=code_query_msg, temperature=code_temperature, top_p=1.0, n=1, mode='code', docstring_def=docdef)
+        code = _query(key, model_name=model_name, max_tokens=1024, stop='Question: ', messages=code_query_msg, temperature=code_temperature, top_p=1.0, n=1, mode='code')#, docstring_def=docdef)
         # print(f"{code=}")
         # wrapup
-        completions = [code]
         if not code:
-            return None
+            return [None], [plan]
         else: 
-            return completions
+            return [code], [plan]
     else:
-        return None 
+        return None, None 
 
 
 def query_pal(data: dict, key: str, pal_temperature: float, backbone: str):
@@ -390,7 +369,7 @@ def query_math(
                 cot_answers.append(cot_ans)
                 cot_solutions.append(cot_solution[0])
             if use_plancode:
-                pal_solution = query_plancode(data, key=key, plan_temperature=plan_temperature, code_temperature=code_temperature, backbone=backbone, k_fewshot=k_fewshot)
+                pal_solution, plans = query_plancode(data, key=key, plan_temperature=plan_temperature, code_temperature=code_temperature, backbone=backbone, k_fewshot=k_fewshot)
             else:
                 pal_solution = query_pal(
                     data, key, pal_temperature, backbone=backbone)
@@ -455,12 +434,12 @@ def query_math(
                     final_ans = pal_ans 
 
             elif ablation == 'plancode':
-                pal_solution = query_plancode(data, key=key, 
+                pal_solution, plans = query_plancode(data, key=key, 
                                               plan_temperature=plan_temperature, 
                                               code_temperature=code_temperature, 
                                               backbone=backbone, 
                                               k_fewshot=k_fewshot)
-                if pal_solution is None:
+                if pal_solution is None or pal_solution == [None]:
                     print('Time out')
                     return None
                 else:
@@ -481,6 +460,8 @@ def query_math(
          'cot_executed': cot_answers, 'pal_executed': pal_answers,
          'cot_generated': cot_solutions, 'pal_generated': pal_solutions, 'choice_solution': selection_solutions}
     )
+    if ablation == 'plancode':
+        to_dump_data['plan'] = plans
 
     return to_dump_data
 
@@ -517,7 +498,7 @@ if __name__ == '__main__':
     parser.add_argument('--use_plancode', action='store_true')
     parser.add_argument('--plan_temperature', type=float, default=0.)
     parser.add_argument('--code_temperature', type=float, default=0.)
-    parser.add_argument('--k_fewshot', type=int, default=6) #  >= 0
+    parser.add_argument('--k_fewshot', type=int, default=8) #  >= 0
     # ablative options
     parser.add_argument('--ablation', type=str, default='', choices=['cot', 'plancode', 'pal'], 
                         help='for ablation study: use only one method to reason on gsm8k')

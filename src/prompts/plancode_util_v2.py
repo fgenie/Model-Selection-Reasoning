@@ -1,7 +1,7 @@
 import yaml 
 from typing import Sequence, Mapping, Any, Union, Callable
-PLAN_F = 'prompts_plan_v2.yaml'
-CODE_F = 'prompts_code_v2.yaml'
+PLAN_F = '/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prompts_plan_v2.yaml'
+CODE_F = '/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prompts_code_v2.yaml'
 import openai
 KEY = open('/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/openai_key.txt').read().strip()
 PLAN_PROMPTS_D= yaml.full_load(open(PLAN_F))
@@ -64,7 +64,8 @@ def get_plan2code_prompt(data:dict, plan:str='', k_fewshot:int=0, custom_idxs:li
 
 
 def postprocess_plan(rawanswer:str):
-    lines = [l for l in rawanswer.split('\n') if '</end>' not in l]
+    # lines = [l for l in rawanswer.split('\n') if '</end>' not in l]
+    lines = rawanswer.split('\n')
     if len(lines)>=1:
         plan_ = "\n".join(lines)
     else:
@@ -73,24 +74,27 @@ def postprocess_plan(rawanswer:str):
         plan_ = ''
     return plan_
 
-def postprocess_code_answer(rawanswer:str, docdef:str='', k_fewshot:int=0):
+# def postprocess_code_answer(rawanswer:str, docdef:str='', k_fewshot:int=0):
+def postprocess_code(rawanswer:str, k_fewshot:int=0):
     try:
-        # removing starting wrap ```
+        # 1 removing starting wrap ```
         if "```python" in rawanswer:
             code = rawanswer.split("```python")[-1]
         elif rawanswer.startswith('```'):
             rawanswer = rawanswer.split('```')[-1]
-        # removing ``` at the end
+        
+        # 2 removing ``` at the end
         code = rawanswer.split("```")[0] #ending ``` removal
-        # remove possible starting repetition # solution in Python:\n\n\n
-        code = code.replace('# solution in Python:\n\n\n', '')
-        if k_fewshot>0: # just use output do not modif
-            if code.startswith('def solution():'):
-                pass
-            else:
-                code = docdef + '\n' + (code if code.startswith('\t') else f"\t{code}")
+        
+        # in v1, I tried force decode in prompt which caused so many errors, I will not do it here.
+        # if k_fewshot>0: # just use output do not modif
+        #     if code.startswith('def solution():'):
+        #         pass
+        #     else:
+        #         code = docdef + '\n' + (code if code.startswith('\t') else f"\t{code}")
         code = remove_prints(code)
-        exec(code) # check if it is executable
+        assert code
+        # exec(code) # check if it is executable # this is done in tool.py:safe_execute_turbo
     except: 
         print('code gen fails (unexecutable or funcname?)')
         print(f"code:\n{rawanswer}")
