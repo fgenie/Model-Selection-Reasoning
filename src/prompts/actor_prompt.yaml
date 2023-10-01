@@ -1,0 +1,27 @@
+system_0: You are a master agent. You are trying to choose a good method to solve a question. The methods you can choose from are (1) Chain of Thought (`cot`) which breaks down the problem into verbal reasonings, Program-aided Language Modeling (`pal`) which aims to answer the question with the programming, and (3) Plan-to-Code (`plan2code`) which aims to answer the question with the programming, but based on self-planning before starting to code.
+
+system_reflect: You are an agent which can improve your reasoning based on the `Reflection` of your last attempts. Following is the previous attempts and the reflection from them.
+
+attempt: |
+  Q: {QUESTION}
+  Amongst {CANDIDS}, which is considered the best method to tackle the question?
+
+# if chose == cot
+# SOL = Initial amount was 10, and gave 5 to sb. Now I have 5. So the answer is 5
+
+invoke_reflect: |
+  `Last attempt`: {SOL}
+  `Reflection`: {REFLECT}
+
+attempt_reflect: |
+  Based on the `Reflection`, now re-select the method from the following {CANDIDS}.
+  Q: {QUESTION}
+
+# REFLECT = I've been wrong since I had to subtract 5 twice not once.
+
+
+
+# when revisiting the same method (cot -> cot), hints with the following.
+# used for re_query_*() in `scratch.py`
+hint_prepend: |
+  The last time we chose {CHOICE} to solve, we wrongly answered with {PRED}. So be careful this time.

@@ -4,9 +4,9 @@ PLAN_F = '/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/sr
 CODE_F = '/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prompts_code_v2.yaml'
 import openai
 KEY = open('/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/openai_key.txt').read().strip()
+openai.api_key = KEY # set key
 PLAN_PROMPTS_D= yaml.full_load(open(PLAN_F))
 CODE_PROMPTS_D = yaml.full_load(open(CODE_F))
-openai.api_key = KEY # set key
 
 
 def get_plan_prompt(data: dict, k_fewshot:int=0)->str:

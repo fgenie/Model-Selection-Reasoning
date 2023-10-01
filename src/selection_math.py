@@ -369,12 +369,16 @@ def query_math_rl(
         iscorrect, judgement_raw = query_verification(data:dict, key:str, sol, majority_ans, howtoverify=howtoverify)
 
 
-        sample_history.append({'sampled':sampled, 'prompt_user':prompt_user, 'solution_now': sol, 'answer':majority_ans, 'verification_result': (judgement, judgement_raw)})
+    sample_history.append({'sampled':sampled, 'prompt_user':prompt_user, 'solution_now': sol, 'answer':majority_ans, 'verification_result': (judgement, judgement_raw)})
         answers_history.append(majority_ans)
         if iscorrect:
             break # break the cycle if the answer is correct.
-        if not models_to_sample:
+        elif not models_to_sample:
             break
+        else:
+            hint = hint_from_sol(sol)
+            
+        
 
     # === dump data ===
     to_dump_data = OrderedDict(
@@ -600,11 +604,17 @@ if __name__ == '__main__':
         4. repeat `2` and `3` until the answer is correct or the number of cycle exceeds `n_cycle`
     '''
     parser.add_argument('--rl', action='store_true', help='this flag will run rl-agent style experiment.')
-    parser.add_argument('--n_cycle', type=int, default=3, help='maximum trial of an agent.') 
-    parser.add_argument('--n_retry_per_method', type=int, default=1, help='number of available retry per method. default: cot*1, pal*1, plancode*1')
-    parser.add_argument('--howtosample', type=str, default='random', help='how to pick a method for action', choices = ['random', 'llm'])
+    parser.add_argument('--n_reflect', type=int, default=1, help='maximum retrial of a llm per a method.') 
+    # parser.add_argument('--n_retry_per_method', type=int, default=1, help='number of available retry per method. default: cot*1, pal*1, plancode*1')
+    parser.add_argument('--ablation_howtosample', type=str, default='random', help='What if we sample method exhaustively?', choices = ['random', 'llm'])
     parser.add_argument('--howtoverify', type=str, default='llm', help='how would you like your verification be done?', choices = ['oracle', 'llm'])
-    # NOTE: min(n_retry_per_method*3, n_cycle) will be the number of trials for each question.
+    #     parser.add_argument('--first_reasoning_how', type=str, default='random', help='How to take first action?', choices = ['random', 'llm'])
+    
+    # Training
+    # Until succeeding on 5-shots, repeat: sample fewshots for model selection with the help of ground-truth labels: min(n_reflect, n_retry_per_method * 3)
+    # with the fewshots above, select model and solve a problem.
+
+
 
     args = parser.parse_args()
 
@@ -660,8 +670,6 @@ if __name__ == '__main__':
         print('Current total tasks: ', task_num)
 
         unfinished_tasks = []
-
-        
 
         
 
