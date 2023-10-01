@@ -1,7 +1,7 @@
 import yaml
 ACTOR_PROMPTS = yaml.full_load('actor_prompt.yaml')
 
-def trial_n_error_method_sampling(
+def kshot_harvesting(
     data:Dict[str, Any],
     n_reflect:int = 1, # args.n_reflect --> per method, how many times to reflect?
     first_reasoning_how:'random', #'llm' args.first_reasoning_how
