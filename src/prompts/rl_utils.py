@@ -11,24 +11,50 @@ def completion_with_backoff(**kwargs):
     return openai.ChatCompletion.create(**kwargs)
 
 def sample_a_model(
+            question:str='',
             models_to_sample:Sequence[str], 
             howtosample:str='random',
-            **kwargs):
+            **kwargs)->Dict[str, Union[str, Sequence[str]]]]:
+    '''
+    From `models_to_sample`, sample a `model(sampled)` to tackle a `question`
+
+    !!!system_msg need to clarify the agent is trying to choose a good method to solve the question.!!!
+    '''
+    assert question.strip(), f"question need to be given."
+
     if howtosample == 'random':
         sampled = random.choice(models_to_sample)
+        verbal_response = f"Q: {question}\nRandomly choose a method from: {list(set(models_to_sample))}.\nChoice: {sampled}"
     elif howtosample == 'llm':
         if backbone == 'chatgpt':
             model_name = 'gpt-3.5-turbo'
         elif backbone == 'gpt-4':
             model_name = backbone
         
-        sampled, resp_raw = query_modelsample(data, key=key, models_to_sample)
+        _pref = f"Q: {question}\nFrom {list(set(models_to_sample))}, which is most likely to be the best method to tackle the problem?"
+        _verbal_response = query_modelsample(data, key=key, models_to_sample)
+        sampled = parse_choice(verbal_response)
+        if sampled not in models_to_sample:
+            print(f'sampling failed:\n{_verbal_response}')
+            sampled = random.choice(models_to_sample)
+            _verbal_response = f"{_verbal_response}\n\n\nSampling failed. Randomly choose a method from: {list(set(models_to_sample))}.\nChoice: {sampled}"
     models_to_sample.remove(sampled)
-    return model_name, models_to_sample
+    return {
+        'sampled':sampled,
+        'verbal_response':verbal_response,
+        'models_to_sample':models_to_sample,
+    }
+
+def parse_choice(verbal_response:str)->str:
+    lines = verbal_response.split('\n')
+    for l in lines:
+        if l.startswith('Choice: '):
+            gist = l
+            break
+    return l.split('Choice: ')[-1]
 
 
 def query_modelsample()->Tuple[str, str]:
-
     msgs = get_modelsample_prompt(data, models_to_sample)
     advice = completion_with_backoff(
             api_key=key,
@@ -47,37 +73,3 @@ def get_model_sample_prompt(data:Dict, models_to_sample:Sequence[str])->str:
     raise NotImplementedError('rl_utils.py::get_model_sample_prompt'')
     return 
 
-def parse_model_name(advice:str)->str:
-    lines = advice.split('\n')
-    for l in lines:
-        if l.startswith('Method: '):
-            gist = l
-            break
-    return l.split('Model: ')[-1]
-
-def query_verification(data:dict, 
-                       key:str, 
-                       sol:str='', 
-                       majority_ans:Union[str, int]=None, 
-                       howtoverify:str='') -> Tuple[bool, str]:
-    if howtoverify == 'llm'
-        '''args=
-        https://arxiv.org/abs/2309.11495
-        '''
-        raise NotImplementedError()
-    elif howtoverify == 'oracle':
-        iscorrect = majority_ans == data['ans']
-        judgement_raw = f'ORACLE VERIF: {majority_ans}({type(majority_ans)})=={data["ans"]}({type(data["ans"])})'
-    return iscorrect, judgement_raw
-
-def augment_user_msg_with_hint(msgs:Sequence[Dict[str,str]], wrong_answer:Sequence[Union[int,str]])->Dict:
-    '''
-    This function augments the user_msg with a hint to avoid the same wrong answer to be queried again. (progressive hint prompting improves reasoning (https://arxiv.org/abs/2304.09797))
-
-    msgs: actual msgs for apicall
-    wrong_answer: list of `parsed(!)` wrong answers 
-    '''
-    user_msg = msgs[-1]
-    user_msg['content'] = f"{user_msg['content']} (Avoid wrong answers: [{', '.join(wrong_answer)}])"
-    msgs[-1] = user_msg
-    return msgs
