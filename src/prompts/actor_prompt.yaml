@@ -31,9 +31,36 @@ hint_prepend: |
 
 
 
+*For *now: 
+- make a chain of prompts that harvests reflexion examples
+- make a chain of prompts that invokes decision based on fewshots and reflections.
 
-hotpotqa reflexion exploration
+For later: 
+- augment the harvesting prompt so that it invoke reflection-based retry during the inference. (need to add approximate judgement of the correctness of the answer.)
 
+
+Exploring: hotpotqa/reflexion 
+
+#1. react_reflect_agent prompt: actual actor prompt for reflexion.
+REACT_REFLECT_INSTRUCTION = """Solve a question answering task with interleaving Thought, Action, Observation steps. Thought can reason about the current situation, and Action can be three types: 
+(1) Search[entity], which searches the exact entity on Wikipedia and returns the first paragraph if it exists. If not, it will return some similar entities to search.
+(2) Lookup[keyword], which returns the next sentence containing keyword in the last passage successfully found by Search.
+(3) Finish[answer], which returns the answer and finishes the task.
+You may take as many steps as necessary.
+Here are some examples:
+{examples}
+(END OF EXAMPLES)
+
+{reflections}
+
+Question: {question}{scratchpad}"""
+
+
+
+
+
+
+#2. reflect prompt: make reflections for above
 from 
 https://github.com/noahshinn024/reflexion
 
@@ -116,4 +143,10 @@ Action 3: Finish[unable to find answer]
 Observation 3: Answer is INCORRECT
 
 Reflection:
+
+
+
+
+
+
 

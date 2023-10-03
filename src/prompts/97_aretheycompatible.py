@@ -55,4 +55,3 @@ len(pal_wrongs.intersection(p2c_wrongs).intersection(cot_wrongs))=119
 
 
 '''
-
