@@ -7,7 +7,7 @@
 `reflexion-kshot-harvesting` somehow. Ours does not do reflection during inference but it would somehow improve its performance. Look at the [OPRO](https://arxiv.org/abs/2309.03409) case... **hopefully** it will learn sth.
 
 ## now
-- To make use of *k-shot harvested reflections trajectory* for our agent during inference, **[CoH](https://arxiv.org/abs/2302.02676)** style prompting (kind of conditional language modeling) will help. (see `actor_model_select_prompt.yaml`)
+- Our method **does not reflect during the inference**. To make use of *k-shot harvested reflections trajectory* for our agent during inference, **[CoH](https://arxiv.org/abs/2302.02676)** style prompting (kind of conditional language modeling) will help. (see `actor_model_select_prompt.yaml`)
 - This experiments is getting sophisticated... modularly add progressive hint prompting **after implementing model-switching reflexion agent**
 - or we need evaluation guess prompt and loops on inference (*rejected but could be an alternative*) 
 
@@ -15,9 +15,9 @@
 ----
 # TODO for the exp.
 - [x] code utils for trainset prep
-- [ ] `scratch.py`: pseudo code for main loop implements `k-shot harvesting`... contains both concepts of `model-switching` and `retrying`  
-- [ ] implement `reflexion_kshot_harvesting` -- constructing an agent with the prompts.
-    - [x] explore the details of Reflexion prompting: `scribbles on actor_prompt.yaml`
+- [ ] implement `reflexion_kshot_harvesting` (`scratch.py`)  -- constructing an agent with the prompts.
+    - `scratch.py`: (currently outdated, presented in the last meeting): pseudo code for `k-shot harvesting`, containing both concepts of `model-switching` and `retrying` at the same time.  
+    - [x] explore the details of Reflexion prompting (code): `scribbles on actor_prompt.yaml`
     - [x] imitate the reflexion prompt to configure gsm-harvesting prompt (+CoH prompt)
         - [x] `verbose`
         - [ ] `concise` 
