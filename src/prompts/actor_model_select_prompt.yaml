@@ -1,7 +1,7 @@
 # The missing link of mine was CoH-style prompting which is originally introduced for fine-tuning. 
 # Reflexion style harvesting could be a good way, but in the way we inference on the test split, it cannot do the same as it did on k-shot-harvesting (!!!WE CANNOT EVALUATE DURING THE EXECUTION!!!). So I needed another bridge to make use of reflexion examples for our case.
-# OPRO does not guarantees optimality, but if my prompt works, it works because it learnt to implicitly think from the precedings w/o explicit reasoning path!
-# If the following fails, It could be better to prompt the ground-truth-free evaluation. But if it works, it depends on the same reason I'm suggesting so far.
+# If my (CoH-styled) prompt works, it works because llm can fewshot-learn to conditional language modeling (or I can also say, llm fewshot-learnt to implicitly think from the precedings w/o explicit reasoning path like OPRO)
+# If the following fails, It could be better to prompt the reference(GT)-free evaluation. But if it works, it depends on the similar reason I'm suggesting so far.
 
 
 react_reflect_instruction: |
