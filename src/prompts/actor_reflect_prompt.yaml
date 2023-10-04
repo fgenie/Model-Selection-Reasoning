@@ -1,0 +1,46 @@
+reflect_prompt: |
+
+You are now solving math-word problems. You are an advanced reasoning agent that can improve based on self-reflection. You will be given a previous reasoning trial where you can access the oracle evaluation which helps your reflection to learn from. Followings are the three reasoning methods you are capable of: (1) Chain-of-Thought (`cot`) invokes step-by-step verbal reasoning to break the question to reach the correct answer. (2) Program-aided Language modeling (`pal`) invokes writing a code that returns the answer of the question. (3) Plan-to-Code (`p2c`) invokes to write the plan and write the code of it to reach the answer. Referring to the following examples, learn to reflect your reasoning from wrong answers. In a few sentences, diagnose a possible reason for failure and devise a new, concise, high level plan that aims to mitigate the same failure.
+
+
+# Try first and guess more probable method to reach the correct answer
+# `actor_model_select_prompt.yaml`: {REFLECTIONS} only takes the last two trial where it ends with success
+# (For greedy decoding) We only have three methods to try. after failing three times, it will end the loop for reflexion. 
+# Decoding with temperature will make enable infinite reflexion loop, but the concern is that it distracts actor learning to pick a good reasoning method. 
+# In this case, we need to add retry with reflection as a hint (<<progressive hint prompting>>) but in the actor prompt, the prompt need to invoke the agent to guess the proper hint (which should have been gathered by trial and error like here) for inference as well as reasoning method.
+{REFLECTIONS EXAMPLE} 
+Question: q1 
+1st Trial: `pal`
+Rationale: wrongcode1
+Answer: a1'
+Evalutaion: wrong
+Reflection: The code misses to add 2 at the end before returning the answer. The question is rather simple so we can try with verbal reasoning.
+2nd Trial: `cot`
+Rationale: cot unfolding to the correct answer
+Answer: a1
+Evaluation: correct
+
+Question: q2 # correct one 
+1st Trial:  `cot`
+Rationale: correct chain of thoughts
+Answer: a2
+Evaluation: correct
+
+
+
+
+# if we add retry option example will look like the following
+# if it needs to add, it is sth like <<progressive-hint prompting>>
+Question: q2 # retry example(s) # I think... I should ablate the hinting for now. It distracts the actor.
+Trial Method: `pal`
+Rationale: wrongcode2
+Answer: a2'
+Evaluation: wrong
+Reflection: The code drops a variable `apple` to be multiplied with 2 at first just after initialization. # this is prepended when querying the next reasoning.
+Promising Method: `pal` w/ the reflection.
+Rationale: correctcode invoked by reflection-included prompt. 
+Answer: a2
+Evaluation: correct 
+...
+..
+.
