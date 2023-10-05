@@ -8,37 +8,48 @@ You are now solving math-word problems. You are an advanced reasoning agent that
 # (For greedy decoding) We only have three methods to try. after failing three times, it will end the loop for reflexion. 
 # Decoding with temperature will make enable infinite reflexion loop, but the concern is that it distracts actor learning to pick a good reasoning method. 
 # In this case, we need to add retry with reflection as a hint (<<progressive hint prompting>>) but in the actor prompt, the prompt need to invoke the agent to guess the proper hint (which should have been gathered by trial and error like here) for inference as well as reasoning method.
-{REFLECTIONS EXAMPLE} 
+{REFLECTIONS EXAMPLE} # will look like below.
 Question: q1 
 1st Trial: `pal`
-Rationale: wrongcode1
+Walk Through: wrongcode1
 Answer: a1'
 Evalutaion: wrong
-Reflection: The code misses to add 2 at the end before returning the answer. The question is rather simple so we can try with verbal reasoning.
+Reflection: The code misses to add 2 at the end before returning the answer. 
+  HINT: The question is rather simple so we can try with verbal reasoning.
 2nd Trial: `cot`
-Rationale: cot unfolding to the correct answer
+Walk Through: cot unfolding to the correct answer
 Answer: a1
-Evaluation: correct
+Evaluation: correct # q1 example ends here. double \n
 
 Question: q2 # correct one 
 1st Trial:  `cot`
-Rationale: correct chain of thoughts
+Walk Through: correct chain of thoughts
 Answer: a2
-Evaluation: correct
+Evaluation: correct # q2 example ends.
+
+{QUESTION OF INTEREST}
+Question: QOI
+1st Trial: # generate or randomly sample from three
+
+
+## stop  = "correct"
+
+prompt ends here --- )
 
 
 
-
+# 아래는 같은 모델(메서드)를 선택하도록 시킬 때의 예시이다.
 # if we add retry option example will look like the following
 # if it needs to add, it is sth like <<progressive-hint prompting>>
 Question: q2 # retry example(s) # I think... I should ablate the hinting for now. It distracts the actor.
 Trial Method: `pal`
-Rationale: wrongcode2
+Walk Through: wrongcode2
 Answer: a2'
 Evaluation: wrong
 Reflection: The code drops a variable `apple` to be multiplied with 2 at first just after initialization. # this is prepended when querying the next reasoning.
-Promising Method: `pal` w/ the reflection.
-Rationale: correctcode invoked by reflection-included prompt. 
+  HINT: be careful when initializing the variables.
+Promising Method: `pal` w/ HINT
+Walk Through: correctcode invoked by reflection-included prompt. 
 Answer: a2
 Evaluation: correct 
 ...

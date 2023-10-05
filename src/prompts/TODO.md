@@ -11,6 +11,10 @@
 - This experiments is getting sophisticated... modularly add progressive hint prompting **after implementing model-switching reflexion agent**
 - or we need evaluation guess prompt and loops on inference (*rejected but could be an alternative*) 
 
+## algorithm sketch
+1. `actor_reflect_prompt.yaml` will be used for k-shot reflection harvesting. harvest reflections and hint throughout the k questions in the train split of gsm8k. If available, reflect until the question gets correct or it gets fails on three method, give it up (or retry with progressive hint prompting: `re_query_*()` or it will distract the actor learning relation between question and the model to be sampled) (`actor_reflect_prompt.yaml`)
+2. Use the output of `1.`, inference through the test split. No reflection, no loop. Sample a method for reasoning with CoH style-prompting and go on to solve the question with the sampled method. (`actor_model_select_prompt.yaml`)
+
 
 ----
 # TODO for the exp.
