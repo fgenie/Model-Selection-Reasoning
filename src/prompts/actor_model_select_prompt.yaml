@@ -9,7 +9,7 @@ react_reflect_instruction: |
 Choose the most likely reasoning method for answering math-word questions. Followings are the three methods available: (1) Chain-of-Thought (`cot`) invokes step-by-step verbal reasoning to break the question to reach the correct answer. (2) Program-aided Language modeling (`pal`) invokes writing a code that returns the answer of the question. (3) Plan-to-Code (`p2c`) invokes to write the plan and write the code of it to reach the answer. Referring to the followings, learn to guess which method would be promising given the question.
 
 # Try first and guess more probable method to reach the correct answer
-{REFLECTIONS} -- resulted by actor_reflect_prompt
+{REFLECTIONS EXAMPLES} # --generated from actor_reflect_prompt.yaml --> pasted to here.
 Question: q1 # method-changing example(s)
 Trial Method: `pal`
 Rationale: wrongcode1
@@ -22,23 +22,6 @@ Rationale: cot unfolding to the correct answer
 Answer: a1
 Evaluation: correct
 
-  # retrying is optional for now
-  # if it needs to add, it is sth like <<progressive-hint prompting>>
-  Question: q2 # retry example(s) # I think... I should ablate the hinting for now. It distracts the actor.
-  Trial Method: `pal`
-  Rationale: wrongcode2
-  Answer: a2'
-  Evaluation: wrong
-  Reflection: The code drops a variable `apple` to be multiplied with 2 at first just after initialization. # this is prepended when querying the next reasoning.
-    HINT: Be careful when initializing the variables
-  Promising Method: `pal` w/ the reflection.
-  Rationale: correctcode invoked by reflection-included prompt. 
-  Answer: a2
-  Evaluation: correct 
-  ...
-  ..
-  .
-
 
 # Experiment with and w/o the following prompt 
 Now given Question, start guessing the most Promising Method to answer. 
@@ -48,12 +31,12 @@ Now given Question, start guessing the most Promising Method to answer.
   # or should these be included above?
   {ACTION FEWSHOTS} -- need to prepare from the testset examples gathered (or try on trainset and exclude them.)
   Question: q1
-  HINT: asdasd
+    HINT: asdasd
   Promising Method: `cot`
   Evaluation: correct
 
   Question: q2
-  HINT: asdasd
+    HINT: asdasd
   Promising Method: `pal`
   Evaluation: correct
   ...
@@ -61,6 +44,29 @@ Now given Question, start guessing the most Promising Method to answer.
   .
 
 Question: {QUESTION OF INTEREST}
-  HINT: #
-Promising Method: 
+  HINT: # this part is optional. If we used HINT above, querying HINT from the Question and then querying Promising Method might help. 
+Promising Method: # If we decided to use HINT: above, this is not given to the actor. It is generated subsequently after HINT generation's done.  
 
+prompt ends here --- # stop = "Evaluation:"
+
+
+
+
+
+
+  # retrying is optional for now
+  # if it needs to add, it is sth like <<progressive-hint prompting>>
+  Question: q2 # retry example(s) # I think... I should ablate the hinting for now. It distracts the actor.
+  Trial Method: `pal`
+  Rationale: wrongcode2
+  Answer: a2'
+  Evaluation: wrong
+  Reflection: The code drops a variable `apple` to be multiplied with 2 at first just after initialization. 
+    HINT: Be careful when initializing the variables. # this is prepended when querying the next reasoning.
+  Promising Method: `pal` w/ the reflection.
+  Rationale: correctcode invoked by reflection-included prompt. 
+  Answer: a2
+  Evaluation: correct 
+  ...
+  ..
+  .
