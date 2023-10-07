@@ -9,16 +9,16 @@ react_reflect_instruction: |
 Choose the most likely reasoning method for answering math-word questions. Followings are the three methods available: (1) Chain-of-Thought (`cot`) invokes step-by-step verbal reasoning to break the question to reach the correct answer. (2) Program-aided Language modeling (`pal`) invokes writing a code that returns the answer of the question. (3) Plan-to-Code (`p2c`) invokes to write the plan and write the code of it to reach the answer. Referring to the followings, learn to guess which method would be promising given the question.
 
 # Try first and guess more probable method to reach the correct answer
-{REFLECTIONS EXAMPLES} # --generated from actor_reflect_prompt.yaml --> pasted to here.
+{REFLECTIONS EXAMPLES} # --generated from actor_reflect_prompt.yaml.
 Question: q1 # method-changing example(s)
 Trial Method: `pal`
-Rationale: wrongcode1
+Walk Through: wrongcode1
 Answer: a1'
 Evalutaion: wrong
 Reflection: The code misses to add 2 at the end before returning the answer. 
   HINT: The question is rather simple so we can try with verbal reasoning. # added when retry is considered
 Promising Method: `cot`
-Rationale: cot unfolding to the correct answer
+Walk Through: cot unfolding to the correct answer
 Answer: a1
 Evaluation: correct
 
@@ -58,13 +58,13 @@ prompt ends here --- # stop = "Evaluation:"
   # if it needs to add, it is sth like <<progressive-hint prompting>>
   Question: q2 # retry example(s) # I think... I should ablate the hinting for now. It distracts the actor.
   Trial Method: `pal`
-  Rationale: wrongcode2
+  Walk Through: wrongcode2
   Answer: a2'
   Evaluation: wrong
   Reflection: The code drops a variable `apple` to be multiplied with 2 at first just after initialization. 
     HINT: Be careful when initializing the variables. # this is prepended when querying the next reasoning.
   Promising Method: `pal` w/ the reflection.
-  Rationale: correctcode invoked by reflection-included prompt. 
+  Walk Through: correctcode invoked by reflection-included prompt. 
   Answer: a2
   Evaluation: correct 
   ...
