@@ -104,7 +104,7 @@ def fill_selection(reflection_exs:str='',
 def main():
     
     models = ['cot', 'pal', 'p2c']
-
+    datarows = []
     for idx in range(3): # try three compositions from the examples
         for (wm, cm) in product(models, models):
             if wm == cm:
@@ -112,8 +112,8 @@ def main():
             sheetname = f"{wm}_wrong_{cm}_correct"
             df = fs_pool_dict[sheetname]
             row = df.iloc[idx]
+            datarows.append(row)
             
-            fs = {}
         
         
     
