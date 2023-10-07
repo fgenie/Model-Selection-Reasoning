@@ -1,0 +1,38 @@
+# r'\[/w+\]' are placeholders.
+# [ACTION_EXS] is optional but looks helpful for output controllability.
+prompt_template: |
+  Choose the most likely reasoning method for answering math-word questions. Followings are the three methods available: (1) Chain-of-Thought (`cot`) invokes step-by-step verbal reasoning to break the question to reach the correct answer. (2) Program-aided Language modeling (`pal`) invokes writing a code that returns the answer of the question. (3) Plan-to-Code (`p2c`) invokes to write the plan and write the code of it to reach the answer. Referring to the followings, learn to guess which method would be promising given the question. 
+
+  Previous attempts and reflections:
+
+  [REFLECTION_EXS]
+
+  Now, given the question, start guessing the most `Promising Method` to correctly answer after writing probable `Hint:` based on your learnings. 
+
+  [ACTION_EXS]
+
+  Question: [QUESTION]
+  Hint: 
+  
+
+reflection_exs: |
+  Question: [QUESTION]
+  Trial Method: [WRONG_MODEL]
+  Solution Steps: [WRONG_SOL]
+  Answer: [WRONG_PRED]
+  Evalutaion: Wrong
+  Reflection: [REFLECTION]
+  Hint: [HINT]
+  Promising Method: [CORRECT_MODEL]
+  Solution Steps: [CORRECT_SOL]
+  Answer: [CORRECT_PRED]
+  Evaluation: Correct
+
+
+action_exs: | # optional
+  Question: [QUESTION]
+  Hint: [HINT]
+  Promising Method: [PROMISING_METHOD]
+  Evaluation: Correct
+
+
