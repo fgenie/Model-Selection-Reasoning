@@ -5,6 +5,7 @@ from typing import Sequence, Mapping
 from fire import Fire
 import re
 import jsonlines as jsl
+from functools import partial
 from pathlib import Path
 '''
 read: 
@@ -141,20 +142,70 @@ def main(outdir='3_prompts_for_manual_fill'):
             sf.write(s_prompt_temp)
             rf.write(r_prompt_temp)
         print(f'saved to {str(outdir)}')
-            
-            
-            
-def test():
-        # test
 
-    for trow in testrows:
-        s_prompt = fill_selection(reflection_exs=sel_ref_exs, action_exs=sel_act_exs, question=trow['question'])
-        r_prompt = fill_reflection(reflection_exs=ref_exs, datarow=trow)
+
+          
+            
+def preptest(outdir='3_prompts_for_manual_fill/test'):
+    '''
+    check whether the prompts works as expected
+    expected:
+        1. selection prompt generates:
+            - hint that hints about correct model
+            - selects correct model
+        2. reflection prompt generates:
+            - reflection that pincets what's gone wrong
+            - hints that hints the model selection
+    '''
+    outdir = Path(outdir)
+    if not outdir.exists():
+        outdir.mkdir(parents=True, exist_ok=True)
+    models = ['cot', 'pal', 'p2c']
+    r_tmp = PromptStr(open(outdir.parent / 'reflection_prompt_0_1.txt').read())
+    s_a0shot = PromptStr(open(outdir.parent / 'selection_prompt_0_1.txt').read())
+    s_a6shot = PromptStr(open(outdir.parent / 'selection_prompt_0_1_action_fewshots.txt').read())
+    for w, c in product(models, models):
+        if w==c:
+            continue
+        sheet_name = f"{w}_wrong_{c}_correct"
+        df = FS_D[sheet_name]
+        df = df[3:]
+        # complete prompts 
+        prompt_records = [] 
+        for i, row in df.iterrows():
+            s_prompt_0 = s_a0shot # highy suspected...
+            s_prompt_fs = s_a6shot
+            r_prompt = r_tmp
+            fill = partial(fill_placeholders, datarow=row)
+            s_prompt_0, s_prompt_fs, r_prompt = map(fill,[s_prompt_0, s_prompt_fs, r_prompt])
+            obj = {'selectprompt_0': s_prompt_0, 'selectprompt_fs': s_prompt_fs, 'reflectprompt': r_prompt}
+            prompt_records.append(obj)
+            # check whether the prompt contains the question
+            assert row.question in s_prompt_0
+            assert row.question in s_prompt_fs
+            assert row.question in r_prompt         
+        test_data = df.to_dict(orient='records')
+        with jsl.open(outdir/f'{sheet_name}_prompt.jsonl', 'w') as writer, jsl.open(outdir/f'{sheet_name}_data.jsonl', 'w') as writer2:
+            writer.write_all(prompt_records)
+            writer2.write_all(test_data)
+        print(f'saved to {str(outdir)}')
+
+        
+def fill_placeholders(prompt:PromptStr, datarow:dict)->PromptStr:
+    for ph in prompt.get_placeholder_names():
+        key = ph.lower()
+        if key in datarow.keys():
+            prompt = prompt.sub(ph, datarow[key])
+    return prompt  
+    
+def test(outdir='3_prompts_for_manual_fill/test'):
+    outdir = Path(outdir)
+    preptest()
 
 
 if __name__ == '__main__':
-    Fire(main)
-        
+    # Fire(main)
+    Fire(test)
 
         
         
