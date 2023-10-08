@@ -19,12 +19,36 @@ def df_entry_cleaner(df):
                 df[col] = ''
     return df 
 
+def alternate_flatten(records:list):
+    newrecords = []
+    records = list(records)
+    for row in records:
+        wrong_models = row['wrong']
+        idx1, idx2 = [], []
+        idxs = row['idxs_test']
+        for i, idx in enumerate(idxs):
+            if i%2==1:
+                idx1.append(idx)
+            else:
+                idx2.append(idx)
+        row1 = row.copy()
+        row2 = row.copy()
+        row1['wrong'] = wrong_models[0]
+        row2['wrong'] = wrong_models[1] 
+        row1['idxs_test'] = idx1
+        row2['idxs_test'] = idx2  
+        newrecords.append(row1)
+        newrecords.append(row2)
+    assert len(newrecords) == 2*len(records)
+    return newrecords
+
+
 def main(
-        idxf = '98_switching_for_wrongtocorrect.jsonl',
+        idxf = '1_onlyone_correct.jsonl',
         cotjsl='/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/expresults/0910_ablation_result/cot.jsonl',
         paljsl='/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/expresults/0910_ablation_result/pal.jsonl',
         p2cjsl='/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/expresults/0924_plancode_v2_abl/gsm8k_k8_sc1_s0_e1319_09_24_01_16.jsonl',
-        outxl= '99_good_examples_from_gsm_test.xlsx',
+        outxl= '2_good_examples_from_gsm_test.xlsx',
         ):
     models = ['cot', 'pal', 'p2c']
     modelouts = [cotjsl, paljsl, p2cjsl ]
@@ -42,6 +66,9 @@ def main(
 
     # for every entry in modelsdf, unlist list of length 1
     idxdf = pd.DataFrame(jsl.open(idxf))
+    if isinstance(idxdf['wrong'].iloc[0], list):
+        idxdf = pd.DataFrame(alternate_flatten(jsl.open(idxf)))
+
 
 
     wrong_correct_modelpairs = product(models, models)
