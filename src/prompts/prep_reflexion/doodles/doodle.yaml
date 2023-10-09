@@ -47,7 +47,7 @@ PoC:
     - 주로 pal을 잘 selection 하지 않음
     - 나머지는 33.3% 보단 높게 나옴
 
-PoC representative result:
+PoC representative result: Model-Selection-Reasoning/src/prompts/prep_reflexion/3_prompts_for_manual_fill/test/selection_prompt_0_1_nobiassys/selection_accuracy.txt
     cot_wrong_p2c_correct
         selection accuracy: 5/11=45.5%
         {'p2c': 5, 'cot': 5, 'pal': 1}
@@ -72,7 +72,7 @@ Misc:
         Question: [QUESTION]
         Hint: [HINT]
         Promising Method: <cot, pal, or p2c> --> <pick one amongst three reasoning methods>  
-        /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prep_reflexion/3_prompts_for_manual_fill/test/selection_prompt_0_1/selection_accuracy.txt
+        Model-Selection-Reasoning/src/prompts/prep_reflexion/3_prompts_for_manual_fill/test/selection_prompt_0_1/selection_accuracy.txt
             cot_wrong_p2c_correct
                 selection accuracy: 2/11=18.2%
                 {'cot': 7, 'p2c': 2, 'pal': 2}

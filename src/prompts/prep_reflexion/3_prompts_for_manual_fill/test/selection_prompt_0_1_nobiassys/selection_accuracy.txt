@@ -16,3 +16,5 @@ jslf:p2c_wrong_cot_correct_prompt.jsonl
 jslf:pal_wrong_p2c_correct_prompt.jsonl
 	selection accuracy: 6/11=54.5%
 	{'p2c': 6, 'cot': 5}
+
+# cot pal p2c
