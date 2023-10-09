@@ -9,6 +9,7 @@ from functools import partial
 from pathlib import Path
 from tqdm import tqdm
 import openai
+from tenacity import wait_chain, wait_fixed, retry
 
 KEY = open('openai_key.txt').read().strip()
 openai.api_key = KEY # set key
@@ -266,7 +267,7 @@ def test(outroot='3_prompts_for_manual_fill/test',
             writer.write_all(results_records)
         print('wrote:\n\t', str(resjsl))
             
-
+@retry(wait=wait_chain(*[wait_fixed(3) for i in range(4)]))
 def query_llm(msgs:list=None, 
               stop:str='', 
               max_tokens:int=200,
