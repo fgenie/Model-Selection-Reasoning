@@ -7,12 +7,11 @@ prompt_template: |
 
   [REFLECTION_EXS]
 
-  Now, given the question, start guessing the most `Promising Method` to correctly answer after writing probable `Hint:` based on your learnings. 
-
-  [ACTION_EXS]
+  Now, given the question, start guessing the most `Promising Method` to correctly answer the `Question` based on your learnings and given the `Hint`.
 
   Question: [QUESTION]
-  Hint: 
+  Hint: [HINT]
+  Promising Method: <cot, pal, or p2c>
   
 
 reflection_exs: |
