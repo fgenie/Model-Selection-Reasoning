@@ -20,7 +20,8 @@
 # TODO for the exp.
 - [x] code utils for trainset prep
 - [ ] implement `reflexion_kshot_harvesting` (`scratch.py`)  -- constructing an agent with the prompts.
-    - [ ] prompt qualitative test (`src/prompts/prep_reflexion/*`)
+    - [x] prompt qualitative test (`src/prompts/prep_reflexion/*`)
+        - 
     - `scratch.py`: (currently outdated, presented in the last meeting): pseudo code for `k-shot harvesting`, containing both concepts of `model-switching` and `retrying` at the same time.  
     - [x] explore the details of Reflexion prompting (code): `scribbles on actor_prompt.yaml`
     - [x] imitate the reflexion prompt to configure gsm-harvesting prompt (+CoH prompt)

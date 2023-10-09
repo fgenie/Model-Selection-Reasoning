@@ -92,7 +92,7 @@ Misc:
                 selection accuracy: 3/11=27.3%
                 {'cot': 7, 'p2c': 3, 'pal': 1}
     - reflection example 에서의 예시 힌트를 pal에 좀더 유리하게 혹은 치팅이 가능하도록 바꾸어도 큰 영향은 없었음.
-
+    - 프롬프트 맨 위의 method (1), (2), (3) 순서를 바꿔도 큰 변화는 없었음.
 
 
 
