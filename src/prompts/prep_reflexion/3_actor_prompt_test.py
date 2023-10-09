@@ -7,6 +7,12 @@ import re
 import jsonlines as jsl
 from functools import partial
 from pathlib import Path
+from tqdm import tqdm
+import openai
+
+KEY = open('openai_key.txt').read().strip()
+openai.api_key = KEY # set key
+
 '''
 read: 
 - 2_good_examples_from_*xlsx
@@ -135,7 +141,10 @@ def main(outdir='3_prompts_for_manual_fill'):
         sel_act_exs = get_fewshots_string(datarows, mode='select_act')
         ref_exs = get_fewshots_string(datarows, mode='reflect') 
         # save almost-done prompt
-        s_prompt_temp = fill_selection(reflection_exs=sel_ref_exs, action_exs=sel_act_exs, question='[QUESTION]')
+        s_prompt_temp = fill_selection(reflection_exs=sel_ref_exs, 
+                                       action_exs=sel_act_exs, 
+                                       question='[QUESTION]',
+                                       hint = '[HINT]')
         r_prompt_temp = fill_reflection(reflection_exs=ref_exs, datarow={})
         
         with open(outdir/f"reflection_prompt_{idx}.txt", 'w') as rf, open(outdir/f'selection_prompt.txt_{idx}', 'w') as sf:
@@ -163,7 +172,7 @@ def preptest(outdir='3_prompts_for_manual_fill/test'):
     models = ['cot', 'pal', 'p2c']
     r_tmp = PromptStr(open(outdir.parent / 'reflection_prompt_0_1.txt').read())
     s_a0shot = PromptStr(open(outdir.parent / 'selection_prompt_0_1.txt').read())
-    s_a6shot = PromptStr(open(outdir.parent / 'selection_prompt_0_1_action_fewshots.txt').read())
+    s_a6shot = PromptStr(open(outdir.parent / 'selection_prompt_0_1_action_fewshots.txt').read()) # I don't think this will work properly (do not want action examples affect the inference)
     for w, c in product(models, models):
         if w==c:
             continue
@@ -174,15 +183,17 @@ def preptest(outdir='3_prompts_for_manual_fill/test'):
         prompt_records = [] 
         for i, row in df.iterrows():
             s_prompt_0 = s_a0shot # highy suspected...
-            s_prompt_fs = s_a6shot
+            # s_prompt_fs = s_a6shot
             r_prompt = r_tmp
             fill = partial(fill_placeholders, datarow=row)
-            s_prompt_0, s_prompt_fs, r_prompt = map(fill,[s_prompt_0, s_prompt_fs, r_prompt])
-            obj = {'selectprompt_0': s_prompt_0, 'selectprompt_fs': s_prompt_fs, 'reflectprompt': r_prompt}
+            # s_prompt_0, s_prompt_fs, r_prompt = map(fill,[s_prompt_0, s_prompt_fs, r_prompt])
+            s_prompt_0, r_prompt = map(fill,[s_prompt_0, r_prompt])
+            # obj = {'selectprompt_0': s_prompt_0, 'selectprompt_fs': s_prompt_fs, 'reflectprompt': r_prompt}
+            obj = {'selectprompt': s_prompt_0, 'reflectprompt': r_prompt}
             prompt_records.append(obj)
             # check whether the prompt contains the question
             assert row.question in s_prompt_0
-            assert row.question in s_prompt_fs
+            # assert row.question in s_prompt_fs
             assert row.question in r_prompt         
         test_data = df.to_dict(orient='records')
         with jsl.open(outdir/f'{sheet_name}_prompt.jsonl', 'w') as writer, jsl.open(outdir/f'{sheet_name}_data.jsonl', 'w') as writer2:
@@ -201,10 +212,38 @@ def fill_placeholders(prompt:PromptStr, datarow:dict)->PromptStr:
 def test(outdir='3_prompts_for_manual_fill/test'):
     outdir = Path(outdir)
     preptest()
+    for jslf in outdir.glob("*jsonl"):
+        df = pd.DataFrame(jsl.open(jslf))
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            rprompt = row.reflectprompt
+            print()
+            reflection_hint = query_llm(msgs=[{'role':'user', 'content': rprompt}])
+            print()
 
+def query_llm(msgs:list=None, 
+              stop:str='', 
+              max_tokens:int=200,
+              temperature:float=0.,
+              model='gpt-3.5-turbo-16k',
+              )->str:
+    response = openai.ChatCompletion.create(
+        messages = msgs,
+        stop = stop,
+        max_tokens = max_tokens,
+        temperature = temperature,
+        model = model, 
+    )
+    completion = response['choices'][0]['message']['content']
+    return completion
+    
+def parse_reflectionhint(rawout:str)->tuple:
+    return reflect, hint
+def parse_selection(rawout:str)->str:
+    return model
 
 if __name__ == '__main__':
     # Fire(main)
+    # Fire(preptest)
     Fire(test)
 
         
