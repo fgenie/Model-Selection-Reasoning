@@ -11,7 +11,7 @@ prompt_template: |
 
   Question: [QUESTION]
   Hint: [HINT]
-  Promising Method: <cot, pal, or p2c>
+  Promising Method: <pick one amongst three reasoning methods>
   
 
 reflection_exs: |

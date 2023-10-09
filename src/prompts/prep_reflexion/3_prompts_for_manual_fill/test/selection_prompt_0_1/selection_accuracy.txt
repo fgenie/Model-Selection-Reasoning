@@ -1,0 +1,20 @@
+jslf:cot_wrong_p2c_correct_prompt.jsonl
+	selection accuracy: 2/11=18.2%
+	{'cot': 7, 'p2c': 2, 'pal': 2}
+jslf:cot_wrong_pal_correct_prompt.jsonl
+	selection accuracy: 1/28=3.6%
+	{'cot': 22, 'p2c': 5, 'pal': 1}
+jslf:pal_wrong_cot_correct_prompt.jsonl
+	selection accuracy: 24/34=70.6%
+	{'cot': 24, 'p2c': 9, 'pal': 1}
+jslf:p2c_wrong_pal_correct_prompt.jsonl
+	selection accuracy: 1/28=3.6%
+	{'cot': 22, 'p2c': 5, 'pal': 1}
+jslf:p2c_wrong_cot_correct_prompt.jsonl
+	selection accuracy: 21/33=63.6%
+	{'cot': 21, 'p2c': 11, 'pal': 1}
+jslf:pal_wrong_p2c_correct_prompt.jsonl
+	selection accuracy: 3/11=27.3%
+	{'cot': 7, 'p2c': 3, 'pal': 1}
+
+# bias by candidate ordering at the last part of the prompting (reference 있는데 찾을 회사 컴퓨터에 넣어놨네요...)

@@ -1,6 +1,6 @@
-You are an advanced reasoning agent that can improve based on self-reflection. You will be given a set of examples showing your previous attempts to solve math-word problems, including the reflections on where you struggled. Followings are the three reasoning methods you used for answering the problem: (1) Chain-of-Thought (`cot`) invokes step-by-step verbal reasoning to break the question to reach the correct answer. (2) Program-aided Language modeling (`pal`) invokes writing a code that returns the answer of the question. (3) Plan-to-Code (`p2c`) invokes to write the plan and write the code of it to reach the answer. Referring to the followings, learn to reflect from your solution. In a few sentences, diagnose a possible reason for failure and devise a new, concise, high level plan that aims to mitigate the same failure. Write your relfection after the `Reflection:` and then add general hint after `Hint:` to help preventing similar failures on the similar questions.
+Choose the most likely reasoning method for answering math-word questions. Followings are the three methods available: (1) Chain-of-Thought (`cot`) invokes step-by-step verbal reasoning to break the question to reach the correct answer. (2) Program-aided Language modeling (`pal`) invokes writing a code that returns the answer of the question. (3) Plan-to-Code (`p2c`) invokes to write the plan and write the code of it to reach the answer. Referring to the followings, learn to guess which method would be promising given the question. 
 
-Previous attempts:
+Previous attempts and reflections:
 
 Question: If Marcy works for the same company for 40 years, she gets an annual pension of $50,000/year. Starting after 20 years, she becomes entitled to 5% of the value of the pension per year. If she quits after 30 years, what will her annual pension be?
 Trial Method: cot
@@ -26,7 +26,7 @@ Answer: 76408.0
 Evalutaion: Wrong
 Reflection: The agent made a mistake by assuming Marcy's annual pension starts from $50,000 per year from year 20 and it increases 5% annually, while the $50,000 per year is the 100% of the pension which could be entitled when she worked for 40 or more years.
 Hint: Remember to accurately understand the conditions in the questions and then calculate from. For concise reasoning and computation, programming might help.
-Trial Method: pal
+Promising Method: pal
 Solution Steps: def solution():
     """If Marcy works for the same company for 40 years, she gets an annual pension of $50,000/year. Starting after 20 years, she becomes entitled to 5% of the value of the pension per year. If she quits after 30 years, what will her annual pension be?"""
     pension_initial = 50000
@@ -50,10 +50,9 @@ Therefore, the total number of kittens is x + 3x + 12 = 4x + 12.
 Since we don't know the value of x, we cannot determine the exact number of kittens the Doubtfire family now has.
 Answer: nan
 Evalutaion: Wrong
-Reflection: The solution created the correct equation to calculate the total number of kittens, but failed to substitute the number of adopted kittens into the equation, and thus failed to calculate the right number.
+Reflection: The solution creates an equation correctly about number of kittens, but fails to plug the number of adopted kittens into, fail to conclude the number.
 Hint: If a question is properly comprehended, using programming to find a solution could assist in arriving at the right answer.
 Promising Method: p2c
-Trial Method: p2c
 Solution Steps: 1. Start by defining a variable to represent the initial number of kittens the Doubtfire sisters have, let's call it "initial_kittens".
 2. Assign the value 7 to "initial_kittens", as mentioned in the question.
 3. Define another variable to represent the number of kittens Patchy has had, let's call it "patchy_kittens".
@@ -88,7 +87,7 @@ Answer: 115.0
 Evalutaion: Wrong
 Reflection: The initial solution incorrectly divided the distance by each of the two trains with the number of trains.
 Hint: Some math problems tricks with the semantics in the question, stressing the need for accurate thinking in semantics.
-Trial Method: cot
+Promising Method: cot
 Solution Steps: Answer:
 Both trains traveled westward for 80 miles.
 So each train covered 80 miles.
@@ -116,7 +115,7 @@ Answer: 1.904761904761905
 Evalutaion: Wrong
 Reflection: The error in the agent's initial solution arises from incorrectly calculating the total running hours per week by subtracting the running hours of the first day from total miles and dividing by remaining days.
 Hint: Getting help from the programming only works when you program the question correctly. Determining what to compute before programming would be helpful.
-Trial Method: p2c
+Promising Method: p2c
 Solution Steps: 1. Start by defining a variable to represent the total number of miles John runs in a week, let's call it "total_miles" and assign it a value of 60.
 2. Define another variable to represent the number of days John runs in a week, let's call it "num_days" and assign it a value of 3.
 3. Calculate the average number of miles John runs per day by dividing "total_miles" by "num_days".
@@ -170,7 +169,7 @@ Answer: 3.0
 Evalutaion: Wrong
 Reflection: The initial solution fails at understanding what to compute and also hallucinates about regular price in the code which shows lack of question understanding.
 Hint: Accurate understanding of what to figure out from the question is the key.
-Trial Method: cot
+Promising Method: cot
 Solution Steps: To find out how much money Vincent saves by buying 18 flowers at the better price, we need to compare the cost of buying 18 flowers in packages of 3 and in packages of 2.
 
 First, let's calculate the cost of buying 18 flowers in packages of 3:
@@ -208,7 +207,7 @@ Answer: 17.0
 Evalutaion: Wrong
 Reflection: Raymond's age is wrongly recognized from the start of the solution, and the following plans are also poor at understanding ages and chronological orders.
 Hint: Be careful not to confuse adding or subtracting when solving problems with chronological concepts.
-Trial Method: pal
+Promising Method: pal
 Solution Steps: def solution():
     """Raymond and Samantha are cousins. Raymond was born 6 years before Samantha. Raymond had a son at the age of 23. If Samantha is now 31, how many years ago was Raymond's son born?"""
     samantha_age_now = 31
@@ -221,12 +220,8 @@ Answer: 14
 Evaluation: Correct
 
 
-Now given the followings, write `Reflection` and the `Hint` concisely. 
+Now, given the question, start guessing the most `Promising Method` to correctly answer the `Question` based on your learnings and given the `Hint`.
 
 Question: [QUESTION]
-Trial Method: [WRONG_MODEL]
-Solution Steps: [WRONG_SOL]
-Answer: [WRONG_PRED]
-Evaluation: Wrong
-Reflection: <your reflection>
-Hint: <general hint for the similar type of question>
+Hint: [HINT]
+Promising Method: <pick one amongst three reasoning methods> 

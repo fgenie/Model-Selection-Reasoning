@@ -155,7 +155,9 @@ def main(outdir='3_prompts_for_manual_fill'):
 
           
             
-def preptest(outdir='3_prompts_for_manual_fill/test'):
+def preptest(outdir='3_prompts_for_manual_fill/test',
+             select_prompt_f:str = '3_prompts_for_manual_fill/selection_prompt_0_1.txt',
+             reflect_prompt_f:str = '3_prompts_for_manual_fill/reflection_prompt_0_1.txt'):
     '''
     check whether the prompts works as expected
     expected:
@@ -170,9 +172,9 @@ def preptest(outdir='3_prompts_for_manual_fill/test'):
     if not outdir.exists():
         outdir.mkdir(parents=True, exist_ok=True)
     models = ['cot', 'pal', 'p2c']
-    r_tmp = PromptStr(open(outdir.parent / 'reflection_prompt_0_1.txt').read())
-    s_a0shot = PromptStr(open(outdir.parent / 'selection_prompt_0_1.txt').read())
-    s_a6shot = PromptStr(open(outdir.parent / 'selection_prompt_0_1_action_fewshots.txt').read()) # I don't think this will work properly (do not want action examples affect the inference)
+    r_tmp = PromptStr(open(reflect_prompt_f).read())
+    s_a0shot = PromptStr(open(select_prompt_f).read())
+    # s_a6shot = PromptStr(open(outdir.parent / 'selection_prompt_0_1_action_fewshots.txt').read()) # I don't think this will work properly (do not want action examples affect the inference)
     for w, c in product(models, models):
         if w==c:
             continue
@@ -196,7 +198,11 @@ def preptest(outdir='3_prompts_for_manual_fill/test'):
             # assert row.question in s_prompt_fs
             assert row.question in r_prompt         
         test_data = df.to_dict(orient='records')
-        with jsl.open(outdir/f'{sheet_name}_prompt.jsonl', 'w') as writer, jsl.open(outdir/f'{sheet_name}_data.jsonl', 'w') as writer2:
+
+        outdir_ = outdir/f"{Path(select_prompt_f).stem}_{Path(reflect_prompt_f).stem}"
+        if not outdir_.exists():
+            outdir_.mkdir(parents=True, exist_ok=True)
+        with jsl.open(outdir_/f'{sheet_name}_prompt.jsonl', 'w') as writer, jsl.open(outdir_/f'{sheet_name}_data.jsonl', 'w') as writer2:
             writer.write_all(prompt_records)
             writer2.write_all(test_data)
         print(f'saved to {str(outdir)}')
@@ -209,16 +215,57 @@ def fill_placeholders(prompt:PromptStr, datarow:dict)->PromptStr:
             prompt = prompt.sub(ph, datarow[key])
     return prompt  
     
-def test(outdir='3_prompts_for_manual_fill/test'):
-    outdir = Path(outdir)
-    preptest()
-    for jslf in outdir.glob("*jsonl"):
+def test(outroot='3_prompts_for_manual_fill/test', 
+         selection_prompt_f:str='3_prompts_for_manual_fill/selection_prompt_0_1_nobiassys.txt',
+         reflection_prompt_f:str='3_prompts_for_manual_fill/reflection_prompt_0_1.txt',
+         model = 'gpt-3.5-turbo-16k'):
+    outdir = Path(outroot) / f"{Path(selection_prompt_f).stem}_{Path(reflection_prompt_f).stem}"
+    print(outdir)
+    print()
+    print()
+    preptest(outdir = outroot, 
+             select_prompt_f=selection_prompt_f, 
+             reflect_prompt_f=reflection_prompt_f)
+    for jslf in tqdm(list(outdir.glob("*prompt.jsonl"))):
+        rescsv = jslf.parent/f"{jslf.stem}_results.jsonl"
+        if rescsv.exists():
+            print(f'skipping {jslf.name} ({rescsv.name} exists)')
+            continue
+        # wrongmodel = jslf.stem.split('_')[0]
+        correctmodel = jslf.stem.split('_')[2]
         df = pd.DataFrame(jsl.open(jslf))
-        for i, row in tqdm(df.iterrows(), total=len(df)):
+        query_results = []
+        for i, row in tqdm(df.iterrows(), total=len(df), desc = jslf.name):
             rprompt = row.reflectprompt
-            print()
-            reflection_hint = query_llm(msgs=[{'role':'user', 'content': rprompt}])
-            print()
+            reflection_hint, rtoks_d = query_llm(msgs=[{'role':'user', 'content': rprompt}], model = model, stop = 'Trial Method:')
+            r, h = parse_reflectionhint(reflection_hint)
+            sprompt = PromptStr(row.selectprompt).sub('HINT', h)
+            # print(sprompt)
+            rawselect, stoks_d = query_llm(msgs=[{'role':'user', 'content': sprompt}], model = model, stop='Solution Steps:')
+            select = parse_selection(rawselect)
+            # print(rawselect)
+            # print(select)
+            # print()
+            # print(f'gt: {correctmodel}, select: {select}')
+            obj = {'reflect': r, 
+                   'hint': h,
+                   'select': select, 
+                   'raw_reflect_hint': reflection_hint, 
+                   'raw_select': rawselect}
+            obj.update({f'reflect_{k}': v for k,v in rtoks_d.items()})
+            obj.update({f'select_{k}': v for k,v in stoks_d.items()})
+            query_results.append(obj)
+        results_df = pd.DataFrame(query_results)
+        hits = results_df.select == correctmodel
+        with open(outdir/f'selection_accuracy.txt', 'a') as f:
+            print(f'jslf:{jslf.name}\n\tselection accuracy: {int(hits.sum())}/{len(hits)}={hits.mean()*100:.1f}%', file=f)
+            print(f"\t{results_df.select.value_counts().to_dict()}", file=f)
+        results_records = results_df.to_dict(orient='records')
+        resjsl = outdir/f'{jslf.stem}_results.jsonl'
+        with jsl.open(resjsl, 'w') as writer:
+            writer.write_all(results_records)
+        print('wrote:\n\t', str(resjsl))
+            
 
 def query_llm(msgs:list=None, 
               stop:str='', 
@@ -234,17 +281,32 @@ def query_llm(msgs:list=None,
         model = model, 
     )
     completion = response['choices'][0]['message']['content']
-    return completion
+    usage_dict = response['usage']
+    return completion, usage_dict
     
 def parse_reflectionhint(rawout:str)->tuple:
+    try: 
+        reflect, hint = rawout.split("Hint: ")
+        reflect = reflect.replace('Reflection: ', '').strip()
+        hint = hint.strip()
+    except:
+        reflect, hint = 'failed parsing', rawout
     return reflect, hint
 def parse_selection(rawout:str)->str:
-    return model
+    select = rawout.replace("Promising Method: ", '').strip()
+    for candid in ['cot', 'pal', 'p2c']:
+        if candid in select:
+            select= candid
+            break
+    return select
 
 if __name__ == '__main__':
     # Fire(main)
     # Fire(preptest)
     Fire(test)
+    '''
+    python 3_actor_prompt_test.py --selection_prompt_f 3_prompts_for_manual_fill/selection_prompt_0_1_nobiassys.txt --reflection_prompt_f 3_prompts_for_manual_fill/reflection_prompt_0_1_nobiassys.txt && python 3_actor_prompt_test.py --selection_prompt_f 3_prompts_for_manual_fill/selection_prompt_0_1_nobiassys1.txt --reflection_prompt_f 3_prompts_for_manual_fill/reflection_prompt_0_1_nobiassys1.txt
+    '''
 
         
         

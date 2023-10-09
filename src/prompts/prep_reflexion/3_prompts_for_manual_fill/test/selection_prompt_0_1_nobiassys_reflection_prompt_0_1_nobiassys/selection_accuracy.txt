@@ -1,0 +1,9 @@
+jslf:cot_wrong_p2c_correct_prompt.jsonl
+	selection accuracy: 6/11=54.5%
+	{'p2c': 6, 'cot': 4, 'pal': 1}
+jslf:cot_wrong_pal_correct_prompt.jsonl
+	selection accuracy: 1/28=3.6%
+	{'p2c': 15, 'cot': 12, 'pal': 1}
+jslf:pal_wrong_cot_correct_prompt.jsonl
+	selection accuracy: 17/34=50.0%
+	{'cot': 17, 'p2c': 17}
