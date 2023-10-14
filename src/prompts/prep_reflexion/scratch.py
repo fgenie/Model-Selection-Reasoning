@@ -109,9 +109,6 @@ def prep_gpt_input(
             msgs.append({'role': 'assist', 'content': assist_msgs[i]})
     return msgs
 
-
-
-
 def get_k_train_shots(
                 k:int=10,
                 train_f:str='gsm8k_train.jsonl', 

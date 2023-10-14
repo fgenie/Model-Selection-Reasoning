@@ -222,8 +222,6 @@ def test(outroot='3_prompts_for_manual_fill/test',
          model = 'gpt-3.5-turbo-16k'):
     outdir = Path(outroot) / f"{Path(selection_prompt_f).stem}_{Path(reflection_prompt_f).stem}"
     print(outdir)
-    print()
-    print()
     preptest(outdir = outroot, 
              select_prompt_f=selection_prompt_f, 
              reflect_prompt_f=reflection_prompt_f)
