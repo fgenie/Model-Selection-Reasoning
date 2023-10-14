@@ -21,7 +21,6 @@
 - [x] code utils for trainset prep
 - [ ] implement `reflexion_kshot_harvesting` (`scratch.py`)  -- constructing an agent with the prompts.
     - [x] prompt qualitative test (`src/prompts/prep_reflexion/*`)
-        - 
     - `scratch.py`: (currently outdated, presented in the last meeting): pseudo code for `k-shot harvesting`, containing both concepts of `model-switching` and `retrying` at the same time.  
     - [x] explore the details of Reflexion prompting (code): `scribbles on actor_prompt.yaml`
     - [x] imitate the reflexion prompt to configure gsm-harvesting prompt (+CoH prompt)
@@ -29,10 +28,16 @@
         - [ ] `concise` 
     - [x] switching models (reflexion)
         - [x] could they be complimentary to each other?  `99_aretheycomplimentary.py` --> yes switching models can help! (model-selection paper also proves this)
-        - [ ] inspect the exclusive questions for each reasoning method to figure out the weakness or strength of the reasoning method 
-    - [ ] retrying with the hint (progressive hint prompting + reflexion)
-        - [ ] `re_query_*()` functions
-        - [x] prompts (`HINT` parts)
+        - [x] inspect the exclusive questions for each reasoning method to figure out the weakness or strength of the reasoning method 
+- [ ] attest your oracle actor prompt against gsm8k
+    - [ ] 1. actor only selects
+        - reflection_prompt_0_1
+        - selection_prompt_0_1_nobiassys
+    - [ ] 2. actor selects and injects hint when querying chosen method
+    - [ ] ~~3. reflexion-inference~~ evaluation prompt needed
+    - tweaks and concerns
+        - [ ] ablate p2c and try the same
+        - [ ] model selection with 3 models?
 - [ ] Glue functions in `scratch.py` to `src/selection_math.py`.
     - [ ] debug
 

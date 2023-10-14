@@ -16,16 +16,22 @@ kshot harvesting: (w/o retry with hint)
 1. randomly select a model 
 2. solve
 3. evaluate
-4. break and append 1shot if correct else `reflect`
-  5. `switch` a model based on hint
+4. break and append 1shot if correct else `reflect`(<-reflection prompt)
+  5. `switch`(<-actor prompt) a model based on hint 
 
 w/o `retrying with hint` (!= `switch`), each question's trial will be <= 3shot solution (not guaranteed to arrive at the correct answer)
 
+inference:
+we have k-shot harvested examples for actor's model selection prompt 
+1. actor selects method
+    - given the question,
+    - generate Hint, and Promising Method consequently 
+2. query selected method to solve and answer 
 
 PoC:
 - (1) 이상적이라 생각하는 reflection examples를 만들고 그것으로 reflection/hint 생성 (2) 같은 reflection examples 을 harvested reflection 대신 사용하고, 생성된 hint를 사용하여 model switching 경향을 보았음
 - reflect example들을 만들 때에는
-    - 3x2 방향의 모든 switching 에 대하여 한가지씩
+    - 3x2 방향의 모든 switching 에 대하여 한가지씩 (틀린 시도 -> 맞는 시도)
     - Reflection 과 Hint는 수기하여 작성
     - e.g.
         Reflection: The agent made a mistake by assuming Marcy's annual pension starts from $50,000 per year from year 20 and it increases 5% annually, while the $50,000 per year is the 100% of the pension which could be entitled when she worked for 40 or more years.
@@ -92,7 +98,7 @@ Misc:
                 selection accuracy: 3/11=27.3%
                 {'cot': 7, 'p2c': 3, 'pal': 1}
     - reflection example 에서의 예시 힌트를 pal에 좀더 유리하게 혹은 치팅이 가능하도록 바꾸어도 큰 영향은 없었음.
-    - 프롬프트 맨 위의 method (1), (2), (3) 순서를 바꿔도 큰 변화는 없었음.
+    - 프롬프트 맨 위의 method (1), (2), (3) 순서를 바꾸는데에 변화가 있긴 하지만 어떤 경향이 있는 것 같아보이진 않음...
 
 
 
