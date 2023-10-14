@@ -57,7 +57,7 @@ def get_cot_prompt(data: dict, backbone: str, hint:str=''):
     question_message = data['question']
     if hint:
         question_message += f" ({hint})"
-    print(question_message)
+    # print(question_message)
     messages += [{"role": "user", "content": f"Question: {question_message}"}]
 
 
@@ -96,7 +96,7 @@ def get_pal_prompt(data: dict, backbone: str, hint:str=''):
             question_message += f" ({hint})"
         messages += [{"role": "user",
                       "content": f"Answer the following question in Python: {question_message}"}]
-    print(question_message)
+    # print(question_message)
     return messages
 
 
@@ -505,12 +505,6 @@ def query_math(
     for i in range(sc_num):
         if actor_selection_prompt:
             assert not ablation, "actor_selection_prompt and ablation cannot be used together."
-            # print("----")
-            # print("----")
-            # print("actor_selection_prompt running!")
-            # print(f"{actor_selection_prompt=}")
-            # print("----")
-            # print("----")
             hint, reasoning_method = query_actor_selection(data, 
                                                            prompt_f=actor_selection_prompt, 
                                                            key=key, 
@@ -567,13 +561,6 @@ def query_math(
             
                         
         elif ablation: # ablation != ''
-            # print("----")
-            # print("----")
-            # print("ablation running!")
-            # print(f"{ablation=}")
-            # print("----")
-            # print("----")
-
             if ablation == 'cot':
                 cot_solution = query_cot(
                                     data, 
@@ -616,12 +603,6 @@ def query_math(
                     pal_solutions.append(pal_solution[0])
                     final_ans = pal_ans 
         else: # doing model-selection way of inference (includes plancode variate when use_plancode==True)
-            # print("----")
-            # print("----")
-            # print('Model selection running!')
-            # print(f"{use_plancode=}")
-            # print("----")
-            # print("----")
             cot_ans = None
             pal_ans = None
             selection_ans = None
@@ -853,7 +834,7 @@ if __name__ == '__main__':
                 try:
                     count += 1
                     if dataset_name=='dbg':
-                        print(f"""{args.plan_temperature=}\n{args.code_temperature=}\n{args.use_plancode=}\n{args.k_fewshot=}""")
+                        print(f"""{args.actor_selection_prompt=}\n{args.prog_hint_prompting=}""")
                     
                     # if args.rl:
                     #     ans = query_math_rl(

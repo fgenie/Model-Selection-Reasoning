@@ -23,7 +23,7 @@ def get_plan_prompt(data: dict, k_fewshot:int=0, hint:str='')->str:
     else:
         user_attempt = user_tmp.replace('{QUESTION}', f"Question: {q}")
 
-    print(user_attempt)
+    # print(user_attempt)
     fewshots_user = prompt_d['fewshots_user'][:k_fewshot] # list of fewshot strings include Question: as a stop sequence.
     fewshots_assistant = prompt_d['fewshots_assistant'][:k_fewshot]
     
