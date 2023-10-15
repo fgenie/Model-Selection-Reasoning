@@ -23,9 +23,13 @@ cd ${EXEHOME}
 #                 --dataset_type 'math'
 # wc -l $INPUTPATH3
 
-INPUTPATH='/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/ablation_plancode/gsm8k_k8_sc1_s0_e1319_09_24_01_16.jsonl'
-
+INPUTPATH='/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct14_actorselect_palcot/gsm8k_k8_sc1_s0_e1319_10_15_09_13.jsonl'
+INPUTPATH1='/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct14_actorselect_hinted_palcot/gsm8k_k8_sc1_s0_e1319_10_15_09_12.jsonl'
 
 python evaluate.py --input_path ${INPUTPATH}\
                 --dataset_type 'math'
 wc -l $INPUTPATH
+
+python evaluate.py --input_path ${INPUTPATH1}\
+                --dataset_type 'math'
+wc -l $INPUTPATH1

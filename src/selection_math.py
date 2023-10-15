@@ -314,7 +314,9 @@ def query_actor_selection(data: dict,
             hint_w_header, reasoning_method = rawstr.split('Promising Method: ')
             hint = hint_w_header.strip()
             reasoning_method = reasoning_method.strip().strip('`')
-            assert reasoning_method in ['cot', 'pal', 'p2c']
+            for m in ['p2c', 'cot', 'pal']:
+                if m in reasoning_method:
+                    reasoning_method = m
         except:
             hint = rawstr
             reasoning_method = 'parsing failed'
@@ -331,7 +333,7 @@ def query_actor_selection(data: dict,
     hint_n_select = completion_with_backoff(
             api_key=key,
             model=model_name,
-            max_tokens=100,
+            max_tokens=60, # when verbose, if 100, reaches 4130 tokens > 4097
             stop='Answer: ', # just in case the lm continues generation
             messages=messages,
             temperature=0.,
@@ -816,9 +818,9 @@ if __name__ == '__main__':
             output_path = os.path.join(output_dir, f"ablation_{args.ablation}/")
         if args.actor_selection_prompt: # != ''
             if args.prog_hint_prompting:
-                output_path = os.path.join(output_dir, f"oct14_actorselect_hinted/")
+                output_path = os.path.join(output_dir, f"oct14_actorselect_hinted_palcot/")
             else:
-                output_path = os.path.join(output_dir, f"oct14_actorselect/")
+                output_path = os.path.join(output_dir, f"oct14_actorselect_palcot/")
         if not os.path.exists(output_path):
             os.makedirs(output_path)
         save_path = os.path.join(output_path,
