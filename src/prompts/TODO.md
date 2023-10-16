@@ -29,16 +29,19 @@
     - [x] switching models (reflexion)
         - [x] could they be complimentary to each other?  `99_aretheycomplimentary.py` --> yes switching models can help! (model-selection paper also proves this)
         - [x] inspect the exclusive questions for each reasoning method to figure out the weakness or strength of the reasoning method 
-- [ ] attest your oracle actor prompt against gsm8k
-    - [ ] 1. actor only selects
+- [x] attest your oracle actor prompt against gsm8k
+    - [x] 1. actor only selects
         - reflection_prompt_0_1
         - selection_prompt_0_1_nobiassys
-    - [ ] 2. actor selects and injects hint when querying chosen method
-    - [ ] ~~3. reflexion-inference~~ evaluation prompt needed
+    - [x] 2. actor selects and injects hint when querying chosen method
+    - [ ] 3. refer to solution before actor selection
+    - [ ] 3. generating further to complete solution
+    - [ ] additional analyses...
     - tweaks and concerns
-        - [ ] ablate p2c and try the same
+        - [x] ablate p2c and try the same
         - [ ] model selection with 3 models?
-- [ ] Glue functions in `scratch.py` to `src/selection_math.py`.
-    - [ ] debug
+        - [ ] update previous ablations...(chatgpt get updates)
+- [x] Glue functions in `scratch.py` to `src/selection_math.py`.
+    - [x] debug
 
 

@@ -7,6 +7,7 @@ import argparse
 from tqdm import tqdm
 from prompts import math_prompt
 from prompts.plancode_util_v2 import *
+import jsonlines as jsl
 # from prompts.rl_utils import *
 # from .rl import *
 from collections import OrderedDict, Counter
@@ -312,11 +313,19 @@ def query_actor_selection(data: dict,
         rawstr = rawstr.strip()
         try: 
             hint_w_header, reasoning_method = rawstr.split('Promising Method: ')
+            # print(reasoning_method)
             hint = hint_w_header.strip()
             reasoning_method = reasoning_method.strip().strip('`')
             for m in ['p2c', 'cot', 'pal']:
                 if m in reasoning_method:
                     reasoning_method = m
+                    return hint, reasoning_method
+            lowered = reasoning_method.lower().replace("-"," ").replace("_", " ")
+            for m_, long in zip(['cot', 'pal', 'p2c'], ['chain of thought', 'program aided language modeling', 'plan to code']):
+                if long in lowered:
+                    reasoning_method = m_
+                    return hint, reasoning_method
+            assert reasoning_method in ['cot', 'p2c', 'pal']
         except:
             hint = rawstr
             reasoning_method = 'parsing failed'
@@ -340,6 +349,8 @@ def query_actor_selection(data: dict,
             top_p=1.0,
             n=1)['choices'][0]['message']['content'] # str
     hint, reasoning_method = parse_hint_selection(hint_n_select)
+    # print(reasoning_method)
+    # print(hint)
     # print(prompt)
     # print(hint)
     # print(reasoning_method)
@@ -677,6 +688,8 @@ def query_math(
         to_dump_data['hint'] = hint
         to_dump_data['prog_hint_prompting'] = prog_hint_prompting
         to_dump_data['reasoning_method'] = reasoning_method
+        if reasoning_method == 'p2c':
+            to_dump_data['plan'] = plans
 
     return to_dump_data
 
@@ -812,19 +825,26 @@ if __name__ == '__main__':
         
         # model-selection / ablation study
         output_path = os.path.join(output_dir, f'{backbone}/')
-        if args.use_plancode:
-            output_path = os.path.join(output_dir, f"{backbone}_cot_plancode/")
-        if args.ablation: # != ''
-            output_path = os.path.join(output_dir, f"ablation_{args.ablation}/")
-        if args.actor_selection_prompt: # != ''
-            if args.prog_hint_prompting:
-                output_path = os.path.join(output_dir, f"oct14_actorselect_hinted_palcot/")
-            else:
-                output_path = os.path.join(output_dir, f"oct14_actorselect_palcot/")
+        # if args.use_plancode:
+        #     output_path = os.path.join(output_dir, f"{backbone}_cot_plancode/")
+        # if args.ablation: # != ''
+        #     output_path = os.path.join(output_dir, f"ablation_{args.ablation}/")
+        # if args.actor_selection_prompt: # != ''
+        #     if 'verbose_nomeclature' not in args.actor_selection_prompt:
+        #         if args.prog_hint_prompting:
+        #             output_path = os.path.join(output_dir, f"oct14_actorselect_hinted_palcot/")
+        #         else:
+        #             output_path = os.path.join(output_dir, f"oct14_actorselect_palcot/")
+        #     else:
+        #         if args.prog_hint_prompting:
+        #             output_path = os.path.join(output_dir, f"oct15_actorselect_hinted_palcot_verbose/")
+        #         else:
+        #             output_path = os.path.join(output_dir, f"oct15_actorselect_palcot_verbose/")
         if not os.path.exists(output_path):
             os.makedirs(output_path)
         save_path = os.path.join(output_path,
                                 f'{dataset_name}_k{args.k_fewshot}_sc{sc_num}_s{start_index}_e{end_index}_{dt_string}.jsonl')
+        print(save_path)
 
         # === run experiments ===
         progress_bar = tqdm(range(task_num))
@@ -835,8 +855,6 @@ if __name__ == '__main__':
             while True:
                 try:
                     count += 1
-                    if dataset_name=='dbg':
-                        print(f"""{args.actor_selection_prompt=}\n{args.prog_hint_prompting=}""")
                     
                     # if args.rl:
                     #     ans = query_math_rl(
@@ -883,7 +901,7 @@ if __name__ == '__main__':
                         break
                     else:
                         print("retrying (main)")
-                        time.sleep(random.uniform(3, 5))
+                        time.sleep(random.uniform(1,3))
                 
                 
 

@@ -10,6 +10,18 @@ if __name__ == '__main__':
                         choices=['math', 'date'], required=True)
     args = parser.parse_args()
 
+    if '*' in args.input_path:
+        candids = [p for p in Path().glob(args.input_path)]
+        if len(candids)>1:
+            raise ValueError(f"More than path found: {candids}")
+        elif len(candids)==0:
+            raise ValueError(f"No path found: {args.input_path}")
+        else:
+            print(f"interpret\n\t--input_path {args.input_path}\n\t->{candids[0]}")
+            args.input_path = candids[0]
+            print(args.input_path)
+
+
     input_path = args.input_path
     dataset_type = args.dataset_type
 
