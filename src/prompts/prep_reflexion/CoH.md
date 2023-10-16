@@ -2,7 +2,79 @@
 액터프롬으로 모델 선택에서 멈추지 않고 생성하면 cot/pal/p2c솔루션까지 생성이 잘 되길래 시도해봅니다 (기존에는 액터의 model selection --> standard cot/pal/p2c prompt query로 진행했음). 몇 몇 틀리던 문제들을 맞추기도 하며 셀렉션에 더 영향을 주는 `Hint`를 생성하는 것처럼 보입니다.
 > 설레발일 수 있습니다
 
-# 테스트해본 문제 
+
+## 변경점
+[diffchecker](https://www.diffchecker.com/yEXqtICX/)
+
+1. Promising Method 가 아니라 Successful Method로 변경. Trial Method는 Failed Method로 변경.
+2. Hint와 Promising Method 생성 --> Failed Method, Hint, Promising Method, Solution 까지 생성 
+    - 생성시 Failed Method 생성 후 Hint 생성하여 위의 example과 순서를 맞추고 더 괜찮은 Hint 생성에 영향
+    - Solution, Answer, Reflection 은 생략하는데, 이걸 생성하는게 도움이 될지는 미지수
+
+3. 그 외 자잘한 변경
+    - Acronym으로 선택시키는 것보다 verbose가 나은 것 같아서 그렇게 진행
+    - 크고작은 워딩 변경: CoT를 유발한다는 생각이 드는 Solution Step 을 Solution으로 변경 (큰 변화는 없어보이지만 토큰도 아끼고...) 그 외 좀더 원하는 동작에 가깝도록 워딩 변경 
+
+## 변경 전
+```
+Choose the most likely reasoning method for answering math-word questions. Followings are the two methods available: (1) Chain-of-Thought (`cot`) invokes step-by-step verbal reasoning to break the question to reach the correct answer. (2) Program-aided Language Modeling (`pal`) invokes writing a code that returns the answer of the question. Referring to the followings, learn to guess which method would be promising given the question. 
+
+Previous attempts and reflections:
+
+Question: 
+Trial Method: 
+Answer: 
+Evalutaion: 
+Reflection: 
+Hint: 
+Promising Method
+Solution: 
+Answer: 
+Evaluation: 
+
+Now, given the question, start guessing the most `Promising Method` after writing an appropriate `Hint` to correctly choose the reasoning method for  the `Question` based on your learnings. 
+
+Question: [QUESTION]
+
+<format>
+Hint: <write a concise sentence that help the method choice for answering correctly>
+Promising Method: <pick one between two reasoning methods> 
+</format>
+```
+
+## 변경 후 (More CoH-like prompt)
+```
+#After
+Choose the most likely reasoning method for answering math-word questions. Followings are the three methods available: (1) Chain-of-Thought (CoT) invokes step-by-step verbal reasoning to break the question to reach the correct answer. (2) Plan-to-Code (P2C) invokes to write the plan and write the code of it to reach the answer. (3) Program-aided Language Model (PAL) invokes writing a code that returns the answer of the question. Referring to the followings, learn to guess which method would be promising; Write helpful `Hint` for giving a better shot on guessing `Successful Method` for the `Question`. 
+
+Learn to infer which method would work and which not:
+
+Question: 
+Failed Method: 
+Answer: 
+Evalutaion: 
+Reflection: 
+Hint: 
+Successful Method
+Solution: 
+Answer: 
+Evaluation: 
+
+
+Now, given the `Question`, start writing an appropriate `Hint` to correctly choose `Successful Method` based on your learnings.
+
+Question: A bumper car rink has 12 red cars. They have 2 fewer green cars than they have red cars. They have 3 times the number of blue cars as they have green cars. The rink also has yellow cars.  If the rink has 75 cars in total how many yellow cars do they have?
+
+<format>
+Failed Method: <A method that might be tricky to correctly answer the `Question`>
+Hint: <write a concise sentence that help the method choice for answering correctly>
+Successful Method: <A method that might work perfectly for the `Question`> 
+Solution: <show your works by`Successful Method`>
+</format>
+```
+
+
+## 테스트해본 문제 
 ```
 # I have 10 liters of orange drink that are two-thirds water and I wish to add it to 15 liters of pineapple drink that is three-fifths water. But as I pour it, I spill one liter of the orange drink. How much water is in the remaining 24 liters?
 
@@ -48,74 +120,4 @@ def solution():
     result = yellow_cars
     return result
 
-```
-
-## 변경점
-0. Promising Method 가 아니라 Successful Method로 변경. Trial Method는 Failed Method로 변경.
-1. Hint와 Promising Method 생성 --> Failed Method, Hint, Promising Method, Solution 까지 생성 
-
-생성시 Failed Method 생성 후 Hint 생성하여
-    위의 example과 순서를 맞추고 더 괜찮은 Hint 생성에 영향
-    Solution, Answer, Reflection 은 생략하는데, 이걸 생성하는게 도움이 될지는 미지수
-
-2. 그 외 자잘한 변경
-    2-1. Acronym으로 선택시키는 것보다 verbose가 나은 것 같아서 그렇게 진행
-    2-2. 크고작은 워딩 변경: CoT를 유발한다는 생각이 드는 Solution Step 을 Solution으로 변경 (큰 변화는 없어보이지만 토큰도 아끼고...) 그 외 좀더 원하는 동작에 가깝도록 워딩 변경 
-
-## 변경 전
-```
-Choose the most likely reasoning method for answering math-word questions. Followings are the two methods available: (1) Chain-of-Thought (`cot`) invokes step-by-step verbal reasoning to break the question to reach the correct answer. (2) Program-aided Language Modeling (`pal`) invokes writing a code that returns the answer of the question. Referring to the followings, learn to guess which method would be promising given the question. 
-
-Previous attempts and reflections:
-
-Question: 
-Failed Method: 
-Answer: 17.0
-Evalutaion: Wrong
-Reflection: Raymond's age is wrongly recognized from the start of the solution, and the following plans are also poor at understanding ages and chronological orders.
-Hint: Be careful not to confuse adding or subtracting when solving problems with chronological concepts.
-Successful Method: Program-aided Language Model (PAL)
-Solution: 
-Answer: 14
-Evaluation: Correct
-
-Now, given the question, start guessing the most `Promising Method` after writing an appropriate `Hint` to correctly choose the reasoning method for  the `Question` based on your learnings. 
-
-Question: [QUESTION]
-
-<format>
-Hint: <write a concise sentence that help the method choice for answering correctly>
-Promising Method: <pick one between two reasoning methods> 
-</format>
-```
-
-## 변경 후 (More CoH-like prompt)
-```
-#After
-Choose the most likely reasoning method for answering math-word questions. Followings are the three methods available: (1) Chain-of-Thought (CoT) invokes step-by-step verbal reasoning to break the question to reach the correct answer. (2) Plan-to-Code (P2C) invokes to write the plan and write the code of it to reach the answer. (3) Program-aided Language Model (PAL) invokes writing a code that returns the answer of the question. Referring to the followings, learn to guess which method would be promising; Write helpful `Hint` for giving a better shot on guessing `Successful Method` for the `Question`. 
-
-Learn to infer which method would work and which not:
-
-Question: 
-Failed Method: 
-Answer: 17.0
-Evalutaion: Wrong
-Reflection: Raymond's age is wrongly recognized from the start of the solution, and the following plans are also poor at understanding ages and chronological orders.
-Hint: Be careful not to confuse adding or subtracting when solving problems with chronological concepts.
-Successful Method: Program-aided Language Model (PAL)
-Solution: 
-Answer: 14
-Evaluation: Correct
-
-
-Now, given the `Question`, start writing an appropriate `Hint` to correctly choose `Successful Method` based on your learnings.
-
-Question: A bumper car rink has 12 red cars. They have 2 fewer green cars than they have red cars. They have 3 times the number of blue cars as they have green cars. The rink also has yellow cars.  If the rink has 75 cars in total how many yellow cars do they have?
-
-<format>
-Failed Method: <A method that might be tricky to correctly answer the `Question`>
-Hint: <write a concise sentence that help the method choice for answering correctly>
-Successful Method: <A method that might work perfectly for the `Question`> 
-Solution: <show your works by`Successful Method`>
-</format>
 ```
