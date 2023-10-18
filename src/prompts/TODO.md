@@ -36,7 +36,9 @@
     - [x] 2. actor selects and injects hint when querying chosen method
     - [ ] 3. refer to solution before actor selection
     - [ ] 3. generating further to complete solution
-    - [ ] additional analyses...
+    - additional analyses...
+        - [ ] verbose selection: bias? (actor_prompt_selection test)
+        - [ ] how actual results being biased?
     - tweaks and concerns
         - [x] ablate p2c and try the same
         - [ ] model selection with 3 models?
