@@ -2,6 +2,7 @@ Choose the most likely reasoning method for answering math-word questions. Follo
 
 Learn to infer which method would work and which not:
 
+
 Question: If Marcy works for the same company for 40 years, she gets an annual pension of $50,000/year. Starting after 20 years, she becomes entitled to 5% of the value of the pension per year. If she quits after 30 years, what will her annual pension be?
 Failed Method: Chain of Thought (CoT)
 Solution: To calculate Marcy's annual pension after 30 years, we need to consider two periods: the first 20 years and the next 10 years.
@@ -222,7 +223,7 @@ Evaluation: Correct
 
 Now, given the `Question`, start writing an appropriate `Hint` to correctly choose `Successful Method` based on your learnings.
 
-Question: A bumper car rink has 12 red cars. They have 2 fewer green cars than they have red cars. They have 3 times the number of blue cars as they have green cars. The rink also has yellow cars.  If the rink has 75 cars in total how many yellow cars do they have?
+Question: [QUESTION]
 
 <format>
 Failed Method: <A method that might be tricky to correctly answer the `Question`>

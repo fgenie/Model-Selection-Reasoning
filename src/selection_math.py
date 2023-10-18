@@ -14,6 +14,8 @@ from collections import OrderedDict, Counter
 from tool import *
 # from string import Template # $ sign annoys me using this
 from prompts.prep_reflexion.actor_prompt_utils import PromptStr
+import random 
+from collections import OrderedDict
 
 
 
@@ -355,8 +357,99 @@ def query_actor_selection(data: dict,
     # print(hint)
     # print(reasoning_method)
     return hint, reasoning_method
+
+def separate_plan_code(rawstr:str)->tuple:
+    # used for 5_my_greatgreat_prompt
+    # p2c results in plan\ncode so split it.
+    rawstr = rawstr.strip()
+    lines = rawstr.split("\n")
+    for i,l in enumerate(lines):
+        if l.startswith('def ') and l.strip().endswith(':'):
+            break
+    plan = "\n".join(lines[:i])
+    code = "\n".join(lines[i:])
+    return plan, code
+
     
 
+def parse_method(methodstr:str)->str:
+    # works for 5_my_greatgreat_prompt
+    if '(PAL)' in methodstr or 'Program aided Language Model' in methodstr.replace('-', ' '):
+        return 'pal'
+    elif '(CoT)' in methodstr or 'Chain of Thought' in methodstr.replace('-', ' '):   
+        return 'cot'
+    elif '(P2C)' in methodstr or 'Plan to Code' in methodstr.replace('-', ' '):
+        return 'p2c'
+
+def query_enhanced_coh(data: dict, 
+                          prompt_f: str, 
+                          key: str, 
+                          backbone: str,
+                          n_fewshot:int=0) -> OrderedDict[str,str]:
+    # 5_my_greatgreat_prompt.txt
+    # when n_fewshot == 0, 6-shot default maximum is used
+    
+    if backbone == 'chatgpt':
+        model_name = 'gpt-3.5-turbo-16k' if (n_fewshot==0 or n_fewshot>=5) else 'gpt-3.5-turbo'  # this prompt is kind of lengthy
+    elif backbone == 'gpt-4':
+        model_name = 'gpt-4'
+
+    def reduce_fewshots(rawtext:str, n_fewshot:int)->str:
+        chunks = rawtext.split("\n\n\n")
+        fewshots = chunks[1:-1]
+        random.shuffle(fewshots) # in-place operation
+        fewshots = fewshots[:n_fewshot] # reduced
+        # assert n_fewshot >= len(fewshots), 'give smaller n_fewshot to reduce'
+        reduced = "\n\n\n".join([chunks[0]] + fewshots + [chunks[-1]]) # join
+        return reduced
+    
+    def parse_raw2dict(rawqueryout:str)->OrderedDict:
+        lines = rawqueryout.split('\n')
+        parse_d = OrderedDict()
+        # gather each line's index
+        toparse = ['Failed Method: ', 'Hint: ', 'Successful Method: ', 'Solution: ', 'Answer: ']
+        for i, l in enumerate(lines):
+            for k in toparse:
+                if k in parse_d: 
+                    continue
+                if l.startswith(k):
+                    parse_d[k] = i
+        # indices to slice
+        num = len(parse_d)
+        indices = list(parse_d.values())
+        parse_dd = OrderedDict.fromkeys(toparse[:num])
+        # parse_dd = actual parsed dict
+        for i in range(num):
+            if i == num-1:
+                content = lines[indices[i]:]
+            else:
+                content = lines[indices[i]: indices[i+1]]
+            assert content, 'empty content'
+            parse_dd[toparse[i]] = content
+        return parse_dd, raw_query_out
+
+    # prep prompt
+    rawprompt = open(prompt_f).read().strip()
+    if n_fewshot>0 and n_fewshot<6:
+        rawprompt = reduce_fewshots(rawprompt, n_fewshot)
+    prompt_tmp = PromptStr(rawprompt)
+    prompt = prompt_tmp.sub('QUESTION', data['question'])
+    assert isinstance(prompt, str)
+    messages = [
+        {'role':'user', 'content': prompt}
+    ]
+    raw_query_out = completion_with_backoff(
+            api_key=key,
+            model=model_name,
+            max_tokens=500, 
+            stop='\nEvaluation: ', 
+            messages=messages,
+            temperature=0.,
+            top_p=1.0,
+            n=1)['choices'][0]['message']['content'] # str
+    parsed_dict = parse_raw2dict(raw_query_out)
+
+    return parsed_dict, raw_query_out, messages
 
 # # when reflexion-style inference get used (need: evaluation by prompting (w/o access to the original answer))
 # def query_math_rl(
@@ -481,7 +574,8 @@ def query_math(
         use_plancode:bool=False,
         ablation:str='',
         actor_selection_prompt:str='', # 10/14 assuming kshot harvesting is done, test actor potential
-        prog_hint_prompting:bool=False, # 10/14 whether to do `hint injection` 
+        prog_hint_prompting:bool=False, # 10/14 whether to do `hint injection`
+        custom_prompt:str='', # 10/19 coh exp
         ):
     '''
     This function is used to query OpenAI for answers in arithmetic tasks. It contains three steps:
@@ -515,10 +609,42 @@ def query_math(
     selection_solutions = []
     final_answers = []
 
+    good_solutions = []
+    prompts = [] # already a list
+    rawouts = []
+    plan = ''
+
     for i in range(sc_num):
-        if actor_selection_prompt:
+        if custom_prompt:
+            assert not ablation
+            assert not actor_selection_prompt
+            parse_dd, rawout, query_msgs = query_enhanced_coh(
+                data, 
+                prompt_f=custom_prompt, 
+                key=key, 
+                backbone=backbone,
+                n_fewshot=k_fewshot)
+            good_solution = parse_dd['Solution: ']
+            good_method = parse_method(parse_dd['Successful Method: '])
+            # start parsing
+            if good_method == 'cot':
+                final_ans = extract_num_turbo(good_solution)
+            elif good_method == 'pal':
+                final_ans = safe_execute_turbo(good_solution)
+            elif good_method == 'p2c':
+                plan, code = separate_plan_code(good_solution)
+                final_ans = safe_execute_turbo(code)
+            
+            # record result
+            prompts.append(query_msgs)
+            rawouts.append(rawout)
+            good_solutions.append(good_solution)
+            bad_method = parse_method(parse_dd['Failed Method: '])
+
+
+        elif actor_selection_prompt:
             assert not ablation, "actor_selection_prompt and ablation cannot be used together."
-            hint, reasoning_method = query_actor_selection(data, 
+            hint, reasoning_method= query_actor_selection(data, 
                                                            prompt_f=actor_selection_prompt, 
                                                            key=key, 
                                                            backbone=backbone)
@@ -690,6 +816,11 @@ def query_math(
         to_dump_data['reasoning_method'] = reasoning_method
         if reasoning_method == 'p2c':
             to_dump_data['plan'] = plans
+    if custom_prompt:
+        to_dump_data['good_solution'] = good_solution
+        to_dump_data['bad_method'] = bad_method
+        to_dump_data['good_method'] = good_method
+        to_dump_data['plan'] = [plan]
 
     return to_dump_data
 
@@ -737,7 +868,13 @@ if __name__ == '__main__':
     # actor_prompt_test
     parser.add_argument('--actor_selection_prompt', type=str, default='', help='this flag will run actor selection prompt test.')
     parser.add_argument('--prog_hint_prompting', action='store_true', help='this flag will run prog_hint_prompting test: prepend hint when querying the solution')
+
+    # custom_prompt (coh exp)
+    parser.add_argument('--custom_prompt', type=str, default='', help='path to customprompt file')
+
     # (DEPREC) rl-agent style experiment
+
+    
     '''
         1. randomly sample amongst methods at first (i.e. cot pal plancode)
         2. verify the answer with the prompt (I guess this will be a critic?)
@@ -882,6 +1019,7 @@ if __name__ == '__main__':
                         ablation=args.ablation, # for onlyone method ablation study
                         actor_selection_prompt=args.actor_selection_prompt, # for actor selection prompt test
                         prog_hint_prompting=args.prog_hint_prompting, # whether to inject hint to query solution
+                        custom_prompt=args.custom_prompt, # for custom prompt experiment
                         )
                         
                 except Exception as e:
