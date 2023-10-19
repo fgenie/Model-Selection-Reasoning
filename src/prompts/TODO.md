@@ -19,6 +19,7 @@
 ----
 # TODO for the exp.
 - [x] code utils for trainset prep
+- [ ] need `try-except` for other modes than `--custom_prompt` (removed `while True:try-except` from `__main__`)
 - [ ] implement `reflexion_kshot_harvesting` (`scratch.py`)  -- constructing an agent with the prompts.
     - [x] prompt qualitative test (`src/prompts/prep_reflexion/*`)
     - `scratch.py`: (currently outdated, presented in the last meeting): pseudo code for `k-shot harvesting`, containing both concepts of `model-switching` and `retrying` at the same time.  
@@ -35,7 +36,7 @@
         - selection_prompt_0_1_nobiassys
     - [x] 2. actor selects and injects hint when querying chosen method
     - [ ] 3. refer to solution before actor selection
-    - [ ] 3. generating further to complete solution
+    - [x] 3. generating further to complete solution
     - additional analyses...
         - [ ] verbose selection: bias? (actor_prompt_selection test)
         - [ ] how actual results being biased?
