@@ -19,6 +19,8 @@ see [`5_my_greatgreat_prompt.txt`](https://github.com/fgenie/Model-Selection-Rea
 | acc.  | 87.6\% | 83.0\% |
 
 *for k=3, randomly pick 3 transition examples amongst possible 6 (3C2) variants
+* lower than pal only acc = **90.8 \%**.
+
 
 ## Oct 14: actor prompt test (manual reflections k=6)
 | acc. | amongst 3 models (6shots) | only 2 models (2shots) |
@@ -112,3 +114,16 @@ this experiment is done on 805 / 1319 instances (all indices are common for thre
 | | cot+pal | cot+p2c_v1 k=2 | cot+p2c_v1 k=5 |
 |-|-|-|-|
 | acc. | ~~81.9\%~~ &rarr; **92.8\%** | ~~80.0 \%~~ &rarr; 90.9 \% | ~~79.5\%~~ &rarr; 91.6\% |
+
+
+
+# 회의 전 생각
+* p2c_v1이 좋았던 건 포맷 때문일까 fewshot example (코딩 등 수기 예제) 때문이었을까? --> v2에 차용 가능
+* p2c_v1 + cot 의 gsm8k full set에서의 성능은 어떨까?
+* coh에서 failed method solution 을 쓰도록 하고 answer, evaluation까지 쓰게 해서 correct가 나오면 그걸로 답을 제출하도록 해볼까? 그게 나으려나? (이 경우 스탠다드한 fewshot 이 됨)
+    * solution까지 보고 selection 하도록 하는 프롬은 어떻게 만들어야 모델 셀렉션과 좀 달라보일까. reflection과 chimera 되어있고 p2c가 포함되어 있다는 점이 다른가?
+    * 사실은 위의 coh 변형도 solution보고 셀렉션을 하는 케이스 아닐까?
+    * 이렇게 하면 사실 evaluation까지 시키는 것이기도 하다. 
+* 모델 세 개로 selection을 하는 경우 성능은?
+* model selection 방법의 개선폭이 미미해보이지만 생각보다 그런 개선을 이뤄내기가 쉬운 것도 아니다. solution만 보고 selection하는건 llm이 어느정도 효과를 발휘 (\<1.5\% for `gpt-3.5-turbo, temperature=0.`) 하고 있다고 봐야한다.
+* ablation solution과 oct14 solution, 그리고 oct20 solution을 비교해보자. 
