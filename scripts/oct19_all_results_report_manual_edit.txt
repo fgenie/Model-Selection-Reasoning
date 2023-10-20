@@ -14,13 +14,14 @@ Accuracy: 0.914, Total: 1319, Correct: 1206, Error: 113
 Accuracy: 0.916, Total: 805, Correct: 737, Error: 68
 # Accuracy: 0.7950310559006211, Total: 805, Correct: 640, Error: 3
 
-0903_result/baseline (cot + pal model selection on equal indices as the others)
-Accuracy: 0.928, Total: 805, Correct: 747, Error: 58
-# Accuracy: 0.8186335403726708, Total: 805, Correct: 659, Error: 2
 
 0903_result/k2
 Accuracy: 0.909, Total: 805, Correct: 732, Error: 73
 # Accuracy: 0.8, Total: 805, Correct: 644, Error: 2
+
+0903_result/baseline (cot + pal model selection on equal indices as the others)
+Accuracy: 0.928, Total: 805, Correct: 747, Error: 58
+# Accuracy: 0.8186335403726708, Total: 805, Correct: 659, Error: 2
 ===================================
 
 
