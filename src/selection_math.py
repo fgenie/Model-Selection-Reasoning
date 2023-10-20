@@ -21,9 +21,8 @@ from tenacity import retry, wait_chain, wait_fixed
 
 
 # after 6 times of retry, it raises exception. waits between retries are specified inside the `wait_chain`
-@retry(wait=wait_chain(*[wait_fixed(3) for i in range(5)])) #defining backoff for retrying.
+# @retry(wait=wait_chain(*[wait_fixed(3) for i in range(5)])) #defining backoff for retrying.
 def completion_with_backoff(**kwargs):
-    print("calling...")
     return openai.ChatCompletion.create(**kwargs)
 
 def get_user_assistant_messages(system_message: str, user_message: str, assistant_message: str):
