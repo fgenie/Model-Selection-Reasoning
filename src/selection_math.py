@@ -387,6 +387,8 @@ def parse_method(methodstr:str)->str:
         return 'cot'
     elif '(P2C)' in methodstr or 'Plan to Code' in methodstr.replace('-', ' '):
         return 'p2c'
+    else:
+        return None
 
 def query_enhanced_coh(data: dict, 
                           prompt_f: str, 
@@ -435,7 +437,11 @@ def query_enhanced_coh(data: dict,
                 content = lines[indices[i]: indices[i+1]]
             assert content, 'empty content'
             parse_dd[toparse[i]] = "\n".join(content)
-        parse_dd['Solution:'] = parse_dd['Solution:'].replace('Solution:', '').strip()
+        if 'Solution:' not in parse_dd.keys():
+            parse_dd['Solution:'] = None
+            print(f'paring failed:\n{rawqueryout}')
+        else:
+            parse_dd['Solution:'] = parse_dd['Solution:'].replace('Solution:', '').strip()
         return parse_dd
 
     # prep prompt
@@ -528,9 +534,16 @@ def query_math(
                 backbone=backbone,
                 n_fewshot=k_fewshot)
             good_solution = parse_dd['Solution:']
-            good_method = parse_method(parse_dd['Successful Method:'])
+            try:
+                good_method = parse_method(parse_dd['Successful Method:'])
+            except Exception as e:
+                print(e)
+                print("parse_dd['Successful Method:'] failed")
+                good_method = None
             # start parsing
-            if good_method == 'cot':
+            if good_method is None:
+                final_ans, actual_method = None, None
+            elif good_method == 'cot':
                 final_ans = extract_num_turbo(good_solution)
                 actual_method = good_method
             elif good_method == 'pal':
@@ -554,8 +567,12 @@ def query_math(
             task_prompts.append(query_msg)
             rawouts.append(rawout)
             good_solutions.append(good_solution)
-            bad_method = parse_method(parse_dd['Failed Method:'])
-
+            try:
+                bad_method = parse_method(parse_dd['Failed Method:'])
+            except Exception as e:
+                print(e)
+                print("parse_dd['Failed Method:'] failed")
+                bad_method = None
 
         elif actor_selection_prompt:
             assert not ablation, "actor_selection_prompt and ablation cannot be used together."
@@ -799,79 +816,82 @@ if __name__ == '__main__':
 
     key = open('../openai_key.txt').read().strip()
     # print(key)
-    if args.justprompt:
-        just_prompt(key = key)
-    else: 
-        # prep experiements-common
-        start_index = args.start
-        end_index = args.end
-        dataset_name = args.dataset
-        cot_temperature = args.cot_temperature
-        pal_temperature = args.pal_temperature
-        backbone = args.backbone
-        sc_num = args.sc_num
-        output_dir = args.output_dir
 
-        start_time_0 = time.time()
-        print('Current time: ', time.strftime(
-            "%Y-%m-%d %H:%M:%S", time.localtime()))
+    # prep experiements-common
+    start_index = args.start
+    end_index = args.end
+    dataset_name = args.dataset
+    cot_temperature = args.cot_temperature
+    pal_temperature = args.pal_temperature
+    backbone = args.backbone
+    sc_num = args.sc_num
+    output_dir = args.output_dir
 
-        dt_string = datetime.now().strftime("%m_%d_%H_%M")
+    start_time_0 = time.time()
+    print('Current time: ', time.strftime(
+        "%Y-%m-%d %H:%M:%S", time.localtime()))
 
-        if dataset_name == 'gsm8k':
-            dataset = jsonlines_load('../dataset/gsm8K_test.jsonl')
-        elif dataset_name == 'dbg':
-            dataset = jsonlines_load('../dataset/dbg.jsonl') # 2 lines of gsm8k test
-        elif dataset_name == 'svamp':
-            dataset = jsonlines_load('../dataset/svamp.jsonl')
-        elif dataset_name == 'asdiv':
-            dataset = jsonlines_load('../dataset/asdiv.jsonl')
-        elif dataset_name == 'singleeq':
-            dataset = jsonlines_load('../dataset/single_eq.jsonl')
-        elif dataset_name == 'singleop':
-            dataset = jsonlines_load('../dataset/single_op.jsonl')
-        elif dataset_name == 'singleaddsub':
-            dataset = jsonlines_load('../dataset/single_addsub.jsonl')
-        elif dataset_name == 'multiarith':
-            dataset = jsonlines_load('../dataset/multiarith.jsonl')
+    dt_string = datetime.now().strftime("%m_%d_%H_%M")
 
-        # === slice data based on start and end ===
-        total_num = len(dataset)
-        print('total data: ', total_num)
-        if end_index == -1:
-            end_index = total_num
+    if dataset_name == 'gsm8k':
+        dataset = jsonlines_load('../dataset/gsm8K_test.jsonl')
+    elif dataset_name == 'dbg':
+        dataset = jsonlines_load('../dataset/dbg.jsonl') # 2 lines of gsm8k test
+    elif dataset_name == 'svamp':
+        dataset = jsonlines_load('../dataset/svamp.jsonl')
+    elif dataset_name == 'asdiv':
+        dataset = jsonlines_load('../dataset/asdiv.jsonl')
+    elif dataset_name == 'singleeq':
+        dataset = jsonlines_load('../dataset/single_eq.jsonl')
+    elif dataset_name == 'singleop':
+        dataset = jsonlines_load('../dataset/single_op.jsonl')
+    elif dataset_name == 'singleaddsub':
+        dataset = jsonlines_load('../dataset/single_addsub.jsonl')
+    elif dataset_name == 'multiarith':
+        dataset = jsonlines_load('../dataset/multiarith.jsonl')
 
-        if end_index > total_num:
-            end_index = total_num
+    # === slice data based on start and end ===
+    total_num = len(dataset)
+    print('total data: ', total_num)
+    if end_index == -1:
+        end_index = total_num
 
-        tasks = dataset[start_index:end_index]
-        task_num = len(tasks)
-        print('Current total tasks: ', task_num)
+    if end_index > total_num:
+        end_index = total_num
 
-        unfinished_tasks = []
+    tasks = dataset[start_index:end_index]
+    task_num = len(tasks)
+    print('Current total tasks: ', task_num)
 
-        
+    unfinished_tasks = []
+
+    
 
 
 
-        
-        # model-selection / ablation study
-        output_path = os.path.join(output_dir, f'{backbone}/')
-        if not os.path.exists(output_path):
-            os.makedirs(output_path)
-        save_path = os.path.join(output_path,
-                                f'{dataset_name}_k{args.k_fewshot}_sc{sc_num}_s{start_index}_e{end_index}_{dt_string}.jsonl')
-        print(save_path)
+    
+    # model-selection / ablation study
+    output_path = os.path.join(output_dir, f'{backbone}/')
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+    save_path = os.path.join(output_path,
+                            f'{dataset_name}_k{args.k_fewshot}_sc{sc_num}_s{start_index}_e{end_index}_{dt_string}.jsonl')
+    print(save_path)
 
-        # === run experiments ===
-        progress_bar = tqdm(range(task_num))
-        for i in range(task_num):
-            task = tasks[i]
-            start_time = time.time()
-            count = 0
-            while True:
-            #     try:
+    # === run experiments ===
+    progress_bar = tqdm(range(task_num))
+    for i in range(task_num):
+        task = tasks[i]
+        start_time = time.time()
+        count = 0
+        while True:
+            try:
                 count += 1
+
+                if args.custom_prompt.endswith('prompts/prep_reflexion/5_my_greatgreat_prompt.txt') and args.k_fewshot>6: # oct19 exp
+                    args.k_fewshot = 6
+                    print('for 5_my_greatgreat_prompt.txt, k_fewshot is maximum at 6')
+                    
         
                 ans = query_math(
                     task, key=key, cot_temperature=cot_temperature,
@@ -886,40 +906,40 @@ if __name__ == '__main__':
                     custom_prompt=args.custom_prompt, # for custom prompt experiment
                     )
                             
-                    # except Exception as e:
-                    #     print(e)
-                    #     ans = None
-                if ans is not None:
-                    with open(save_path, "a+") as fout:
-                        fout.write(json.dumps(ans)+'\n')
-                    progress_bar.update(1)
+            except Exception as e:
+                print(e)
+                ans = None
+            if ans is not None:
+                with open(save_path, "a+") as fout:
+                    fout.write(json.dumps(ans)+'\n')
+                progress_bar.update(1)
+                break
+            else: 
+                if count>3:
+                    print(f'tried {count} times, passing')
+                    print('Current Task: ', i)
+                    unfinished_tasks.append(task)
+                    count=0
                     break
-                else: # retry logic... but now obsolete?
-                    if count>3:
-                        print(f'tried {count} times, passing')
-                        print('Current Task: ', i)
-                        unfinished_tasks.append(task)
-                        count=0
-                        break
-                    else:
-                        print("retrying (main)")
-                        time.sleep(random.uniform(1,3))
-            
-                
-
-        end_time_0 = time.time()
-        print('Finish at time: ', time.strftime(
-            "%Y-%m-%d %H:%M:%S", time.localtime()))
-        print(f'Time used: {end_time_0 - start_time_0} seconds')
-        if len(unfinished_tasks) > 0:
-            unfinished_name = save_path.replace('.jsonl', '_unfinished.jsonl')
-            with jsl.open(unfinished_name, 'w') as writer:
-                writer.write_all(unfinished_tasks)
-                print(f'Unfinished tasks at: \n\t{unfinished_name}')
-            with open(f'{unfinished_name}.args', 'w') as f:
-                print(args, file=f)
-            print(f'Unfinished args at: \n\t{unfinished_name}.args')
-
+                else:
+                    print("retrying (main)")
+                    time.sleep(random.uniform(1,3))
+        
             
 
-        print('Done')
+    end_time_0 = time.time()
+    print('Finish at time: ', time.strftime(
+        "%Y-%m-%d %H:%M:%S", time.localtime()))
+    print(f'Time used: {end_time_0 - start_time_0} seconds')
+    if len(unfinished_tasks) > 0:
+        unfinished_name = save_path.replace('.jsonl', '_unfinished.jsonl')
+        with jsl.open(unfinished_name, 'w') as writer:
+            writer.write_all(unfinished_tasks)
+            print(f'Unfinished tasks at: \n\t{unfinished_name}')
+        with open(f'{unfinished_name}.args', 'w') as f:
+            print(args, file=f)
+        print(f'Unfinished args at: \n\t{unfinished_name}.args')
+
+        
+
+    print('Done')
