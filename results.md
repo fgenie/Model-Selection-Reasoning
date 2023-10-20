@@ -1,22 +1,16 @@
-# ComingUp
-## (Chul's idea)
-see solution and then select
-[ ] need to construct
-
-## cot+p2c_v1 was close
-[ ] try cot+p2c_v2
-    [ ] retry Sep 3 experiments with 805 &rarr; 1319 instances
-
 # Crooked `evaluate.py`!: Re-reporting all previous results 
-* found bug in eval script (`evaluate.py`) and fixed 
-* re-measured all the results as follows
+* found bug in eval script (`evaluate.py`) and fixed
+* **re-measured renewing all the results** as follows
+    * trend does not really change but it blows my mind...
+    * cot + p2c_v1 was close and p2c_v2 > p2c_v1 still holds.
+    
 
 ## Aug 31: Unchanged fact = no method so far beats the original model selection (pal + cot)
 | | standard prompts (k=8) | 
 |-|-|
 | acc.  | ~~80.2\%~~ &rarr; **91.4\%** | 
 
-## Oct 20: enhanced_coh (with manual reflections k=6) 
+## Oct 20: enhanced_coh (with manual reflections k <= 6) 
 > Don't stop after choosing, but continue to solve!  
 see [`5_my_greatgreat_prompt.txt`](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/5_my_greatgreat_prompt.txt), [`CoH.md`](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/CoH.md) for details
 
