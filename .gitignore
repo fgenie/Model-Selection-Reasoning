@@ -7,7 +7,9 @@ claude_key.txt
 openai_key.txt
 
 # scripts might include apikeys.
-scripts/
+# scripts include some exp results
+# checked with 'grep -rnw . -e "sk-"' + all keys are anonymized.
+# scripts/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
