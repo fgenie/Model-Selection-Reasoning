@@ -34,8 +34,8 @@ if __name__ == '__main__':
     else:
         corrects = (datadf.final_ans == datadf.answer)
 
-    acc = corrects.mean()
     ncorr = corrects.sum()
+    acc = ncorr / len(datadf)
     nwro = (~corrects).sum()
 
     df = pd.DataFrame(output_data)

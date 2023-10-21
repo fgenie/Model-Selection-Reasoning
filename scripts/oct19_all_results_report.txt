@@ -1,0 +1,76 @@
+0831
+===================================
+/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/chatgpt_cot_pal/gsm8k_sc1_s0_e1319_08_31_00_19
+Accuracy: 0.914, Total: 1319, Correct: 1206, Error: 113
+
+===================================
+
+
+0903
+===================================
+/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/0903_result/k5
+Accuracy: 0.916, Total: 805, Correct: 737, Error: 68
+
+/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/0903_result/baseline
+Accuracy: 0.928, Total: 805, Correct: 747, Error: 58
+
+/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/0903_result/k2
+Accuracy: 0.909, Total: 805, Correct: 732, Error: 73
+
+===================================
+
+
+0910 ablation
+===================================
+/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/0910_ablation_result/cot
+Accuracy: 0.903, Total: 1318, Correct: 1190, Error: 128
+
+/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/0910_ablation_result/plancode
+Accuracy: 0.821, Total: 1316, Correct: 1080, Error: 236
+
+/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/0910_ablation_result/pal
+Accuracy: 0.908, Total: 1319, Correct: 1197, Error: 122
+
+/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/expresults/0924_plancode_v2_abl/gsm8k_k8_sc1_s0_e1319_09_24_01_16
+Accuracy: 0.865, Total: 1319, Correct: 1141, Error: 178
+
+===================================
+
+
+oct14 actor selection 
+===================================
+/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct14_actorselect_chatgpt/gsm8k_k8_sc1_s0_e1319_10_14_23_48
+Accuracy: 0.875, Total: 1319, Correct: 1154, Error: 165
+
+/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct14_actorselect_palcot_chatgpt/gsm8k_k8_sc1_s0_e1319_10_15_09_13
+Accuracy: 0.895, Total: 1319, Correct: 1181, Error: 138
+
+/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct14_actorselect_hinted_chatgpt/gsm8k_k8_sc1_s0_e1319_10_14_23_49
+Accuracy: 0.865, Total: 1319, Correct: 1141, Error: 178
+
+/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct14_actorselect_hinted_palcot_chatgpt/gsm8k_k8_sc1_s0_e1319_10_15_09_12
+Accuracy: 0.895, Total: 1319, Correct: 1181, Error: 138
+
+/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct15_actorselect_verbose/chatgpt/gsm8k_k8_sc1_s0_e1319_10_16_11_22
+Accuracy: 0.869, Total: 1319, Correct: 1146, Error: 173
+
+/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct15_actorselect_cotpal_verbose/chatgpt/gsm8k_k8_sc1_s0_e1319_10_15_23_46
+Accuracy: 0.893, Total: 1319, Correct: 1178, Error: 141
+
+===================================
+
+
+oct19 enhanced coh
+===================================
+/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct19_enhanced_coh/chatgpt/gsm8k_k3
+Accuracy: 0.830, Total: 1319, Correct: 1095, Error: 224
+
+/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct19_enhanced_coh_another/chatgpt/gsm8k_k4_sc1_s0_e1319_10_20_21_16
+Accuracy: 0.827, Total: 1319, Correct: 1091, Error: 228
+
+/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct19_enhanced_coh/chatgpt/gsm8k_k6
+Accuracy: 0.876, Total: 1318, Correct: 1155, Error: 163
+
+===================================
+
+

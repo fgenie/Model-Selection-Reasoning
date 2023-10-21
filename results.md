@@ -1,5 +1,6 @@
 # Crooked `evaluate.py`!: Re-reporting all previous results 
-* found bug in eval script (`evaluate.py`) and fixed
+* found bug in eval script (`evaluate.py`) and corrected [this commit: evaluate.py](https://github.com/fgenie/Model-Selection-Reasoning/commit/1c9e9da279a944d319f4bbfe5281e9406ce796a6?diff=split#diff-0aeb543dc2f4cfda989f7c60a43d968c7b7fb62a96bfcc862e73340dc0cdc97a)
+    * author is using the same code to report the numbers.
 * **re-measured renewing all the results** as follows
     * trend does not really change but it blows my mind...
     * cot + p2c_v1 was close and p2c_v2 > p2c_v1 still holds.
@@ -14,9 +15,9 @@
 > Don't stop after choosing, but continue to solve!  
 see [`5_my_greatgreat_prompt.txt`](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/5_my_greatgreat_prompt.txt), [`CoH.md`](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/CoH.md) for details
 
-| | k=6 | k=3* |
-|-|-|-|
-| acc.  | 87.6\% | 83.0\% |
+| | k=6 | k=4* | k=3*
+|-|-|-|-|
+| acc.  | **87.6\%** | 82.7 \% | 83.0\% |
 
 *for k=3, randomly pick 3 transition examples amongst possible 6 (3C2) variants
 * lower than pal only acc = **90.8 \%**.
@@ -25,16 +26,17 @@ see [`5_my_greatgreat_prompt.txt`](https://github.com/fgenie/Model-Selection-Rea
 ## Oct 14: actor prompt test (manual reflections k=6)
 | acc. | amongst 3 models (6shots) | only 2 models (2shots) |
 |-|-|-|
-| select only | ~~77.3\%~~ &rarr; 87.5\% | ~~78.2\%~~ &rarr; 89.5\% |
-| prepend hint | ~~75.1\%~~ &rarr; 86.5\% | ~~78.2\%~~ &rarr; 89.5\% |
-* lower than pal only acc = **90.8 \%**.
+| select only | ~~77.3\%~~ &rarr; 87.5\% | ~~78.2\%~~ &rarr; **89.5\%** |
+| prepend hint | ~~75.1\%~~ &rarr; 86.5\% | ~~78.2\%~~ &rarr; **89.5\%** |
+* lower than pal only acc = **90.8 \%**
+* prepend hint does not help.
 
 
 ### + verbose (Chain-of-Thought rather than `cot`)
 
 | acc. | amongst 3 models (6shots) | only 2 models (2shots) |
 |-|-|-|
-| select only | ~~76.5\%~~ &rarr; 86.9\% | ~~78.5\%~~ &rarr; 89.3\% |
+| select only | ~~76.5\%~~ &rarr; 86.9\% | ~~78.5\%~~ &rarr; **89.3\%** |
 * lower than pal only acc = **90.8 \%**.
 
 <details>
@@ -82,15 +84,11 @@ Accuracy: 0.7725549658832449, Total: 1319, Correct: 1019, Error: 49
 + wc -l ../output/oct14_actorselect/gsm8k_k8_sc1_s0_e1319_10_14_23_48.jsonl
     1319 ../output/oct14_actorselect/gsm8k_k8_sc1_s0_e1319_10_14_23_48.jsonl
 
-1019 / (1319-9) = 0.7778625954198474
-
 
 + python evaluate.py --input_path ../output/oct14_actorselect_hinted/gsm8k_k8_sc1_s0_e1319_10_14_23_49.jsonl --dataset_type math
 Accuracy: 0.7513267626990144, Total: 1319, Correct: 991, Error: 63
 + wc -l ../output/oct14_actorselect_hinted/gsm8k_k8_sc1_s0_e1319_10_14_23_49.jsonl
     1319 ../output/oct14_actorselect_hinted/gsm8k_k8_sc1_s0_e1319_10_14_23_49.jsonl
-
-991/(1319 - 16) = 0.760552570990023
 
 
 # bewtween pal / cot (binary choice)
@@ -106,24 +104,28 @@ Accuracy: 0.7816527672479151, Total: 1319, Correct: 1031, Error: 18
 ## Sep 24, Sep 10: Ablation cot, pal, p2c_v1/v2 (v1 prompt k=5 --> v2 prompt k=8 with dialogued fewshot)
 | acc. | cot | pal | p2c |
 |-|-|-|-|
-| sep 10 | ~~78.8\%~~ &rarr; 87.5\% | ~~80.2 \%~~ &rarr; 90.8 \% | ~~67.6\%~~ &rarr; 82.1\% |
+| sep 10 | ~~78.8\%~~ &rarr; 87.5\% | ~~80.2 \%~~ &rarr; **90.8** \% | ~~67.6\%~~ &rarr; 82.1\% |
 | sep 24 v2 | n/a | n/a | ~~71.5\%~~ &rarr; 86.5\% |
 
 ## Sep 3 Model Selection (cot + p2c_v1)
 this experiment is done on 805 / 1319 instances (all indices are common for three)
 | | cot+pal | cot+p2c_v1 k=2 | cot+p2c_v1 k=5 |
 |-|-|-|-|
-| acc. | ~~81.9\%~~ &rarr; **92.8\%** | ~~80.0 \%~~ &rarr; 90.9 \% | ~~79.5\%~~ &rarr; 91.6\% |
+| acc. | ~~81.9\%~~ &rarr; **92.8\%** | ~~80.0 \%~~ &rarr; 90.9 \% | ~~79.5\%~~ &rarr; *91.6\%* |
 
 
 
 # 회의 전 생각
+* model selection 방법의 개선폭 (우리 실험상으로는 `sep10:palonly=90.8\%` &rarr; `sep3:pat+cot=92.8 \%`로 `+2.0%`) 이 미미해보이지만 생각보다 그런 개선을 이뤄내기가 쉬운 것도 아니다. solution만 보고 selection하는건 llm이 어느정도 효과를 발휘 (`gpt-3.5-turbo, temperature=0.`) 하고 있다고 봐야한다.
+    * 논문상에서 greedy decoding 결과는 82.6으로 뭔가 이상하다. PAL, CoT 성능으로 봐서는 잘못된 채점기를 그대로 사용중인 것 같다.
+    * 지금 저자 깃헙 스크립트도 변함이 없다.
 * p2c_v1이 좋았던 건 포맷 때문일까 fewshot example (코딩 등 수기 예제) 때문이었을까? --> v2에 차용 가능
-* p2c_v1 + cot 의 gsm8k full set에서의 성능은 어떨까?
+* p2c_v1 + cot 의 gsm8k full set에서의 성능은 어떨까? p2c_v2 + cot는?
+    * 이 경우 model selection에서 나온 실험과 동일하다 (CCoT + CoT, CoT'+CoT 를 수행한 바 있음)
+    * 물론... p2c를 무언가 잘 포장할 여지도 있긴 함
 * coh에서 failed method solution 을 쓰도록 하고 answer, evaluation까지 쓰게 해서 correct가 나오면 그걸로 답을 제출하도록 해볼까? 그게 나으려나? (이 경우 스탠다드한 fewshot 이 됨)
     * solution까지 보고 selection 하도록 하는 프롬은 어떻게 만들어야 모델 셀렉션과 좀 달라보일까. reflection과 chimera 되어있고 p2c가 포함되어 있다는 점이 다른가?
     * 사실은 위의 coh 변형도 solution보고 셀렉션을 하는 케이스 아닐까?
     * 이렇게 하면 사실 evaluation까지 시키는 것이기도 하다. 
 * 모델 세 개로 selection을 하는 경우 성능은?
-* model selection 방법의 개선폭이 미미해보이지만 생각보다 그런 개선을 이뤄내기가 쉬운 것도 아니다. solution만 보고 selection하는건 llm이 어느정도 효과를 발휘 (\<1.5\% for `gpt-3.5-turbo, temperature=0.`) 하고 있다고 봐야한다.
 * ablation solution과 oct14 solution, 그리고 oct20 solution을 비교해보자. 

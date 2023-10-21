@@ -27,7 +27,8 @@ EXP2PATH = {'0831': ['/Users/seonils/dev/llm-reasoners/examples/Model-Selection-
 'oct19 enhanced coh':
 [
 '/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct19_enhanced_coh/chatgpt/gsm8k_k3.jsonl' ,
-'/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct19_enhanced_coh/chatgpt/gsm8k_k6.jsonl' 
+'/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct19_enhanced_coh_another/chatgpt/gsm8k_k4_sc1_s0_e1319_10_20_21_16.jsonl',
+'/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct19_enhanced_coh/chatgpt/gsm8k_k6.jsonl', 
 ],}
 with open('oct19_all_results_report.txt', 'w') as f:
     for expname, paths in EXP2PATH.items():
