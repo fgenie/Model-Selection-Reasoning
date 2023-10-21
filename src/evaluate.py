@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     datadf = pd.DataFrame(output_data)
     if dataset_type == 'math': # gsm8k here
-        corrects = datadf.majority_ans.sub(datadf.answer) < 1e-3
+        corrects = datadf.majority_ans.sub(datadf.answer).abs() < 1e-3
     else:
         corrects = (datadf.final_ans == datadf.answer)
 

@@ -1,13 +1,15 @@
 # More CoH-like prompt 
 (`5_my_greatgreat_prompt.txt`)
 액터프롬으로 모델 선택에서 멈추지 않고 생성하면 cot/pal/p2c솔루션까지 생성이 잘 되길래 시도해봅니다 (기존에는 액터의 model selection --> standard cot/pal/p2c prompt query로 진행했음). 몇 몇 틀리던 문제들을 맞추기도 하며 셀렉션에 더 영향을 주는 `Hint`를 생성하는 것처럼 보입니다.
-> 설레발일 수 있습니다
+
+## 예후
+* k=6일 때 1319개 중 8개에서 format을 무시하고 Question: 부터 생성한 경우들도 있다.
 
 ## 약간의 에라
 `Successful Method`로는 `pal`, `p2c`를 고르고 `cot`로 풀이하는 경우들이 발생한다. gpt-4로 실행할 경우는 그렇지 않았다.
 
 ## ?
-`cot` -> `cot` 같은 케이스들은 fewshot에 넣으면 너무 길어져서 별론데 해야할까?
+~~`cot` -> `cot` 같은 케이스들은 fewshot에 넣으면 너무 길어져서 별론데 해야할까?~~
 
 
 ## 변경점

@@ -9,7 +9,7 @@
 ## Aug 31: Unchanged fact = no method so far beats the original model selection (pal + cot)
 | | standard prompts (k=8) | 
 |-|-|
-| acc.  | ~~80.2\%~~ &rarr; **91.4\%** | 
+| acc.  | ~~80.2\%~~ &rarr; **80.1\%** | 
 
 ## Oct 20: enhanced_coh (with manual reflections k <= 6) 
 > Don't stop after choosing, but continue to solve!  
@@ -17,7 +17,7 @@ see [`5_my_greatgreat_prompt.txt`](https://github.com/fgenie/Model-Selection-Rea
 
 | | k=6 | k=4* | k=3*
 |-|-|-|-|
-| acc.  | **87.6\%** | 82.7 \% | 83.0\% |
+| acc.  | **74.0 \%** | 69.7 \% | 69.9 \% |
 
 *for k=3, randomly pick 3 transition examples amongst possible 6 (3C2) variants
 * lower than pal only acc = **90.8 \%**.
@@ -108,7 +108,7 @@ Accuracy: 0.7816527672479151, Total: 1319, Correct: 1031, Error: 18
 | sep 24 v2 | n/a | n/a | ~~71.5\%~~ &rarr; 86.5\% |
 
 ## Sep 3 Model Selection (cot + p2c_v1)
-this experiment is done on 805 / 1319 instances (all indices are common for three)
+this experiment is **done on subset of gsm8k: 805 / 1319 instances** (all indices are common for three)
 | | cot+pal | cot+p2c_v1 k=2 | cot+p2c_v1 k=5 |
 |-|-|-|-|
 | acc. | ~~81.9\%~~ &rarr; **92.8\%** | ~~80.0 \%~~ &rarr; 90.9 \% | ~~79.5\%~~ &rarr; *91.6\%* |
@@ -116,7 +116,7 @@ this experiment is done on 805 / 1319 instances (all indices are common for thre
 
 
 # 회의 전 생각
-* model selection 방법의 개선폭 (우리 실험상으로는 `sep10:palonly=90.8\%` &rarr; `sep3:pat+cot=92.8 \%`로 `+2.0%`) 이 미미해보이지만 생각보다 그런 개선을 이뤄내기가 쉬운 것도 아니다. solution만 보고 selection하는건 llm이 어느정도 효과를 발휘 (`gpt-3.5-turbo, temperature=0.`) 하고 있다고 봐야한다.
+* model selection 방법의 개선폭 (우리 실험상으로는 `sep10:palonly=90.8\%` &rarr; `sep3subset:pal+cot=92.8 \%` or `aug31nongreedy:pal+cot=91.4\%`로 `+0.6~2.0%`) 이 미미해보이지만 생각보다 그런 개선을 이뤄내기가 쉬운 것도 아니다. solution만 보고 selection하는건 llm이 어느정도 효과를 발휘 (`gpt-3.5-turbo, temperature=0.`) 하고 있다고 봐야한다.
     * 논문상에서 greedy decoding 결과는 82.6으로 뭔가 이상하다. PAL, CoT 성능으로 봐서는 잘못된 채점기를 그대로 사용중인 것 같다.
     * 지금 저자 깃헙 스크립트도 변함이 없다.
 * p2c_v1이 좋았던 건 포맷 때문일까 fewshot example (코딩 등 수기 예제) 때문이었을까? --> v2에 차용 가능
