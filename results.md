@@ -3,15 +3,18 @@
     * author is using the same code to report the numbers.
 * **re-measured renewing all the results** as follows
     * trend does not really change but it blows my mind...
-    * cot + p2c_v1 was close and p2c_v2 > p2c_v1 still holds.
+    * ~~cot + p2c_v1 was close and p2c_v2 > p2c_v1 still holds.
     
 
 ## Aug 31: Unchanged fact = no method so far beats the original model selection (pal + cot)
 | | standard prompts (k=8) | 
 |-|-|
-| acc.  | ~~80.2\%~~ &rarr; **80.1\%** | 
+| acc.  | 80.1 \% |
 
-## Oct 20: enhanced_coh (with manual reflections k <= 6) 
+*not sure is this greedy decoded. my commit is started from sep2 which performs 0903 exps, not 0831.
+*but the commit where fork started implies it's greedy decoding (temperatures = 0.)
+
+## Oct 20: enhanced_coh (with manual reflections k <= 6)  --> just bad 
 > Don't stop after choosing, but continue to solve!  
 see [`5_my_greatgreat_prompt.txt`](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/5_my_greatgreat_prompt.txt), [`CoH.md`](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/CoH.md) for details
 
@@ -20,24 +23,26 @@ see [`5_my_greatgreat_prompt.txt`](https://github.com/fgenie/Model-Selection-Rea
 | acc.  | **74.0 \%** | 69.7 \% | 69.9 \% |
 
 *for k=3, randomly pick 3 transition examples amongst possible 6 (3C2) variants
-* lower than pal only acc = **90.8 \%**.
 
 
 ## Oct 14: actor prompt test (manual reflections k=6)
 | acc. | amongst 3 models (6shots) | only 2 models (2shots) |
 |-|-|-|
-| select only | ~~77.3\%~~ &rarr; 87.5\% | ~~78.2\%~~ &rarr; **89.5\%** |
-| prepend hint | ~~75.1\%~~ &rarr; 86.5\% | ~~78.2\%~~ &rarr; **89.5\%** |
-* lower than pal only acc = **90.8 \%**
+| select only | 77.3 \% | 78.2 \% |
+| prepend hint | 75.1 \% | 78.2 \% |
+
 * prepend hint does not help.
+* exclusion of p2c improves acc.
 
 
 ### + verbose (Chain-of-Thought rather than `cot`)
-
 | acc. | amongst 3 models (6shots) | only 2 models (2shots) |
 |-|-|-|
-| select only | ~~76.5\%~~ &rarr; 86.9\% | ~~78.5\%~~ &rarr; **89.3\%** |
-* lower than pal only acc = **90.8 \%**.
+| select only | 76.5\% | 78.5\% |
+
+* exclusion of p2c improves acc.
+* 3 model acc. degraded a bit, 2 model acc. improved. no consistent improvement.
+
 
 <details>
     <summary> Click to expand: about actor selection </summary>
@@ -104,22 +109,28 @@ Accuracy: 0.7816527672479151, Total: 1319, Correct: 1031, Error: 18
 ## Sep 24, Sep 10: Ablation cot, pal, p2c_v1/v2 (v1 prompt k=5 --> v2 prompt k=8 with dialogued fewshot)
 | acc. | cot | pal | p2c |
 |-|-|-|-|
-| sep 10 | ~~78.8\%~~ &rarr; 87.5\% | ~~80.2 \%~~ &rarr; **90.8** \% | ~~67.6\%~~ &rarr; 82.1\% |
-| sep 24 v2 | n/a | n/a | ~~71.5\%~~ &rarr; 86.5\% |
+| sep 10 | 78.8 \% | 80.2 \% | 67.6 \% |
+| sep 24 v2 | n/a | n/a | 71.5 \% |
+
+* p2c_v2 > p2c_v1
 
 ## Sep 3 Model Selection (cot + p2c_v1)
 this experiment is **done on subset of gsm8k: 805 / 1319 instances** (all indices are common for three)
 | | cot+pal | cot+p2c_v1 k=2 | cot+p2c_v1 k=5 |
 |-|-|-|-|
-| acc. | ~~81.9\%~~ &rarr; **92.8\%** | ~~80.0 \%~~ &rarr; 90.9 \% | ~~79.5\%~~ &rarr; *91.6\%* |
+| acc. | 81.9\% | 80.0 \% | 79.5\% |
+
+* cot + p2c_v1 k=2: the closest to model selection so far. 
 
 
 
 # 회의 전 생각
-* model selection 방법의 개선폭 (우리 실험상으로는 `sep10:palonly=90.8\%` &rarr; `sep3subset:pal+cot=92.8 \%` or `aug31nongreedy:pal+cot=91.4\%`로 `+0.6~2.0%`) 이 미미해보이지만 생각보다 그런 개선을 이뤄내기가 쉬운 것도 아니다. solution만 보고 selection하는건 llm이 어느정도 효과를 발휘 (`gpt-3.5-turbo, temperature=0.`) 하고 있다고 봐야한다.
-    * 논문상에서 greedy decoding 결과는 82.6으로 뭔가 이상하다. PAL, CoT 성능으로 봐서는 잘못된 채점기를 그대로 사용중인 것 같다.
-    * 지금 저자 깃헙 스크립트도 변함이 없다.
+* ~~model selection 방법의 개선폭 (우리 실험상으로는 `sep10:palonly=90.8\%` &rarr; `sep3subset:pal+cot=92.8 \%` or `aug31nongreedy:pal+cot=91.4\%`로 `+0.6~2.0%`) 이 미미해보이지만 생각보다 그런 개선을 이뤄내기가 쉬운 것도 아니다. solution만 보고 selection하는건 llm이 어느정도 효과를 발휘 (`gpt-3.5-turbo, temperature=0.`) 하고 있다고 봐야한다.~~
+    * ~~논문상에서 greedy decoding 결과는 82.6으로 뭔가 이상하다. PAL, CoT 성능으로 봐서는 잘못된 채점기를 그대로 사용중인 것 같다.~~
+    * ~~지금 저자 깃헙 스크립트도 변함이 없다.~~
 * p2c_v1이 좋았던 건 포맷 때문일까 fewshot example (코딩 등 수기 예제) 때문이었을까? --> v2에 차용 가능
+    * k=2가 특히 좋았다
+    * coh p2c의 승률은 어땠는가?
 * p2c_v1 + cot 의 gsm8k full set에서의 성능은 어떨까? p2c_v2 + cot는?
     * 이 경우 model selection에서 나온 실험과 동일하다 (CCoT + CoT, CoT'+CoT 를 수행한 바 있음)
     * 물론... p2c를 무언가 잘 포장할 여지도 있긴 함

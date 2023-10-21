@@ -51,7 +51,7 @@ def method_dist(df):
 def method_success_rate(df):
     return 
 # get success rate / distribution
-# 0831: model selection full, nongreedy
+# 0831: model selection full, <-- greedy too. according to the commit history
 # 0903: model selection subset, greedy
 # oct14* actor selection 
 interests = [
