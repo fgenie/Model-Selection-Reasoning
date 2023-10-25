@@ -17,7 +17,7 @@ from prompts.prep_reflexion.actor_prompt_utils import PromptStr
 import random 
 from collections import OrderedDict
 from tenacity import retry, wait_chain, wait_fixed
-
+from itertools import combinations
 
 
 # after 6 times of retry, it raises exception. waits between retries are specified inside the `wait_chain`
@@ -306,7 +306,7 @@ def query_selection(data: dict, key: str, cot_solution: list, pal_solution: list
 def query_actor_selection(data: dict, 
                           prompt_f: str, 
                           key: str, 
-                          backbone: str):
+                          backbone: str)->tuple: # str(hint:plain english), str(method acronym), list(msgs)
     if backbone == 'chatgpt':
         model_name = 'gpt-3.5-turbo'
     elif backbone == 'gpt4':
@@ -483,6 +483,7 @@ def query_math(
         actor_selection_prompt:str='', # 10/14 assuming kshot harvesting is done, test actor potential
         prog_hint_prompting:bool=False, # 10/14 whether to do `hint injection`
         custom_prompt:str='', # 10/19 coh exp
+        when_only_conflict:int=-1, # oct26 exp
         ):
     '''
     This function is used to query OpenAI for answers in arithmetic tasks. It contains three steps:
@@ -511,144 +512,285 @@ def query_math(
 
     cot_answers = []
     pal_answers = []
+    p2c_answers = []
     cot_solutions = []
     pal_solutions = []
+    p2c_solutions = []
     selection_solutions = []
     final_answers = []
 
     good_solutions = []
-    prompts = [] # already a list
     rawouts = []
     plan = ''
     task_prompts = [] # not an actor prompt, but a task prompt
 
     for i in range(sc_num):
-        if custom_prompt:
-            assert not ablation
-            assert not actor_selection_prompt
-            parse_dd, rawout, query_msg = query_enhanced_coh(
-                data, 
-                prompt_f=custom_prompt, 
-                key=key, 
-                backbone=backbone,
-                n_fewshot=k_fewshot)
-            good_solution = parse_dd['Solution:']
-            try:
-                good_method = parse_method(parse_dd['Successful Method:'])
-            except Exception as e:
-                print(e)
-                print("parse_dd['Successful Method:'] failed")
-                good_method = None
-            # start parsing
-            if good_method is None:
-                final_ans, actual_method = None, None
-            elif good_method == 'cot':
-                final_ans = extract_num_turbo(good_solution)
-                actual_method = good_method
-            elif good_method == 'pal':
-                try:
-                    final_ans = safe_execute_turbo(good_solution)
-                    actual_method = good_method
-                except: 
-                    final_ans = extract_num_turbo(good_solution)
-                    actual_method = 'cot'
-            elif good_method == 'p2c':
-                plan, code = separate_plan_code(good_solution)
-                try: 
-                    final_ans = safe_execute_turbo(code)
-                    actual_method = good_method
-                except: #if code is None:
-                    final_ans = extract_num_turbo(good_solution)
-                    actual_method = 'cot'
-
+        if when_only_conflict in [2,3]: # actor selection or coh-enhanced when only conflict.
+            cot_ans = None
+            pal_ans = None
+            p2c_ans = None
+            # selection_ans = None # this for model-selection
+            final_ans = None
+            cot_solution, query_msg = query_cot(
+                data, key, cot_temperature, backbone=backbone)
+            # do cot
+            if cot_solution is None:
+                print('Time out') 
+                return None
+            else:
+                cot_ans = extract_num_turbo(cot_solution[0])
+                cot_answers.append(cot_ans)
+                cot_solutions.append(cot_solution[0])
+            # do pal
+            pal_solution, query_msg = query_pal(
+                data, key, pal_temperature, backbone=backbone)
+            if pal_solution is None:
+                print('Time out')
+                return None
+            else:
+                pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
+                pal_answers.append(pal_ans)
+                pal_solutions.append(pal_solution[0])
+            if when_only_conflict==3:
+                # do p2c 
+                p2c_solution, plans, query_msg = query_plancode(data, key=key, plan_temperature=plan_temperature, code_temperature=code_temperature, backbone=backbone, k_fewshot=k_fewshot)
+                if p2c_solution is None:
+                    print('Time out')
+                    return None
+                else:
+                    p2c_ans = safe_execute_turbo(p2c_solution[0]) # testing p2c-generated code and getting answer from it
+                    p2c_answers.append(p2c_ans)
+                    p2c_solutions.append(p2c_solution[0])
+            # apply --custom_prompt | --actor_selection_prompt
+            answers_above = [cot_ans, pal_ans]
+            if when_only_conflict==3:
+                answers_above.append(p2c_ans)
+            n_failed = answers_above.count(None)
             
-            # record result
-            task_prompts.append(query_msg)
-            rawouts.append(rawout)
-            good_solutions.append(good_solution)
-            try:
-                bad_method = parse_method(parse_dd['Failed Method:'])
-            except Exception as e:
-                print(e)
-                print("parse_dd['Failed Method:'] failed")
-                bad_method = None
 
-        elif actor_selection_prompt:
-            assert not ablation, "actor_selection_prompt and ablation cannot be used together."
-            hint, reasoning_method, query_msg_actor = query_actor_selection(data, 
-                                                           prompt_f=actor_selection_prompt, 
-                                                           key=key, 
-                                                           backbone=backbone)
-            if not prog_hint_prompting:
-                hint = '' #make it empty
-            # reasoning_method = n/a if parsing fails
-            # hint = generated string if parsing fails
-            if reasoning_method == 'cot':
-                cot_solution, query_msg = query_cot(
-                                    data, 
-                                    key, 
-                                    cot_temperature, 
-                                    backbone=backbone, 
-                                    hint=hint)
-                if cot_solution is None:
-                    print('Time out')
-                    return None
-                else:
-                    cot_ans = extract_num_turbo(cot_solution[0]) # number parsed
-                    cot_answers.append(cot_ans) # parsed answers stacked --> cot_executed
-                    cot_solutions.append(cot_solution[0]) # unparsed answers --> cot_generated
-                    final_ans = cot_ans
-
-            elif reasoning_method == 'pal':
-                pal_solution, query_msg = query_pal(
-                        data, key, pal_temperature, backbone=backbone, hint=hint)
-                if pal_solution is None:
-                    print('Time out')
-                    return None
-                else:
-                    pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
-                    pal_answers.append(pal_ans)
-                    pal_solutions.append(pal_solution[0])
-                    final_ans = pal_ans 
-
-            elif reasoning_method == 'p2c':
-                pal_solution, plans, query_msg = query_plancode(data, key=key, 
-                                            plan_temperature=plan_temperature, 
-                                            code_temperature=code_temperature, 
-                                            backbone=backbone, 
-                                            k_fewshot=k_fewshot, hint=hint)
-                if pal_solution is None or pal_solution == [None]:
-                    print('Time out')
-                    return None
-                else:
-                    pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
-                    pal_answers.append(pal_ans)
-                    pal_solutions.append(pal_solution[0])
-                    final_ans = pal_ans
-            else: # failed to select correctly
-                final_ans = None
-            task_prompts.append({'actorquery': query_msg_actor, 'taskquery': query_msg})
-        
-            
+            if when_only_conflict==3:
+                raise NotImplementedError('select from two --> need real-time flexible blurb building for actor selection')
+                concord = False
+                if n_failed == 0:
+                    concord = any([ abs(a-b)<1e-3 for a,b in combinations(answers_above,2) ])
+                    if concord:
+                        if abs(cot_ans - p2c_ans)<1e-3:
+                            final_ans = cot_ans
+                        elif abs(p2c_ans - pal_ans)<1e-3:
+                            final_ans = p2c_ans
+                        else: # pal - cot <1e-3
+                            final_ans = cot_ans
+                    else:
+                        query_actor_selection()
                         
-        elif ablation: # ablation != ''
-            if ablation == 'cot':
+                elif n_failed ==1:
+                    answers_not_none = [a for a in answers_above if a is not None]
+                    concord = abs(answers_not_none[0]-answers_not_none[1]) < 1e-3
+                    if concord:
+                        final_ans = answers_not_none[0]
+                    else:
+                        query_actor_selection()
+
+                elif n_failed ==2:
+                    answers_not_none = [a for a in answers_above if a is not None]
+                    concord = True
+                    final_ans = answers_not_none[0]
+                else: # n_failed==3
+                    final_ans = None
+            else: #when_only_conflict==2
+                # same as model selection but actor selection instead
+                if cot_ans is not None and pal_ans is not None:
+                    # ==== Only select when CoT and PAL are different ====
+                    if abs(cot_ans - pal_ans) >= 1e-3:
+                        hint, reasoning_method, query_msg_actor = query_actor_selection(data,
+                                                                                        prompt_f = actor_selection_prompt,
+                                                                                        key= key,
+                                                                                        backbone=backbone)
+                        if reasoning_method == 'cot':
+                            final_ans = cot_ans
+                        elif reasoning_method == 'pal':
+                            final_ans = pal_ans
+                        else: # paring failed 
+                            final_ans = cot_ans if random.random()<0.5 else pal_ans
+                        selection_solutions.append(reasoning_method)
+                        selection_solutions.append(hint)
+                        task_prompts.append(query_msg_actor)
+                    else:
+                        final_ans = cot_ans
+                elif cot_ans is not None and pal_ans is None:
+                    final_ans = cot_ans
+                elif cot_ans is None and pal_ans is not None:
+                    final_ans = pal_ans
+                else:
+                    final_ans = None
+                
+
+        else:
+            if custom_prompt: # coh-enhanced (10/21)
+                assert not ablation
+                assert not actor_selection_prompt
+                parse_dd, rawout, query_msg = query_enhanced_coh(
+                    data, 
+                    prompt_f=custom_prompt, 
+                    key=key, 
+                    backbone=backbone,
+                    n_fewshot=k_fewshot)
+                good_solution = parse_dd['Solution:']
+                try:
+                    good_method = parse_method(parse_dd['Successful Method:'])
+                except Exception as e:
+                    print(e)
+                    print("parse_dd['Successful Method:'] failed")
+                    good_method = None
+                # start parsing
+                if good_method is None:
+                    final_ans, actual_method = None, None
+                elif good_method == 'cot':
+                    final_ans = extract_num_turbo(good_solution)
+                    actual_method = good_method
+                elif good_method == 'pal':
+                    try:
+                        final_ans = safe_execute_turbo(good_solution)
+                        actual_method = good_method
+                    except: 
+                        final_ans = extract_num_turbo(good_solution)
+                        actual_method = 'cot'
+                elif good_method == 'p2c':
+                    plan, code = separate_plan_code(good_solution)
+                    try: 
+                        final_ans = safe_execute_turbo(code)
+                        actual_method = good_method
+                    except: #if code is None:
+                        final_ans = extract_num_turbo(good_solution)
+                        actual_method = 'cot'
+
+                
+                # record result
+                task_prompts.append(query_msg)
+                rawouts.append(rawout)
+                good_solutions.append(good_solution)
+                try:
+                    bad_method = parse_method(parse_dd['Failed Method:'])
+                except Exception as e:
+                    print(e)
+                    print("parse_dd['Failed Method:'] failed")
+                    bad_method = None
+            elif actor_selection_prompt: # actor-selection only (10/14)
+                assert not ablation, "actor_selection_prompt and ablation cannot be used together."
+                hint, reasoning_method, query_msg_actor = query_actor_selection(data, 
+                                                            prompt_f=actor_selection_prompt, 
+                                                            key=key, 
+                                                            backbone=backbone)
+                if not prog_hint_prompting:
+                    hint = '' #make it empty
+                # reasoning_method = n/a if parsing fails
+                # hint = generated string if parsing fails
+                if reasoning_method == 'cot':
+                    cot_solution, query_msg = query_cot(
+                                        data, 
+                                        key, 
+                                        cot_temperature, 
+                                        backbone=backbone, 
+                                        hint=hint)
+                    if cot_solution is None:
+                        print('Time out')
+                        return None
+                    else:
+                        cot_ans = extract_num_turbo(cot_solution[0]) # number parsed
+                        cot_answers.append(cot_ans) # parsed answers stacked --> cot_executed
+                        cot_solutions.append(cot_solution[0]) # unparsed answers --> cot_generated
+                        final_ans = cot_ans
+
+                elif reasoning_method == 'pal':
+                    pal_solution, query_msg = query_pal(
+                            data, key, pal_temperature, backbone=backbone, hint=hint)
+                    if pal_solution is None:
+                        print('Time out')
+                        return None
+                    else:
+                        pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
+                        pal_answers.append(pal_ans)
+                        pal_solutions.append(pal_solution[0])
+                        final_ans = pal_ans 
+
+                elif reasoning_method == 'p2c':
+                    pal_solution, plans, query_msg = query_plancode(data, key=key, 
+                                                plan_temperature=plan_temperature, 
+                                                code_temperature=code_temperature, 
+                                                backbone=backbone, 
+                                                k_fewshot=k_fewshot, hint=hint)
+                    if pal_solution is None or pal_solution == [None]:
+                        print('Time out')
+                        return None
+                    else:
+                        pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
+                        pal_answers.append(pal_ans)
+                        pal_solutions.append(pal_solution[0])
+                        final_ans = pal_ans
+                else: # failed to select correctly
+                    final_ans = None
+                task_prompts.append({'actorquery': query_msg_actor, 'taskquery': query_msg})                
+            elif ablation: # ablation != ''
+                if ablation == 'cot':
+                    cot_solution, query_msg = query_cot(
+                                        data, 
+                                        key, 
+                                        cot_temperature, 
+                                        backbone=backbone)
+                    if cot_solution is None:
+                        print('Time out')
+                        return None
+                    else:
+                        cot_ans = extract_num_turbo(cot_solution[0]) # number parsed
+                        cot_answers.append(cot_ans) # parsed answers stacked --> cot_executed
+                        cot_solutions.append(cot_solution[0]) # unparsed answers --> cot_generated
+                        final_ans = cot_ans
+
+                elif ablation == 'pal':
+                    pal_solution, query_msg = query_pal(
+                            data, key, pal_temperature, backbone=backbone)
+                    if pal_solution is None:
+                        print('Time out')
+                        return None
+                    else:
+                        pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
+                        pal_answers.append(pal_ans)
+                        pal_solutions.append(pal_solution[0])
+                        final_ans = pal_ans 
+
+                elif ablation == 'plancode':
+                    pal_solution, plans, query_msg = query_plancode(data, key=key, 
+                                                plan_temperature=plan_temperature, 
+                                                code_temperature=code_temperature, 
+                                                backbone=backbone, 
+                                                k_fewshot=k_fewshot)
+                    if pal_solution is None or pal_solution == [None]:
+                        print('Time out')
+                        return None
+                    else:
+                        pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
+                        pal_answers.append(pal_ans)
+                        pal_solutions.append(pal_solution[0])
+                        final_ans = pal_ans 
+                task_prompts.append(query_msg)
+            else: # doing model-selection (baseline paper + p2c_v1)
+                cot_ans = None
+                pal_ans = None
+                selection_ans = None
+                final_ans = None
                 cot_solution, query_msg = query_cot(
-                                    data, 
-                                    key, 
-                                    cot_temperature, 
-                                    backbone=backbone)
+                    data, key, cot_temperature, backbone=backbone)
                 if cot_solution is None:
                     print('Time out')
                     return None
                 else:
-                    cot_ans = extract_num_turbo(cot_solution[0]) # number parsed
-                    cot_answers.append(cot_ans) # parsed answers stacked --> cot_executed
-                    cot_solutions.append(cot_solution[0]) # unparsed answers --> cot_generated
-                    final_ans = cot_ans
-
-            elif ablation == 'pal':
-                pal_solution, query_msg = query_pal(
+                    cot_ans = extract_num_turbo(cot_solution[0])
+                    cot_answers.append(cot_ans)
+                    cot_solutions.append(cot_solution[0])
+                if use_plancode:
+                    pal_solution, plans, query_msg = query_plancode(data, key=key, plan_temperature=plan_temperature, code_temperature=code_temperature, backbone=backbone, k_fewshot=k_fewshot)
+                else:
+                    pal_solution, query_msg = query_pal(
                         data, key, pal_temperature, backbone=backbone)
                 if pal_solution is None:
                     print('Time out')
@@ -657,75 +799,32 @@ def query_math(
                     pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
                     pal_answers.append(pal_ans)
                     pal_solutions.append(pal_solution[0])
-                    final_ans = pal_ans 
 
-            elif ablation == 'plancode':
-                pal_solution, plans, query_msg = query_plancode(data, key=key, 
-                                              plan_temperature=plan_temperature, 
-                                              code_temperature=code_temperature, 
-                                              backbone=backbone, 
-                                              k_fewshot=k_fewshot)
-                if pal_solution is None or pal_solution == [None]:
-                    print('Time out')
-                    return None
-                else:
-                    pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
-                    pal_answers.append(pal_ans)
-                    pal_solutions.append(pal_solution[0])
-                    final_ans = pal_ans 
-            task_prompts.append(query_msg)
-        else: # doing model-selection way of inference (includes plancode variate when use_plancode==True)
-            cot_ans = None
-            pal_ans = None
-            selection_ans = None
-            final_ans = None
-            cot_solution, query_msg = query_cot(
-                data, key, cot_temperature, backbone=backbone)
-            if cot_solution is None:
-                print('Time out')
-                return None
-            else:
-                cot_ans = extract_num_turbo(cot_solution[0])
-                cot_answers.append(cot_ans)
-                cot_solutions.append(cot_solution[0])
-            if use_plancode:
-                pal_solution, plans, query_msg = query_plancode(data, key=key, plan_temperature=plan_temperature, code_temperature=code_temperature, backbone=backbone, k_fewshot=k_fewshot)
-            else:
-                pal_solution, query_msg = query_pal(
-                    data, key, pal_temperature, backbone=backbone)
-            if pal_solution is None:
-                print('Time out')
-                return None
-            else:
-                pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
-                pal_answers.append(pal_ans)
-                pal_solutions.append(pal_solution[0])
-
-            if cot_ans is not None and pal_ans is not None:
-                # ==== Only select when CoT and PAL are different ====
-                if abs(cot_ans - pal_ans) > 1e-3:
-                    selection_ans = query_selection(
-                        data, key, cot_solution=cot_solution, pal_solution=pal_solution, backbone=backbone)
-                    if selection_ans is None:
-                        print('Time out')
-                        return None
+                if cot_ans is not None and pal_ans is not None:
+                    # ==== Only select when CoT and PAL are different ====
+                    if abs(cot_ans - pal_ans) > 1e-3:
+                        selection_ans = query_selection(
+                            data, key, cot_solution=cot_solution, pal_solution=pal_solution, backbone=backbone)
+                        if selection_ans is None:
+                            print('Time out')
+                            return None
+                        else:
+                            selection_choice = extract_choice_turbo(selection_ans[0])
+                            selection_solutions.append(selection_ans[0])
+                            if selection_choice == '(A)':
+                                final_ans = cot_ans
+                            elif selection_choice == '(B)':
+                                final_ans = pal_ans
                     else:
-                        selection_choice = extract_choice_turbo(selection_ans[0])
-                        selection_solutions.append(selection_ans[0])
-                        if selection_choice == '(A)':
-                            final_ans = cot_ans
-                        elif selection_choice == '(B)':
-                            final_ans = pal_ans
-                else:
-                    final_ans = cot_ans
+                        final_ans = cot_ans
 
-            elif cot_ans is not None and pal_ans is None:
-                final_ans = cot_ans
-            elif cot_ans is None and pal_ans is not None:
-                final_ans = pal_ans
-            else:
-                final_ans = None
-            task_prompts.append(query_msg)
+                elif cot_ans is not None and pal_ans is None:
+                    final_ans = cot_ans
+                elif cot_ans is None and pal_ans is not None:
+                    final_ans = pal_ans
+                else:
+                    final_ans = None
+                task_prompts.append(query_msg)
 
 
         final_answers.append(final_ans)
@@ -738,19 +837,24 @@ def query_math(
         {'index': data['index'], 'question': data['question'], 'answer': data['answer'],
          'majority_ans': majority_ans, 'final_answers': final_answers,
          'cot_executed': cot_answers, 'pal_executed': pal_answers,
-         'cot_generated': cot_solutions, 'pal_generated': pal_solutions, 'choice_solution': selection_solutions,
+         'cot_generated': cot_solutions, 'pal_generated': pal_solutions,
+         'choice_solution': selection_solutions,
          'iscorrect': majority_ans==data['answer'] }
     )
-    if ablation == 'plancode':
+    if when_only_conflict in [2,3]:
+        to_dump_data['p2c_generated'] = p2c_solutions
+        to_dump_data['p2c_executed'] = p2c_answers
+        to_dump_data['when_only_conflict'] = when_only_conflict
+    elif ablation == 'plancode':
         to_dump_data['plan'] = plans
         to_dump_data['reasoning_method'] = 'p2c'
-    if actor_selection_prompt:
+    elif actor_selection_prompt:
         to_dump_data['hint'] = hint
         to_dump_data['prog_hint_prompting'] = prog_hint_prompting
         to_dump_data['reasoning_method'] = reasoning_method
         if reasoning_method == 'p2c':
             to_dump_data['plan'] = plans
-    if custom_prompt:
+    elif custom_prompt:
         to_dump_data['good==actual'] = good_method == actual_method
         to_dump_data['good_solution'] = good_solution
         to_dump_data['bad_method'] = bad_method
@@ -758,6 +862,7 @@ def query_math(
         to_dump_data['plan'] = [plan]
         to_dump_data['rawouts'] = rawouts
         to_dump_data['actual_method'] = actual_method
+    
     to_dump_data['task_prompts'] = task_prompts
 
     return to_dump_data
@@ -799,9 +904,8 @@ if __name__ == '__main__':
     # custom_prompt (coh exp)
     parser.add_argument('--custom_prompt', type=str, default='', help='path to customprompt file')
 
-    # (DEPREC) rl-agent style experiment
-
-    
+    # 10/26 
+    parser.add_argument('--when_only_conflict', type=int, help='selecting from 2 or 3', default=-1)
     '''
         1. randomly sample amongst methods at first (i.e. cot pal plancode)
         2. verify the answer with the prompt (I guess this will be a critic?)
@@ -865,9 +969,6 @@ if __name__ == '__main__':
     unfinished_tasks = []
 
     
-
-
-
     
     # model-selection / ablation study
     output_path = os.path.join(output_dir, f'{backbone}/')
@@ -883,46 +984,52 @@ if __name__ == '__main__':
         task = tasks[i]
         start_time = time.time()
         count = 0
-        while True:
-            try:
-                count += 1
+        # while True:
+            # try:
+        count += 1
 
-                if args.custom_prompt.endswith('prompts/prep_reflexion/5_my_greatgreat_prompt.txt') and args.k_fewshot>6: # oct19 exp
-                    args.k_fewshot = 6
-                    print('for 5_my_greatgreat_prompt.txt, k_fewshot is maximum at 6')
-                    
-        
-                ans = query_math(
-                    task, key=key, cot_temperature=cot_temperature,
-                    pal_temperature=pal_temperature, sc_num=sc_num,backbone=backbone,
-                    plan_temperature=args.plan_temperature,
-                    code_temperature=args.code_temperature,
-                    k_fewshot=args.k_fewshot,
-                    use_plancode=args.use_plancode, # for model selection experiment
-                    ablation=args.ablation, # for onlyone method ablation study
-                    actor_selection_prompt=args.actor_selection_prompt, # for actor selection prompt test
-                    prog_hint_prompting=args.prog_hint_prompting, # whether to inject hint to query solution
-                    custom_prompt=args.custom_prompt, # for custom prompt experiment
-                    )
+        if args.custom_prompt.endswith('prompts/prep_reflexion/5_my_greatgreat_prompt.txt') and args.k_fewshot>6: # oct19 exp
+            args.k_fewshot = 6
+            print('for 5_my_greatgreat_prompt.txt, k_fewshot is maximum at 6')
+            
+
+        ans = query_math(
+            task, key=key, cot_temperature=cot_temperature,
+            pal_temperature=pal_temperature, sc_num=sc_num,backbone=backbone,
+            plan_temperature=args.plan_temperature,
+            code_temperature=args.code_temperature,
+            k_fewshot=args.k_fewshot,
+            use_plancode=args.use_plancode, # for model selection experiment
+            ablation=args.ablation, # for onlyone method ablation study
+            actor_selection_prompt=args.actor_selection_prompt, # for actor selection prompt test
+            prog_hint_prompting=args.prog_hint_prompting, # whether to inject hint to query solution
+            custom_prompt=args.custom_prompt, # for custom prompt experiment,
+            when_only_conflict=args.when_only_conflict, 
+            )
+        # only when dbg
+        progress_bar.update(1)
+        if ans is not None:
+            with open(save_path, "a+") as fout:
+                fout.write(json.dumps(ans)+'\n')
                             
-            except Exception as e:
-                print(e)
-                ans = None
-            if ans is not None:
-                with open(save_path, "a+") as fout:
-                    fout.write(json.dumps(ans)+'\n')
-                progress_bar.update(1)
-                break
-            else: 
-                if count>3:
-                    print(f'tried {count} times, passing')
-                    print('Current Task: ', i)
-                    unfinished_tasks.append(task)
-                    count=0
-                    break
-                else:
-                    print("retrying (main)")
-                    time.sleep(random.uniform(1,3))
+            # except Exception as e:
+            #     print(e)
+            #     ans = None
+            # if ans is not None:
+            #     with open(save_path, "a+") as fout:
+            #         fout.write(json.dumps(ans)+'\n')
+            #     progress_bar.update(1)
+            #     break
+            # else: 
+            #     if count>3:
+            #         print(f'tried {count} times, passing')
+            #         print('Current Task: ', i)
+            #         unfinished_tasks.append(task)
+            #         count=0
+            #         break
+            #     else:
+            #         print("retrying (main)")
+            #         time.sleep(random.uniform(1,3))
         
             
 

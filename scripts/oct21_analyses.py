@@ -4,6 +4,15 @@ from pathlib import Path
 import numpy as np
 
 
+'''
+Measure success rate of the previous experiments
+- 0903: model selection with p2c_v1 + cot
+- 0831: model selection with pal + cot
+
+success rate = when queried for selection, ratio that the selected method correctly answers the question
+'''
+
+
 exp_of_interests = {
 '0831': ['/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/chatgpt_cot_pal/gsm8k_sc1_s0_e1319_08_31_00_19.jsonl' ], # 
 '0903': [
