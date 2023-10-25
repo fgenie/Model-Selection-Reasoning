@@ -6,6 +6,13 @@
     * ~~cot + p2c_v1 was close and p2c_v2 > p2c_v1 still holds.
     
 
+## Oct 26: actor-select when conflict only (select btw 2)
+* select amongst 3 needs some modification (real-time construction of actor selection prompt with correct fewshot when choosing btw two not three.)
+* current version uses hand-made `training-blurb`
+* current version do not use printed-out solution for selection. Only static `training-blurb` is used. This could be improved by **newly inventing actor selection prompt w/ generated solutions with the `blurb`**
+* model-selection with 3 models prompt as a baseline
+
+
 ## Aug 31: Unchanged fact = no method so far beats the original model selection (pal + cot)
 | | standard prompts (k=8) | 
 |-|-|

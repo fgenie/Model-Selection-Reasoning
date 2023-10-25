@@ -5,7 +5,7 @@ set -x
 EXEHOME=/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src
 cd ${EXEHOME}
 
-python selection_math.py --start 0 \
+python selection_math.py --start 10 \
         --end -1 \
         --dataset 'gsm8k' \
         --backbone 'chatgpt' \

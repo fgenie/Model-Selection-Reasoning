@@ -984,52 +984,52 @@ if __name__ == '__main__':
         task = tasks[i]
         start_time = time.time()
         count = 0
-        # while True:
-            # try:
-        count += 1
+        while True:
+            try:
+                count += 1
 
-        if args.custom_prompt.endswith('prompts/prep_reflexion/5_my_greatgreat_prompt.txt') and args.k_fewshot>6: # oct19 exp
-            args.k_fewshot = 6
-            print('for 5_my_greatgreat_prompt.txt, k_fewshot is maximum at 6')
-            
+                if args.custom_prompt.endswith('prompts/prep_reflexion/5_my_greatgreat_prompt.txt') and args.k_fewshot>6: # oct19 exp
+                    args.k_fewshot = 6
+                    print('for 5_my_greatgreat_prompt.txt, k_fewshot is maximum at 6')
+                    
 
-        ans = query_math(
-            task, key=key, cot_temperature=cot_temperature,
-            pal_temperature=pal_temperature, sc_num=sc_num,backbone=backbone,
-            plan_temperature=args.plan_temperature,
-            code_temperature=args.code_temperature,
-            k_fewshot=args.k_fewshot,
-            use_plancode=args.use_plancode, # for model selection experiment
-            ablation=args.ablation, # for onlyone method ablation study
-            actor_selection_prompt=args.actor_selection_prompt, # for actor selection prompt test
-            prog_hint_prompting=args.prog_hint_prompting, # whether to inject hint to query solution
-            custom_prompt=args.custom_prompt, # for custom prompt experiment,
-            when_only_conflict=args.when_only_conflict, 
-            )
-        # only when dbg
-        progress_bar.update(1)
-        if ans is not None:
-            with open(save_path, "a+") as fout:
-                fout.write(json.dumps(ans)+'\n')
+                ans = query_math(
+                    task, key=key, cot_temperature=cot_temperature,
+                    pal_temperature=pal_temperature, sc_num=sc_num,backbone=backbone,
+                    plan_temperature=args.plan_temperature,
+                    code_temperature=args.code_temperature,
+                    k_fewshot=args.k_fewshot,
+                    use_plancode=args.use_plancode, # for model selection experiment
+                    ablation=args.ablation, # for onlyone method ablation study
+                    actor_selection_prompt=args.actor_selection_prompt, # for actor selection prompt test
+                    prog_hint_prompting=args.prog_hint_prompting, # whether to inject hint to query solution
+                    custom_prompt=args.custom_prompt, # for custom prompt experiment,
+                    when_only_conflict=args.when_only_conflict, 
+                    )
+                # # only when dbg
+                # progress_bar.update(1)
+                # if ans is not None:
+                #     with open(save_path, "a+") as fout:
+                #         fout.write(json.dumps(ans)+'\n')
                             
-            # except Exception as e:
-            #     print(e)
-            #     ans = None
-            # if ans is not None:
-            #     with open(save_path, "a+") as fout:
-            #         fout.write(json.dumps(ans)+'\n')
-            #     progress_bar.update(1)
-            #     break
-            # else: 
-            #     if count>3:
-            #         print(f'tried {count} times, passing')
-            #         print('Current Task: ', i)
-            #         unfinished_tasks.append(task)
-            #         count=0
-            #         break
-            #     else:
-            #         print("retrying (main)")
-            #         time.sleep(random.uniform(1,3))
+            except Exception as e:
+                print(e)
+                ans = None
+            if ans is not None:
+                with open(save_path, "a+") as fout:
+                    fout.write(json.dumps(ans)+'\n')
+                progress_bar.update(1)
+                break
+            else: 
+                if count>3:
+                    print(f'tried {count} times, passing')
+                    print('Current Task: ', i)
+                    unfinished_tasks.append(task)
+                    count=0
+                    break
+                else:
+                    print("retrying (main)")
+                    time.sleep(random.uniform(1,3))
         
             
 
