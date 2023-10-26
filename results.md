@@ -10,7 +10,11 @@
 * select amongst 3 needs some modification (real-time construction of actor selection prompt with correct fewshot when choosing btw two not three.)
 * current version uses hand-made `training-blurb`
 * current version do not use printed-out solution for selection. Only static `training-blurb` is used. This could be improved by **newly inventing actor selection prompt w/ generated solutions with the `blurb`**
-* model-selection with 3 models prompt as a baseline
+* ~~model-selection with 3 models prompt as a baseline~~
+
+| | actorselect when conflict (cot + pal) | 
+|-|-|
+| acc.  | 79.2 \% |
 
 
 ## Aug 31: Unchanged fact = no method so far beats the original model selection (pal + cot)
