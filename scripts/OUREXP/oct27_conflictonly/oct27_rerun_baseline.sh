@@ -15,6 +15,6 @@ python selection_math.py \
     --sc_num 1 \
     --output_dir '../output/oct27_rerun_baseline/' \
 
-# run evaluation at once
-python evaluate.py --input_path '../output/oct27_rerun_baseline/chatgpt/gsm8k*.jsonl'\
-                --dataset_type 'math'
+# # run evaluation at once
+# python evaluate.py --input_path '../output/oct27_rerun_baseline/chatgpt/gsm8k*.jsonl'\
+#                 --dataset_type 'math'

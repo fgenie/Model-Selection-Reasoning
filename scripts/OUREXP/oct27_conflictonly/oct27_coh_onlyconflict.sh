@@ -17,6 +17,6 @@ python selection_math.py --start 0 \
         --cohprompt /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prep_reflexion/5_my_greatgreat_prompt.txt
         # --actor_selection_prompt "/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prep_reflexion/4_selection_prompt_0_1_nobiassys_modif_cotpalonly_verbose_nomenclature.txt" 
 
-# run evaluation at once
-python evaluate.py --input_path '../output/oct27_only_conflict/coh/chatgpt/gsm8k*.jsonl'\
-                --dataset_type 'math'
+# # run evaluation at once
+# python evaluate.py --input_path '../output/oct27_only_conflict/coh/chatgpt/gsm8k*.jsonl'\
+#                 --dataset_type 'math'
