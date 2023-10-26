@@ -1,6 +1,8 @@
 # experiment rawoutputs
 *.jsonl
 **/*.jsonl
+**/dbg.jsonl
+dbg.jsonl
 
 # openai/claude key
 claude_key.txt

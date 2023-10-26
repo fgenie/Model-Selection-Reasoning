@@ -445,8 +445,12 @@ def query_enhanced_coh(data: dict,
 
     # prep prompt
     rawprompt = open(prompt_f).read().strip()
-    if n_fewshot>0 and n_fewshot<6:
-        rawprompt = reduce_fewshots(rawprompt, n_fewshot)
+    if 'cotpal' not in prompt_f:
+        if n_fewshot>0 and n_fewshot<6:
+            rawprompt = reduce_fewshots(rawprompt, n_fewshot)
+    else:
+        if n_fewshot>0 and n_fewshot<2:
+            rawprompt = reduce_fewshots(rawprompt, n_fewshot)
     prompt_tmp = PromptStr(rawprompt)
     prompt = prompt_tmp.sub('QUESTION', data['question'])
     assert isinstance(prompt, str)
@@ -482,8 +486,8 @@ def query_math(
         ablation:str='',
         actor_selection_prompt:str='', # 10/14 assuming kshot harvesting is done, test actor potential
         prog_hint_prompting:bool=False, # 10/14 whether to do `hint injection`
-        custom_prompt:str='', # 10/19 coh exp
-        when_only_conflict:int=-1, # oct26 exp
+        cohprompt:str='', # 10/19 coh exp
+        when_only_conflict:int=-1, # oct26~ exp
         ):
     '''
     This function is used to query OpenAI for answers in arithmetic tasks. It contains three steps:
@@ -561,77 +565,136 @@ def query_math(
                     p2c_ans = safe_execute_turbo(p2c_solution[0]) # testing p2c-generated code and getting answer from it
                     p2c_answers.append(p2c_ans)
                     p2c_solutions.append(p2c_solution[0])
-            # apply --custom_prompt | --actor_selection_prompt
+            # apply --cohprompt | --actor_selection_prompt
             answers_above = [cot_ans, pal_ans]
             if when_only_conflict==3:
                 answers_above.append(p2c_ans)
-            n_failed = answers_above.count(None)
             
+            ##########
+            ## I guess this part could be hugely improvable (readability, conciseness). 
+            ## - only_conflict option should dangle just before the baseline routine or should be merged into it.
+            ##########
+            if cohprompt: 
+                # Does not matter when_only_conflict==2 or 3. Below works for both.
+                final_ans = get_concordant_answer(answers_above)
+                if final_ans is None: # (answers_above are all None) OR (not concordant)
+                    parse_dd, rawout, query_msg = query_enhanced_coh(
+                                                                data, 
+                                                                prompt_f=cohprompt, 
+                                                                key=key, 
+                                                                backbone=backbone,
+                                                                n_fewshot=k_fewshot)
+                    good_solution = parse_dd['Solution:']
+                    try:
+                        good_method = parse_method(parse_dd['Successful Method:'])
+                    except Exception as e:
+                        print(e)
+                        print("parse_dd['Successful Method:'] failed")
+                        good_method = None
+                    # start parsing
+                    if good_method is None:
+                        final_ans, actual_method = None, None
+                    elif good_method == 'cot':
+                        final_ans = extract_num_turbo(good_solution)
+                        actual_method = good_method
+                    elif good_method == 'pal':
+                        try:
+                            final_ans = safe_execute_turbo(good_solution)
+                            actual_method = good_method
+                        except: 
+                            final_ans = extract_num_turbo(good_solution)
+                            actual_method = 'cot'
+                    elif good_method == 'p2c':
+                        plan, code = separate_plan_code(good_solution)
+                        try: 
+                            final_ans = safe_execute_turbo(code)
+                            actual_method = good_method
+                        except: #if code is None:
+                            final_ans = extract_num_turbo(good_solution)
+                            actual_method = 'cot'
+                    # record re-attempted answer and solutions
 
-            if when_only_conflict==3:
-                raise NotImplementedError('select from two --> need real-time flexible blurb building for actor selection')
-                concord = False
-                if n_failed == 0:
-                    concord = any([ abs(a-b)<1e-3 for a,b in combinations(answers_above,2) ])
-                    if concord:
-                        if abs(cot_ans - p2c_ans)<1e-3:
-                            final_ans = cot_ans
-                        elif abs(p2c_ans - pal_ans)<1e-3:
-                            final_ans = p2c_ans
-                        else: # pal - cot <1e-3
-                            final_ans = cot_ans
-                    else:
-                        query_actor_selection()
-                        
-                elif n_failed ==1:
-                    answers_not_none = [a for a in answers_above if a is not None]
-                    concord = abs(answers_not_none[0]-answers_not_none[1]) < 1e-3
-                    if concord:
-                        final_ans = answers_not_none[0]
-                    else:
-                        query_actor_selection()
-
-                elif n_failed ==2:
-                    answers_not_none = [a for a in answers_above if a is not None]
-                    concord = True
-                    final_ans = answers_not_none[0]
-                else: # n_failed==3
-                    final_ans = None
-            else: #when_only_conflict==2
-                # same as model selection but actor selection instead
-                if cot_ans is not None and pal_ans is not None:
-                    # ==== Only select when CoT and PAL are different ====
-                    if abs(cot_ans - pal_ans) >= 1e-3:
-                        hint, reasoning_method, query_msg_actor = query_actor_selection(data,
-                                                                                        prompt_f = actor_selection_prompt,
-                                                                                        key= key,
-                                                                                        backbone=backbone)
-                        if reasoning_method == 'cot':
-                            final_ans = cot_ans
-                        elif reasoning_method == 'pal':
-                            final_ans = pal_ans
-                        else: # paring failed 
-                            final_ans = cot_ans if random.random()<0.5 else pal_ans
-                        selection_solutions.append(reasoning_method)
-                        selection_solutions.append(hint)
-                        task_prompts.append(query_msg_actor)
-                    else:
-                        final_ans = cot_ans
-                elif cot_ans is not None and pal_ans is None:
-                    final_ans = cot_ans
-                elif cot_ans is None and pal_ans is not None:
-                    final_ans = pal_ans
+                    ansmap = {
+                        'cot': cot_ans,
+                        'pal': pal_ans,
+                        # 'p2c': p2c_ans,
+                    }
+                    solmap = {
+                        'cot': cot_solution,
+                        'pal': pal_solution,
+                        # 'p2c': (plan, p2c_solution),
+                    }
+                    if when_only_conflict == 3:
+                        ansmap['p2c'] = p2c_ans
+                        solmap['p2c'] = (plan, p2c_solution)
+                    reattempt = {'reattempt': good_method, 'ans_before': ansmap[good_method], 'ans_after': final_ans, 'sol_before': solmap[good_method][0], 'sol_after': good_solution} 
+                    try:
+                        bad_method = parse_method(parse_dd['Failed Method:'])
+                    except Exception as e:
+                        print(e)
+                        print("parse_dd['Failed Method:'] failed")
+                        bad_method = None
                 else:
-                    final_ans = None
+                    rawout = 'no coh (concordant)'
+                    query_msg = 'no coh (concordant)'
+                    good_solution = ''
+                    # what was the concordant answer?
+                    good_method = ''
+                    actual_method = ''
+                    bad_method = ''
+                    for method, a in zip(['cot', 'pal', 'p2c'], answers_above):
+                        if a == final_ans:
+                            good_method += method
+                            actual_method += method
+                        else:
+                            bad_method += method
+                    reattempt = dict()
+
+                # record result
+                task_prompts.append(query_msg)
+                rawouts.append(rawout)
+                good_solutions.append(good_solution)
                 
+            elif actor_selection_prompt:
+                if when_only_conflict==2: # oct26 experiment
+                    # same as model selection but actor selection instead
+                    if cot_ans is not None and pal_ans is not None:
+                        # ==== Only select when CoT and PAL are different ====
+                        if abs(cot_ans - pal_ans) >= 1e-3:
+                            hint, reasoning_method, query_msg_actor = query_actor_selection(data,
+                                                                                            prompt_f = actor_selection_prompt,
+                                                                                            key= key,
+                                                                                            backbone=backbone)
+                            if reasoning_method == 'cot':
+                                final_ans = cot_ans
+                            elif reasoning_method == 'pal':
+                                final_ans = pal_ans
+                            else: # paring failed 
+                                final_ans = cot_ans if random.random()<0.5 else pal_ans
+                            selection_solutions.append(reasoning_method)
+                            selection_solutions.append(hint)
+                            task_prompts.append(query_msg_actor)
+                        else:
+                            final_ans = cot_ans
+                    elif cot_ans is not None and pal_ans is None:
+                        final_ans = cot_ans
+                    elif cot_ans is None and pal_ans is not None:
+                        final_ans = pal_ans
+                    else:
+                        final_ans = None
+                elif when_only_conflict==3:
+                    raise NotImplementedError('select from three --> need real-time flexible blurb building for actor selection')
+            else:
+                raise ValueError('when_only_conflict==2|3 but no --actor_selection_prompt or --cohprompt')
+
 
         else:
-            if custom_prompt: # coh-enhanced (10/21)
+            if cohprompt: # coh-enhanced (10/21)
                 assert not ablation
                 assert not actor_selection_prompt
                 parse_dd, rawout, query_msg = query_enhanced_coh(
                     data, 
-                    prompt_f=custom_prompt, 
+                    prompt_f=cohprompt, 
                     key=key, 
                     backbone=backbone,
                     n_fewshot=k_fewshot)
@@ -845,6 +908,15 @@ def query_math(
         to_dump_data['p2c_generated'] = p2c_solutions
         to_dump_data['p2c_executed'] = p2c_answers
         to_dump_data['when_only_conflict'] = when_only_conflict
+        if cohprompt:
+            to_dump_data['good==actual'] = good_method == actual_method
+            to_dump_data['good_solution'] = good_solution
+            to_dump_data['bad_method'] = bad_method
+            to_dump_data['good_method'] = good_method
+            to_dump_data['plan'] = [plan]
+            to_dump_data['rawouts'] = rawouts
+            to_dump_data['actual_method'] = actual_method
+            to_dump_data['reattempt'] = reattempt
     elif ablation == 'plancode':
         to_dump_data['plan'] = plans
         to_dump_data['reasoning_method'] = 'p2c'
@@ -854,7 +926,7 @@ def query_math(
         to_dump_data['reasoning_method'] = reasoning_method
         if reasoning_method == 'p2c':
             to_dump_data['plan'] = plans
-    elif custom_prompt:
+    elif cohprompt:
         to_dump_data['good==actual'] = good_method == actual_method
         to_dump_data['good_solution'] = good_solution
         to_dump_data['bad_method'] = bad_method
@@ -893,18 +965,15 @@ if __name__ == '__main__':
     # ablative options
     parser.add_argument('--ablation', type=str, default='', choices=['cot', 'plancode', 'pal'], 
                         help='for ablation study: use only one method to reason on gsm8k')
-    # for prompting test (dev) options
-    parser.add_argument('--justprompt', action='store_true',
-                        help='this flag will just run openai api.')
     
     # actor_prompt_test
     parser.add_argument('--actor_selection_prompt', type=str, default='', help='this flag will run actor selection prompt test.')
     parser.add_argument('--prog_hint_prompting', action='store_true', help='this flag will run prog_hint_prompting test: prepend hint when querying the solution')
 
-    # custom_prompt (coh exp)
-    parser.add_argument('--custom_prompt', type=str, default='', help='path to customprompt file')
+    # cohprompt (coh exp)
+    parser.add_argument('--cohprompt', type=str, default='', help='path to customprompt file')
 
-    # 10/26 
+    # 10/26, 27... only conflict
     parser.add_argument('--when_only_conflict', type=int, help='selecting from 2 or 3', default=-1)
     '''
         1. randomly sample amongst methods at first (i.e. cot pal plancode)
@@ -912,8 +981,6 @@ if __name__ == '__main__':
         3. if considered fail in `2`, sample a method again and retry (prompted to sample method with the question), the method prompt will be augmented with the wrong answer
         4. repeat `2` and `3` until the answer is correct or the number of cycle exceeds `n_cycle`
     '''
-
-
 
     args = parser.parse_args()
 
@@ -984,15 +1051,9 @@ if __name__ == '__main__':
         task = tasks[i]
         start_time = time.time()
         count = 0
-        while True:
+        
+        if dataset_name == 'dbg':
             try:
-                count += 1
-
-                if args.custom_prompt.endswith('prompts/prep_reflexion/5_my_greatgreat_prompt.txt') and args.k_fewshot>6: # oct19 exp
-                    args.k_fewshot = 6
-                    print('for 5_my_greatgreat_prompt.txt, k_fewshot is maximum at 6')
-                    
-
                 ans = query_math(
                     task, key=key, cot_temperature=cot_temperature,
                     pal_temperature=pal_temperature, sc_num=sc_num,backbone=backbone,
@@ -1003,7 +1064,7 @@ if __name__ == '__main__':
                     ablation=args.ablation, # for onlyone method ablation study
                     actor_selection_prompt=args.actor_selection_prompt, # for actor selection prompt test
                     prog_hint_prompting=args.prog_hint_prompting, # whether to inject hint to query solution
-                    custom_prompt=args.custom_prompt, # for custom prompt experiment,
+                    cohprompt=args.cohprompt, # for custom prompt experiment,
                     when_only_conflict=args.when_only_conflict, 
                     )
                 # # only when dbg
@@ -1015,21 +1076,54 @@ if __name__ == '__main__':
             except Exception as e:
                 print(e)
                 ans = None
+            progress_bar.update(1)
             if ans is not None:
                 with open(save_path, "a+") as fout:
                     fout.write(json.dumps(ans)+'\n')
-                progress_bar.update(1)
-                break
-            else: 
-                if count>3:
-                    print(f'tried {count} times, passing')
-                    print('Current Task: ', i)
-                    unfinished_tasks.append(task)
-                    count=0
+
+        else:
+            while True:
+                try:
+                    count += 1
+
+                    if args.cohprompt.endswith('prompts/prep_reflexion/5_my_greatgreat_prompt.txt') and args.k_fewshot>6: # oct19 exp
+                        args.k_fewshot = 6
+                        print('for 5_my_greatgreat_prompt.txt, k_fewshot is maximum at 6')
+                        
+
+                    ans = query_math(
+                        task, key=key, cot_temperature=cot_temperature,
+                        pal_temperature=pal_temperature, sc_num=sc_num,backbone=backbone,
+                        plan_temperature=args.plan_temperature,
+                        code_temperature=args.code_temperature,
+                        k_fewshot=args.k_fewshot,
+                        use_plancode=args.use_plancode, # for model selection experiment
+                        ablation=args.ablation, # for onlyone method ablation study
+                        actor_selection_prompt=args.actor_selection_prompt, # for actor selection prompt test
+                        prog_hint_prompting=args.prog_hint_prompting, # whether to inject hint to query solution
+                        cohprompt=args.cohprompt, # for custom prompt experiment,
+                        when_only_conflict=args.when_only_conflict, 
+                        )
+
+                                
+                except Exception as e:
+                    print(e)
+                    ans = None
+                if ans is not None:
+                    with open(save_path, "a+") as fout:
+                        fout.write(json.dumps(ans)+'\n')
+                    progress_bar.update(1)
                     break
-                else:
-                    print("retrying (main)")
-                    time.sleep(random.uniform(1,3))
+                else: 
+                    if count>3:
+                        print(f'tried {count} times, passing')
+                        print('Current Task: ', i)
+                        unfinished_tasks.append(task)
+                        count=0
+                        break
+                    else:
+                        print("retrying (main)")
+                        time.sleep(random.uniform(1,3))
         
             
 

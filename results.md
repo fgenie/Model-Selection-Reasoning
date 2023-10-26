@@ -1,10 +1,6 @@
-# Crooked `evaluate.py`!: Re-reporting all previous results 
-* found bug in eval script (`evaluate.py`) and corrected [this commit: evaluate.py](https://github.com/fgenie/Model-Selection-Reasoning/commit/1c9e9da279a944d319f4bbfe5281e9406ce796a6?diff=split#diff-0aeb543dc2f4cfda989f7c60a43d968c7b7fb62a96bfcc862e73340dc0cdc97a)
-    * author is using the same code to report the numbers.
-* **re-measured renewing all the results** as follows
-    * trend does not really change but it blows my mind...
-    * ~~cot + p2c_v1 was close and p2c_v2 > p2c_v1 still holds.
-    
+
+## Oct 27: coh when conflict only (select amongst 3, select btw 2)
+
 
 ## Oct 26: actor-select when conflict only (select btw 2)
 * select amongst 3 needs some modification (real-time construction of actor selection prompt with correct fewshot when choosing btw two not three.)

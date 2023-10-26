@@ -14,7 +14,7 @@ cd ${EXEHOME}
 #         --sc_num 1 \
 #         --output_dir '../output/oct19_enhanced_coh_another' \
 #         --k_fewshot 4 \
-#         --custom_prompt "/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prep_reflexion/5_my_greatgreat_prompt.txt" && \
+#         --cohprompt "/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prep_reflexion/5_my_greatgreat_prompt.txt" && \
 
 python selection_math.py --start 138 \
         --end -1 \
@@ -25,5 +25,5 @@ python selection_math.py --start 138 \
         --sc_num 1 \
         --output_dir '../output/oct19_enhanced_coh_another' \
         --k_fewshot 2 \
-        --custom_prompt "/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prep_reflexion/5_my_greatgreat_prompt.txt" 
+        --cohprompt "/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prep_reflexion/5_my_greatgreat_prompt.txt" 
 

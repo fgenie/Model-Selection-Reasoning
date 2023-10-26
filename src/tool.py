@@ -4,7 +4,7 @@ import regex
 import func_timeout
 from typing import Union
 import random
-
+from itertools import combinations
 
 def jsonlines_load(fname: str):
     with open(fname, 'r') as f:
@@ -280,3 +280,27 @@ def execute_date_pal(code_string: str, keys=None):
 
     return ans
 
+def get_concordant_answer(answers:list):
+    '''
+    check if there is a pair of concordant answers.
+    input: cot_ans, pal_ans, p2c_ans, [, ...]
+    output: ans if concordant else None
+
+    *recommend to put answers in the order of cot going first (usually they are intgers)
+    '''
+    answers_no_none = [a for a in answers if a is not None]
+    if not answers_no_none:
+        return None
+    elif len(answers_no_none) == 1:
+        return answers_no_none.pop()
+    elif len(answers_no_none) == 2:
+        if abs(answers[0]-answers[1])<1e-3:
+            return answers[0]
+        else:
+            return None
+    else: # >=3
+        for a1,a2 in combinations(answers_no_none,2):
+            if abs(a1-a2)<1e-3:
+                return a1
+        return None # no concordant answers
+        
