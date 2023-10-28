@@ -1,6 +1,6 @@
 # experiment rawoutputs
 *.jsonl
-**/*.jsonl
+**/dbg*.jsonl
 **/dbg.jsonl
 dbg.jsonl
 

@@ -1,0 +1,72 @@
+# The missing link of mine was CoH-style prompting which is originally introduced for fine-tuning. 
+# Reflexion style harvesting could be a good way, but in the way we inference on the test split, it cannot do the same as it did on k-shot-harvesting (!!!WE CANNOT EVALUATE DURING THE EXECUTION!!!). So I needed another bridge to make use of reflexion examples for our case.
+# If my (CoH-styled) prompt works, it works because llm can fewshot-learn to conditional language modeling (or I can also say, llm fewshot-learnt to implicitly think from the precedings w/o explicit reasoning path like OPRO)
+# If the following fails, It could be better to prompt the reference(GT)-free evaluation. But if it works, it depends on the similar reason I'm suggesting so far.
+
+
+react_reflect_instruction: |
+
+Choose the most likely reasoning method for answering math-word questions. Followings are the three methods available: (1) Chain-of-Thought (`cot`) invokes step-by-step verbal reasoning to break the question to reach the correct answer. (2) Program-aided Language modeling (`pal`) invokes writing a code that returns the answer of the question. (3) Plan-to-Code (`p2c`) invokes to write the plan and write the code of it to reach the answer. Referring to the followings, learn to guess which method would be promising given the question.
+
+# Try first and guess more probable method to reach the correct answer
+{REFLECTIONS EXAMPLES} # --generated from actor_reflect_prompt.yaml --> pasted to here.
+Question: q1 # method-changing example(s)
+Trial Method: `pal`
+Rationale: wrongcode1
+Answer: a1'
+Evalutaion: wrong
+Reflection: The code misses to add 2 at the end before returning the answer. 
+  HINT: The question is rather simple so we can try with verbal reasoning. # added when retry is considered
+Promising Method: `cot`
+Rationale: cot unfolding to the correct answer
+Answer: a1
+Evaluation: correct
+
+
+# Experiment with and w/o the following prompt 
+Now given Question, start guessing the most Promising Method to answer. 
+
+  # try with and without the following fewshots.
+  # to be more informative, pick questions with only one promisign method exists.
+  # or should these be included above?
+  {ACTION FEWSHOTS} -- need to prepare from the testset examples gathered (or try on trainset and exclude them.)
+  Question: q1
+    HINT: asdasd
+  Promising Method: `cot`
+  Evaluation: correct
+
+  Question: q2
+    HINT: asdasd
+  Promising Method: `pal`
+  Evaluation: correct
+  ...
+  ..
+  .
+
+Question: {QUESTION OF INTEREST}
+  HINT: # this part is optional. If we used HINT above, querying HINT from the Question and then querying Promising Method might help. 
+Promising Method: # If we decided to use HINT: above, this is not given to the actor. It is generated subsequently after HINT generation's done.  
+
+prompt ends here --- # stop = "Evaluation:"
+
+
+
+
+
+
+  # retrying is optional for now
+  # if it needs to add, it is sth like <<progressive-hint prompting>>
+  Question: q2 # retry example(s) # I think... I should ablate the hinting for now. It distracts the actor.
+  Trial Method: `pal`
+  Rationale: wrongcode2
+  Answer: a2'
+  Evaluation: wrong
+  Reflection: The code drops a variable `apple` to be multiplied with 2 at first just after initialization. 
+    HINT: Be careful when initializing the variables. # this is prepended when querying the next reasoning.
+  Promising Method: `pal` w/ the reflection.
+  Rationale: correctcode invoked by reflection-included prompt. 
+  Answer: a2
+  Evaluation: correct 
+  ...
+  ..
+  .
