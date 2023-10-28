@@ -7,6 +7,15 @@
     - [coh_reflect_palcot](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/5_my_greatgreat_prompt_cotpal_1.txt): Would showing 2 fewshots in different order affect hugely?
 * running scripts: `scripts/OUREXP/oct27_onlyconflict`
 
+| | accuracy (\%) | 
+|-|-|
+| model-selection*  | 80.2 \% |
+| coh_conflictonly  | **82.4 \%** |
+| coh_conflictonly (cotpal) | **81.8 \%** |
+| coh_conflictonly (cotpal_1) | **81.9 \%** |
+
+*remeasured baseline acc is the same as before. 
+
 ## Oct 26: actor-select when conflict only (select btw 2)
 * select amongst 3 needs some modification (real-time construction of actor selection prompt with correct fewshot when choosing btw two not three.)
 * current version uses hand-made `training-blurb`

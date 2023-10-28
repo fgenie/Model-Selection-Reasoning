@@ -1132,13 +1132,16 @@ if __name__ == '__main__':
         "%Y-%m-%d %H:%M:%S", time.localtime()))
     print(f'Time used: {end_time_0 - start_time_0} seconds')
     if len(unfinished_tasks) > 0:
-        unfinished_name = save_path.replace('.jsonl', '_unfinished.jsonl')
-        with jsl.open(unfinished_name, 'w') as writer:
+        unfinished_path = Path(save_path).parent/'unfinished'/Path(save_path).name.replace('.jsonl', '_unfinished.jsonl')
+        if not unfinished_path.parent.exists():
+            unfinished_path.parent.mkdir(exsits_ok=True, parents=True)
+        unfinished_path = str(unfinished_path)
+        with jsl.open(unfinished_path, 'w') as writer:
             writer.write_all(unfinished_tasks)
-            print(f'Unfinished tasks at: \n\t{unfinished_name}')
-        with open(f'{unfinished_name}.args', 'w') as f:
+            print(f'Unfinished tasks at: \n\t{unfinished_path}')
+        with open(f'{unfinished_path}.args', 'w') as f:
             print(args, file=f)
-        print(f'Unfinished args at: \n\t{unfinished_name}.args')
+        print(f'Unfinished args at: \n\t{unfinished_path}.args')
 
         
 

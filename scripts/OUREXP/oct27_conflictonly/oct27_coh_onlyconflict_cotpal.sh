@@ -5,19 +5,19 @@ set -x
 EXEHOME=/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src
 cd ${EXEHOME}
 
-python selection_math.py --start 0 \
-        --end -1 \
-        --dataset 'gsm8k' \
-        --backbone 'chatgpt' \
-        --cot_temperature 0. \
-        --pal_temperature 0. \
-        --sc_num 1 \
-        --output_dir '../output/oct27_only_conflict/coh_cotpal' \
-        --when_only_conflict 2 \
-        --cohprompt /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prep_reflexion/5_my_greatgreat_prompt_cotpal.txt
+# python selection_math.py --start 0 \
+#         --end -1 \
+#         --dataset 'gsm8k' \
+#         --backbone 'chatgpt' \
+#         --cot_temperature 0. \
+#         --pal_temperature 0. \
+#         --sc_num 1 \
+#         --output_dir '../output/oct27_only_conflict/coh_cotpal' \
+#         --when_only_conflict 2 \
+#         --cohprompt /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prep_reflexion/5_my_greatgreat_prompt_cotpal.txt
         # --actor_selection_prompt "/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prep_reflexion/4_selection_prompt_0_1_nobiassys_modif_cotpalonly_verbose_nomenclature.txt" 
 
-python selection_math.py --start 0 \
+python selection_math.py --start 306 \
         --end -1 \
         --dataset 'gsm8k' \
         --backbone 'chatgpt' \
