@@ -9,15 +9,7 @@ react_reflect_instruction: |
 Choose the most likely reasoning method for answering math-word questions. Followings are the three methods available: (1) Chain-of-Thought (`cot`) invokes step-by-step verbal reasoning to break the question to reach the correct answer. (2) Program-aided Language modeling (`pal`) invokes writing a code that returns the answer of the question. (3) Plan-to-Code (`p2c`) invokes to write the plan and write the code of it to reach the answer. Referring to the followings, learn to guess which method would be promising given the question.
 
 # Try first and guess more probable method to reach the correct answer
-<<<<<<< HEAD
-<<<<<<< HEAD:src/prompts/prep_reflexion/doodles/actor_model_select_prompt.yaml
-{REFLECTIONS EXAMPLES} # --generated from actor_reflect_prompt.yaml.
-=======
 {REFLECTIONS EXAMPLES} # --generated from actor_reflect_prompt.yaml --> pasted to here.
->>>>>>> d469404 (PR: see TODO.md, actor_*_prompt.yaml, numbers_from_ablation.md):src/prompts/actor_model_select_prompt.yaml
-=======
-{REFLECTIONS EXAMPLES} # --generated from actor_reflect_prompt.yaml.
->>>>>>> PR_si
 Question: q1 # method-changing example(s)
 Trial Method: `pal`
 Walk Through: wrongcode1
