@@ -10,33 +10,37 @@ if __name__ == '__main__':
                         choices=['math', 'date'], required=True)
     args = parser.parse_args()
 
+    if '*' in args.input_path:
+        candids = [p for p in Path().glob(args.input_path)]
+        if len(candids)>1:
+            raise ValueError(f"More than path found: {candids}")
+        elif len(candids)==0:
+            raise ValueError(f"No path found: {args.input_path}")
+        else:
+            print(f"interpret\n\t--input_path {args.input_path}\n\t->{candids[0]}")
+            args.input_path = candids[0]
+            print(args.input_path)
+
+
     input_path = args.input_path
     dataset_type = args.dataset_type
 
     output_data = jsonlines_load(input_path)
 
-    total = 0
-    correct = 0
-    error = 0
-    for i in range(len(output_data)):
-        if dataset_type == 'math':
-            if output_data[i]['majority_ans'] is not None:
-                if abs(output_data[i]['majority_ans'] - output_data[i]['answer']) < 1e-3:
-                    correct += 1
-            else:
-                error += 1
 
-        else:
-            if output_data[i]['final_ans'] == output_data[i]['answer']:
-                correct += 1
-            else:
-                error += 1
+    datadf = pd.DataFrame(output_data)
+    if dataset_type == 'math': # gsm8k here
+        corrects = datadf.majority_ans.sub(datadf.answer).abs() < 1e-3
+    else:
+        corrects = (datadf.final_ans == datadf.answer)
 
-        total += 1
+    ncorr = corrects.sum()
+    acc = ncorr / len(datadf)
+    nwro = (~corrects).sum()
 
     df = pd.DataFrame(output_data)
-    m_cor = (df.answer == df.majority_ans)
-    m_wro = ~m_cor
+    m_cor = corrects
+    m_wro = ~corrects
     assert (m_cor.sum() + m_wro.sum()) == len(df)
     ip = Path(input_path)
     fname = f"{ip.parent/ip.stem}_$$.csv"
@@ -49,4 +53,4 @@ if __name__ == '__main__':
     df_wro.to_csv(fwro, index=False)
 
     print(
-        f'Accuracy: {correct/total}, Total: {total}, Correct: {correct}, Error: {error}')
+        f'Accuracy: {acc:.3f}, Total: {len(datadf)}, Correct: {ncorr}, Error: {nwro}')

@@ -9,7 +9,7 @@ PLAN_PROMPTS_D= yaml.full_load(open(PLAN_F))
 CODE_PROMPTS_D = yaml.full_load(open(CODE_F))
 
 
-def get_plan_prompt(data: dict, k_fewshot:int=0)->str:
+def get_plan_prompt(data: dict, k_fewshot:int=0, hint:str='')->str:
     '''
     prep prompt for plan generation
     '''
@@ -18,8 +18,12 @@ def get_plan_prompt(data: dict, k_fewshot:int=0)->str:
     q = data['question'] 
     system = prompt_d['system_msg']
     user_tmp = prompt_d['user_template'] 
-    user_attempt = user_tmp.replace('{QUESTION}', f"Question: {q}")
+    if hint:
+        user_attempt = user_tmp.replace('{QUESTION}', f"Question: {q} ({hint})")
+    else:
+        user_attempt = user_tmp.replace('{QUESTION}', f"Question: {q}")
 
+    # print(user_attempt)
     fewshots_user = prompt_d['fewshots_user'][:k_fewshot] # list of fewshot strings include Question: as a stop sequence.
     fewshots_assistant = prompt_d['fewshots_assistant'][:k_fewshot]
     
@@ -35,7 +39,7 @@ def get_plan_prompt(data: dict, k_fewshot:int=0)->str:
     return msgs
     
     
-def get_plan2code_prompt(data:dict, plan:str='', k_fewshot:int=0, custom_idxs:list=None):
+def get_plan2code_prompt(data:dict, plan:str='', k_fewshot:int=0, custom_idxs:list=None, hint:str=''):
     # little bit revision from PAL prompt.
     # `solution()` is returned (can execute with solution() call w/o argument
     prompt_d = CODE_PROMPTS_D
@@ -43,7 +47,10 @@ def get_plan2code_prompt(data:dict, plan:str='', k_fewshot:int=0, custom_idxs:li
     q = data['question'] 
     system = prompt_d['system_msg']
     user_tmp = prompt_d['user_template'] 
+    if hint:
+        q = f"{q} ({hint})"
     user_attempt = user_tmp.replace('{PLAN}', plan).replace('{QUESTION}', f"Question: {q}")
+    # print(q)
 
     if not custom_idxs:
         fewshots_user = prompt_d['fewshots_user'][:k_fewshot] # list of fewshot strings include Question: as a stop sequence.

@@ -1,0 +1,6 @@
+sys:
+Read the following reasoning steps that some agent did solving a math-word problem. There are two placeholders wrapped with brackets, infer what would be the most proper for  [REFLECTION] and [HINT].  [REFLECTION] should focus diagnosing the wrong solution and [HINT] points out the general notion which would be helpful for next trial of the similar question. Each need to be in 1 sentence long and concise.
+
+
+user:
+each 1-shot example

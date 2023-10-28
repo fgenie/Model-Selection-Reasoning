@@ -1,0 +1,40 @@
+# r'\[/w+\]' are placeholders.
+# stop =  'Trial Method:'
+prompt_template: |
+  You are an advanced reasoning agent that can improve based on self-reflection. You will be given a set of examples showing your previous attempts to solve math-word problems, including the reflections on where you struggled. Followings are the three reasoning methods you used for answering the problem: (1) Chain-of-Thought (`cot`) invokes step-by-step verbal reasoning to break the question to reach the correct answer. (2) Program-aided Language modeling (`pal`) invokes writing a code that returns the answer of the question. (3) Plan-to-Code (`p2c`) invokes to write the plan and write the code of it to reach the answer. Referring to the followings, learn to reflect from your solution. In a few sentences, diagnose a possible reason for failure and devise a new, concise, high level plan that aims to mitigate the same failure. Write your relfection after the `Reflection:` and then add general hint after `Hint:` to help preventing similar failures on the similar questions in a sentence. 
+
+  Previous attempts:
+
+  [REFLECTION_EXS]
+
+  Now given the question and the wrong solution write `Reflection` and the `Hint` concisely.
+
+  Question: [QUESTION]
+  Trial Method: [WRONG_MODEL]
+  Solution Steps: [WRONG_SOL]
+  Answer: [WRONG_PRED]
+  Evaluation: Wrong
+  Reflection: 
+  
+
+
+# similar but not the same: 3_actor_model_select_prompts_plain.yaml
+reflection_exs: |
+  Question: [QUESTION]
+  Trial Method: [WRONG_MODEL]
+  Solution Steps: [WRONG_SOL]
+  Answer: [WRONG_PRED]
+  Evalutaion: Wrong
+  Reflection: [REFLECTION]
+  Hint: [HINT]
+  Trial Method: [CORRECT_MODEL]
+  Solution Steps: [CORRECT_SOL]
+  Answer: [CORRECT_PRED]
+  Evaluation: Correct
+
+# reflection_0: |
+#   Question: [QUESTION]
+#   Trial Method: [CORRECT_MODEL]
+#   Solution Steps: [CORRECT_SOL]
+#   Answer: [CORRECT_PRED]
+#   Evalutaion: Correct

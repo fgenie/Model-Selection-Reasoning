@@ -9,8 +9,8 @@
 
 | | accuracy (\%) | 
 |-|-|
-| model-selection (cotpal)*  | 80.2 \% |
-| coh_conflictonly (cotpalp2c)  | **82.4 \%** |
+| model-selection*  | 80.2 \% |
+| coh_conflictonly  | **82.4 \%** |
 | coh_conflictonly (cotpal) | **81.8 \%** |
 | coh_conflictonly (cotpal_1) | **81.9 \%** |
 
