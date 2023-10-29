@@ -58,29 +58,13 @@ prompt ends here --- # stop = "Evaluation:"
   # if it needs to add, it is sth like <<progressive-hint prompting>>
   Question: q2 # retry example(s) # I think... I should ablate the hinting for now. It distracts the actor.
   Trial Method: `pal`
-<<<<<<< HEAD
-<<<<<<< HEAD:src/prompts/prep_reflexion/doodles/actor_model_select_prompt.yaml
   Walk Through: wrongcode2
-=======
-  Rationale: wrongcode2
->>>>>>> d469404 (PR: see TODO.md, actor_*_prompt.yaml, numbers_from_ablation.md):src/prompts/actor_model_select_prompt.yaml
-=======
-  Walk Through: wrongcode2
->>>>>>> PR_si
   Answer: a2'
   Evaluation: wrong
   Reflection: The code drops a variable `apple` to be multiplied with 2 at first just after initialization. 
     HINT: Be careful when initializing the variables. # this is prepended when querying the next reasoning.
   Promising Method: `pal` w/ the reflection.
-<<<<<<< HEAD
-<<<<<<< HEAD:src/prompts/prep_reflexion/doodles/actor_model_select_prompt.yaml
   Walk Through: correctcode invoked by reflection-included prompt. 
-=======
-  Rationale: correctcode invoked by reflection-included prompt. 
->>>>>>> d469404 (PR: see TODO.md, actor_*_prompt.yaml, numbers_from_ablation.md):src/prompts/actor_model_select_prompt.yaml
-=======
-  Walk Through: correctcode invoked by reflection-included prompt. 
->>>>>>> PR_si
   Answer: a2
   Evaluation: correct 
   ...
