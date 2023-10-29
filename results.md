@@ -10,9 +10,9 @@
 | | accuracy (\%) | 
 |-|-|
 | model-selection*  | 80.2 \% |
-| coh_conflictonly  | **82.4 \%** |
-| coh_conflictonly (cotpal) | **81.8 \%** |
-| coh_conflictonly (cotpal_1) | **81.9 \%** |
+| coh_conflictonly (cot;pal;p2c) | **82.4 \%** |
+| coh_conflictonly (cot;pal) | **81.8 \%** |
+| coh_conflictonly (cot;pal_1) | **81.9 \%** |
 
 *remeasured baseline acc is the same as before. 
 
