@@ -94,7 +94,11 @@ def method_success_rate(df):
 
 
     # actor selection
-    # oct26 actor onlyconflict: choice_selection[0] == actual method 
+    # oct26 actor onlyconflict: choice_selection[0]
+    #   /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct26_only_conflict/actor_select_cotpal/chatgpt
+    # oct15 actor full: reasoning_method
+    #   /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct15_actorselect_verbose/chatgpt
+    # oct27 
     method_dist()
 
     return 

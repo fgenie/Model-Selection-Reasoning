@@ -2,9 +2,9 @@
 ## Oct 27: coh when conflict only (select amongst 3, select btw 2)
 * Re-run model-selection baseline (to check whether it became inferior than before...)
 * Apply [coh](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/CoH.md) when conflict
-    - [coh_reflect_cotpalp2c](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/5_my_greatgreat_prompt.txt)
-    - [coh_reflect_cotpal](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/5_my_greatgreat_prompt_cotpal.txt)
-    - [coh_reflect_palcot](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/5_my_greatgreat_prompt_cotpal_1.txt): Would showing 2 fewshots in different order affect hugely?
+    - [coh_reflect_cotpalp2c](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/5_cohlike_prompt.txt)
+    - [coh_reflect_cotpal](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/5_cohlike_prompt_cotpal.txt)
+    - [coh_reflect_palcot](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/5_cohlike_prompt_cotpal_1.txt): Would showing 2 fewshots in different order affect hugely?
 * running scripts: `scripts/OUREXP/oct27_onlyconflict`
 
 | | accuracy (\%) | 
@@ -37,7 +37,7 @@
 
 ## Oct 20: enhanced_coh (with manual reflections k <= 6)  --> just bad 
 > Don't stop after choosing, but continue to solve!  
-see [`5_my_greatgreat_prompt.txt`](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/5_my_greatgreat_prompt.txt), [`CoH.md`](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/CoH.md) for details
+see [`5_cohlike_prompt.txt`](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/5_cohlike_prompt.txt), [`CoH.md`](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/CoH.md) for details
 
 | | k=6 | k=4* | k=3*
 |-|-|-|-|

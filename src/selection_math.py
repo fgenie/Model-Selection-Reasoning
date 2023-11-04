@@ -360,7 +360,7 @@ def query_actor_selection(data: dict,
     return hint, reasoning_method, messages
 
 def separate_plan_code(rawstr:str)->tuple:
-    # used for 5_my_greatgreat_prompt
+    # used for 5_cohlike_prompt
     # p2c results in plan\ncode so split it.
     rawstr = rawstr.strip()
     lines = rawstr.split("\n")
@@ -379,7 +379,7 @@ def separate_plan_code(rawstr:str)->tuple:
     
 
 def parse_method(methodstr:str)->str:
-    # works for 5_my_greatgreat_prompt
+    # works for 5_cohlike_prompt
     if '(PAL)' in methodstr or 'Program aided Language Model' in methodstr.replace('-', ' '):
         return 'pal'
     elif '(CoT)' in methodstr or 'Chain of Thought' in methodstr.replace('-', ' '):   
@@ -394,7 +394,7 @@ def query_enhanced_coh(data: dict,
                           key: str, 
                           backbone: str,
                           n_fewshot:int=0) -> OrderedDict[str,str]:
-    # 5_my_greatgreat_prompt.txt
+    # 5_cohlike_prompt.txt
     # when n_fewshot == 0, 6-shot default maximum is used
     
     if backbone == 'chatgpt':
@@ -1086,9 +1086,9 @@ if __name__ == '__main__':
                 try:
                     count += 1
 
-                    if args.cohprompt.endswith('prompts/prep_reflexion/5_my_greatgreat_prompt.txt') and args.k_fewshot>6: # oct19 exp
+                    if args.cohprompt.endswith('prompts/prep_reflexion/5_cohlike_prompt.txt') and args.k_fewshot>6: # oct19 exp
                         args.k_fewshot = 6
-                        print('for 5_my_greatgreat_prompt.txt, k_fewshot is maximum at 6')
+                        print('for 5_cohlike_prompt.txt, k_fewshot is maximum at 6')
                         
 
                     ans = query_math(

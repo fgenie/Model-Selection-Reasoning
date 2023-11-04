@@ -14,7 +14,7 @@ python selection_math.py --start 0 \
         --sc_num 1 \
         --output_dir '../output/oct27_only_conflict/coh' \
         --when_only_conflict 3 \
-        --cohprompt /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prep_reflexion/5_my_greatgreat_prompt.txt
+        --cohprompt /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prep_reflexion/5_cohlike_prompt.txt
         # --actor_selection_prompt "/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/prompts/prep_reflexion/4_selection_prompt_0_1_nobiassys_modif_cotpalonly_verbose_nomenclature.txt" 
 
 # # run evaluation at once
