@@ -1,3 +1,16 @@
+## Nov 4: GPT-4 greedy (T=exact 0.)
+* Corresponds to gsm8K result on Table 1 (greedy decoded results)
+* Concerns:
+    * Prompt now (`5_cohlike_prompt.txt`) aims to make LLM to choose not solve. Try another version of it.
+    * GPT-4 performance in Table 4 might not be accurate so we need to estimate concurrent performance.
+* Self-Consistency --> do this later
+
+| | accuracy (\%) / GPT-4 greedy | 
+|-|-|
+| model-selection (cot;pal)*  | |
+| coh_conflictonly (cot;pal;p2c) | |
+| coh_conflictonly (cot;pal_1) | |
+
 
 ## Oct 27: coh when conflict only (select amongst 3, select btw 2)
 * Re-run model-selection baseline (to check whether it became inferior than before...)
