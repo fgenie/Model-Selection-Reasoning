@@ -58,6 +58,7 @@ def method_dist(df):
     '''
     `method choice distribution`
     - when queried for model selection
+        - only conflict
     - when queried for actor selection
         - only conflict
         - fully done
@@ -81,6 +82,7 @@ def method_success_rate(df):
     `when some method chosen, how often it gets correct answer?`
     - ablations
     - when queried for model selection
+        - only conflict
     - when queried for actor selection
         - only conflict
         - fully done
@@ -98,7 +100,6 @@ def method_success_rate(df):
     #   /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct26_only_conflict/actor_select_cotpal/chatgpt
     # oct15 actor full: reasoning_method
     #   /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/oct15_actorselect_verbose/chatgpt
-    # oct27 
     method_dist()
 
     return 

@@ -8,11 +8,8 @@ from tqdm import tqdm
 from prompts import math_prompt
 from prompts.plancode_util_v2 import *
 import jsonlines as jsl
-# from prompts.rl_utils import *
-# from .rl import *
 from collections import OrderedDict, Counter
 from tool import *
-# from string import Template # $ sign annoys me using this
 from prompts.prep_reflexion.actor_prompt_utils import PromptStr
 import random 
 from collections import OrderedDict
@@ -216,6 +213,9 @@ def query_plancode(data: dict, key: str='', plan_temperature: float=.0, code_tem
         model_name = 'gpt-4'
     elif backbone == 'chatgpt':
         model_name = 'gpt-3.5-turbo'
+    if model_name == 'gpt-4': # k_fewshot==8 is default.
+        print(f'gpt-4 uses k_fewshot=5 as default --> if the current setting is default for chatgpt (k= {k_fewshot})\n k_fewshot = 8 -> 5')
+        k_fewshot = 5
 
     # generate plan (retry included)
     plan_query_msg = get_plan_prompt(data, k_fewshot=k_fewshot, hint=hint)
@@ -1086,9 +1086,9 @@ if __name__ == '__main__':
                 try:
                     count += 1
 
-                    if args.cohprompt.endswith('prompts/prep_reflexion/5_cohlike_prompt.txt') and args.k_fewshot>6: # oct19 exp
-                        args.k_fewshot = 6
-                        print('for 5_cohlike_prompt.txt, k_fewshot is maximum at 6')
+                    # if args.cohprompt.endswith('prompts/prep_reflexion/5_cohlike_prompt.txt') and args.k_fewshot>6: # oct19 exp
+                    #     args.k_fewshot = 6
+                    #     print('for 5_cohlike_prompt.txt, k_fewshot is maximum at 6')
                         
 
                     ans = query_math(

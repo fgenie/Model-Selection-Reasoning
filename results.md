@@ -1,3 +1,7 @@
+## need to modif
+selection_math.py:1089 -> k_fewshot = 6 (applied also to cot pal, unintensional)
+
+
 ## Nov 4: GPT-4 greedy (T=exact 0.)
 * Corresponds to gsm8K result on Table 1 (greedy decoded results)
 * Concerns:
@@ -7,9 +11,9 @@
 
 | | accuracy (\%) / GPT-4 greedy | 
 |-|-|
-| model-selection (cot;pal)*  | |
-| coh_conflictonly (cot;pal;p2c) | |
-| coh_conflictonly (cot;pal_1) | |
+| model-selection (cot;pal)*  | 95.5 \% |
+| coh_conflictonly (cot;pal;p2c) | TBA |
+| coh_conflictonly (cot;pal_1) | 95.5 \% |
 
 
 ## Oct 27: coh when conflict only (select amongst 3, select btw 2)
