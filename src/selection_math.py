@@ -393,12 +393,13 @@ def query_enhanced_coh(data: dict,
                           prompt_f: str, 
                           key: str, 
                           backbone: str,
-                          n_fewshot:int=0) -> OrderedDict[str,str]:
+                          n_fewshot:int=8) -> OrderedDict[str,str]:
     # 5_cohlike_prompt.txt
-    # when n_fewshot == 0, 6-shot default maximum is used
-    
+    # 6-shot default maximum is used
+
+
     if backbone == 'chatgpt':
-        model_name = 'gpt-3.5-turbo-16k' if (n_fewshot==0 or n_fewshot>=5) else 'gpt-3.5-turbo'  # this prompt is kind of lengthy
+        model_name = 'gpt-3.5-turbo-16k' if n_fewshot>=5 else 'gpt-3.5-turbo'  # this prompt is kind of lengthy
     elif backbone == 'gpt4':
         model_name = 'gpt-4'
 
@@ -446,9 +447,15 @@ def query_enhanced_coh(data: dict,
     # prep prompt
     rawprompt = open(prompt_f).read().strip()
     if 'cotpal' not in prompt_f:
+        if n_fewshot > 6:
+            print(f'max k_fewshot for cotpalp2c is 6 ({n_fewshot=}->6)') 
+            n_fewshot = 6
         if n_fewshot>0 and n_fewshot<6:
             rawprompt = reduce_fewshots(rawprompt, n_fewshot)
     else:
+        if n_fewshot > 2:
+            print(f'max k_fewshot for cotpal is 2 ({n_fewshot=}->2)') 
+            n_fewshot = 2
         if n_fewshot>0 and n_fewshot<2:
             rawprompt = reduce_fewshots(rawprompt, n_fewshot)
     prompt_tmp = PromptStr(rawprompt)

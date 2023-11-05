@@ -1,5 +1,13 @@
-## need to modif
-selection_math.py:1089 -> k_fewshot = 6 (applied also to cot pal, unintensional)
+## Nov 6~10
+* change coh system prompt (from: choose -> to: solve) so that see if it changes performance
+* without running ablation, you can calculate one-method-only performance (we've already recorded it)
+* check other greedy decoding also shows inconsistency (gpt4 coh vs coh_cotpal_1, in principle, show the same solution for CoT, PAL.)
+* after things are all done, do constructing `training blurb`
+* do analyses on success rate and its bias 
+
+### re-do things (after completing above)
+* chatgpt exps: p2c prompt debugged
+    * coh conflict only
 
 
 ## Nov 4: GPT-4 greedy (T=exact 0.)
