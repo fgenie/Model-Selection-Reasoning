@@ -1,30 +1,66 @@
 ## Nov 6~10
-* change coh system prompt (from: choose -> to: solve) so that see if it changes performance
+* it is possible that we only run prompts on **conflict cases only** that is... we don't need to run over 1319 examples.
+    * `=` success rate.
+    - [ ] implement conflict only runs
+    - [ ] combining results code
+* possible prompt change
+    * change coh system prompt (from: choose -> to: solve) so that see if it changes performance
+    * more fewshots for cotpal case?
+        - [x] `6_cohlike_solve_prompt*.txt`
+        - [x] `6_cohlike_solve_prompt_cotpal_2|3.txt` (added one|two more pair of examples for this)
+        - run
+            - [ ] chatgpt
+            - [ ] gpt-4
+    * transform into a turn-based few-shot prompt (p2c v1 `<` v2 for this reason)
+        - [x] `8_cohlike_solvetwice_prompt.yaml`
+        - [x] `8_cohlike_solvetwice_prompt_cotpal_1.yaml`
+        - [ ] `8_cohlike_solvetwice_prompt_cotpal_2.yaml`
+        - [ ] `8_cohlike_solvetwice_prompt_cotpal_3.yaml`
+        - [ ] prompt utils for querying
+        - run
+            - [ ] chatgpt
 * without running ablation, you can calculate one-method-only performance (we've already recorded it)
-* check other greedy decoding also shows inconsistency (gpt4 coh vs coh_cotpal_1, in principle, show the same solution for CoT, PAL.)
+* how inconsistent does `T=0` shows?
+    - [ ] chatgpt
+    - [ ] gpt4
 * after things are all done, do constructing `training blurb`
-* do analyses on success rate and its bias 
 
 ### re-do things (after completing above)
-* chatgpt exps: p2c prompt debugged
-    * coh conflict only
+* p2c prompt debugged
+    [x] coh conflict only
 
+| *debugged* | accuracy (\%) | 
+|-|-|
+| model-selection (cot;pal)* **(k=8)**  | 80.2 \% | 
+| coh_conflictonly (cot;pal;p2c) | **84.2 \%** (+1.8%p from oct27)|
+| coh_conflictonly (cot;pal) |  |
+| coh_conflictonly (cot;pal_1) |  |
+*increased performance -- caused by k=6 -> 8 applied to `query_cot|pal|p2c` + debugged `p2c` prompt.
 
 ## Nov 4: GPT-4 greedy (T=exact 0.)
 * Corresponds to gsm8K result on Table 1 (greedy decoded results)
-* Concerns:
-    * Prompt now (`5_cohlike_prompt.txt`) aims to make LLM to choose not solve. Try another version of it.
-    * GPT-4 performance in Table 4 might not be accurate so we need to estimate concurrent performance.
-* Self-Consistency --> do this later
-
+    * 
 | | accuracy (\%) / GPT-4 greedy | 
 |-|-|
 | model-selection (cot;pal)*  | 95.5 \% |
-| coh_conflictonly (cot;pal;p2c) | TBA |
+| coh_conflictonly (cot;pal;p2c) | 95.7 \% |
 | coh_conflictonly (cot;pal_1) | 95.5 \% |
 
+*exactly the same performance (1260 correct for 1st and 3rd row.)
+*2 more questions correct on 2nd row.
 
-## Oct 27: coh when conflict only (select amongst 3, select btw 2)
+### GPT-4 greedy decoding does not seem deterministic
+https://community.openai.com/t/a-question-on-determinism/8185 
+
+`compare_idxs.py`
+n_conflict: 75
+intersection_indices: 61
+
+* for chatgpt this does hold too?
+
+
+
+## Oct 27: coh when conflict only (select amongst 3, select btw 2) --> bug: k_fewshot = 6 for all
 * Re-run model-selection baseline (to check whether it became inferior than before...)
 * Apply [coh](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/CoH.md) when conflict
     - [coh_reflect_cotpalp2c](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/5_cohlike_prompt.txt)
@@ -32,14 +68,13 @@
     - [coh_reflect_palcot](https://github.com/fgenie/Model-Selection-Reasoning/blob/PR_si/src/prompts/prep_reflexion/5_cohlike_prompt_cotpal_1.txt): Would showing 2 fewshots in different order affect hugely?
 * running scripts: `scripts/OUREXP/oct27_onlyconflict`
 
-| | accuracy (\%) | 
+| bug: k=6 | accuracy (\%) | 
 |-|-|
-| model-selection (cot;pal)*  | 80.2 \% |
+| model-selection (cot;pal)* **(k=8)**  | 80.2 \% |
 | coh_conflictonly (cot;pal;p2c) | **82.4 \%** |
 | coh_conflictonly (cot;pal) | **81.8 \%** |
 | coh_conflictonly (cot;pal_1) | **81.9 \%** |
-
-*remeasured baseline acc is the same as before. 
+*remeasured baseline acc is the same as before. no k_fewshot=6 bug on baseline
 
 ## Oct 26: actor-select when conflict only (select btw 2)
 * select amongst 3 needs some modification (real-time construction of actor selection prompt with correct fewshot when choosing btw two not three.)

@@ -1,0 +1,79 @@
+Choose the most likely reasoning method for math word questions to solve. Followings are the three methods available: (1) Chain-of-Thought (CoT) invokes step-by-step verbal reasoning to break the question to reach the correct answer. (2) Program-aided Language Model (PAL) invokes writing a code that returns the answer of the question. Referring to the followings, learn to guess which method would be promising; Write helpful `Hint` for giving a better shot on guessing `Successful Method` to solve the `Question` correctly.
+
+Learn to infer which method would work and which not:
+
+
+Question: Two trains leave San Rafael at the same time. They begin traveling westward, both traveling for 80 miles. The next day, they travel northwards, covering 150 miles. What's the distance covered by each train in the two days?
+Failed Method: Program-aided Language Model (PAL)
+Solution: def solution():
+    """Two trains leave San Rafael at the same time. They begin traveling westward, both traveling for 80 miles. The next day, they travel northwards, covering 150 miles. What's the distance covered by each train in the two days?"""
+    westward_distance = 80
+    northward_distance = 150
+    total_distance = westward_distance + northward_distance
+    distance_per_train = total_distance / 2
+    result = distance_per_train
+    return result
+Answer: 115.0
+Evalutaion: Wrong
+Reflection: The initial solution incorrectly divided the distance by each of the two trains with the number of trains.
+Hint: Some math problems tricks with the semantics in the question, stressing the need for accurate thinking in semantics.
+Successful Method: Chain of Thought (CoT)
+Solution: Answer:
+Both trains traveled westward for 80 miles.
+So each train covered 80 miles.
+Then, the next day, they traveled northwards for 150 miles.
+So each train covered an additional 150 miles.
+Therefore, each train covered a total distance of 80 + 150 = 230 miles in the two days.
+So the distance covered by each train in the two days is 230 miles.
+Answer: 230
+Evaluation: Correct
+
+
+Question: If Marcy works for the same company for 40 years, she gets an annual pension of $50,000/year. Starting after 20 years, she becomes entitled to 5% of the value of the pension per year. If she quits after 30 years, what will her annual pension be?
+Failed Method: Chain of Thought (CoT)
+Solution: To calculate Marcy's annual pension after 30 years, we need to consider two periods: the first 20 years and the next 10 years.
+
+For the first 20 years, Marcy's annual pension is $50,000/year.
+
+For the next 10 years, Marcy is entitled to 5% of the value of the pension per year. We can calculate this by multiplying the pension value by 5% and adding it to the previous year's pension value.
+
+Let's calculate the annual pension for each of the 10 years:
+
+Year 21: $50,000 + ($50,000 * 5%) = $50,000 + $2,500 = $52,500
+Year 22: $52,500 + ($52,500 * 5%) = $52,500 + $2,625 = $55,125
+Year 23: $55,125 + ($55,125 * 5%) = $55,125 + $2,756.25 = $57,881.25
+Year 24: $57,881.25 + ($57,881.25 * 5%) = $57,881.25 + $2,894.06 = $60,775.31
+Year 25: $60,775.31 + ($60,775.31 * 5%) = $60,775.31 + $3,038.77 = $63,814.08
+Year 26: $63,814.08 + ($63,814.08 * 5%) = $63,814.08 + $3,190.70 = $66,004.78
+Year 27: $66,004.78 + ($66,004.78 * 5%) = $66,004.78 + $3,300.24 = $69,305.02
+Year 28: $69,305.02 + ($69,305.02 * 5%) = $69,305.02 + $3,465.25 = $72,770.27
+Year 29: $72,770.27 + ($72,770.27 * 5%) = $72,770.27 + $3,638.51 = $76,408.78
+Year 30: $76,408.78 + ($76,408.78 * 5%) = $76,408.
+Answer: 76408.0
+Evalutaion: Wrong
+Reflection: The agent made a mistake by assuming Marcy's annual pension starts from $50,000 per year from year 20 and it increases 5% annually, while the $50,000 per year is the 100% of the pension which could be entitled when she worked for 40 or more years.
+Hint: Remember to accurately understand the conditions in the questions and then calculate from. For concise reasoning and computation, programming might help.
+Successful Method: Program-aided Language Model (PAL)
+Solution: def solution():
+    """If Marcy works for the same company for 40 years, she gets an annual pension of $50,000/year. Starting after 20 years, she becomes entitled to 5% of the value of the pension per year. If she quits after 30 years, what will her annual pension be?"""
+    pension_initial = 50000
+    years_worked = 30
+    years_entitled = years_worked - 20
+    pension_reduction = 0.05 * years_entitled * pension_initial
+    pension_final = pension_initial - pension_reduction
+    result = pension_final
+    return result
+Answer: 25000
+Evaluation: Correct
+
+
+Now, given the question below, write down a `Failed Method` and provide a `Hint` to determine the proper method. Then, illustrate the `Successful Method` and full `Solution`.
+
+Question: [QUESTION]
+
+<format>
+Failed Method: <A method that might be tricky to correctly answer the `Question`>
+Hint: <Provide a hint to help choose the best method>
+Successful Method: <A method that might work perfectly for the `Question`> 
+Solution: <Show your works by `Successful Method`>
+</format>

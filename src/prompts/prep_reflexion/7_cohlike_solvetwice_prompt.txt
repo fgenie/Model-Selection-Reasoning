@@ -1,4 +1,4 @@
-Choose the most likely reasoning method for answering math-word questions. Followings are the three methods available: (1) Chain-of-Thought (CoT) invokes step-by-step verbal reasoning to break the question to reach the correct answer. (2) Plan-to-Code (P2C) invokes to write the plan and write the code of it to reach the answer. (3) Program-aided Language Model (PAL) invokes writing a code that returns the answer of the question. Referring to the followings, learn to guess which method would be promising; Write helpful `Hint` for giving a better shot on guessing `Successful Method` for the `Question`. 
+Choose the most likely reasoning method for math word questions to solve. Followings are the three methods available: (1) Chain-of-Thought (CoT) invokes step-by-step verbal reasoning to break the question to reach the correct answer. (2) Plan-to-Code (P2C) invokes to write the plan and write the code of it to reach the answer. (3) Program-aided Language Model (PAL) invokes writing a code that returns the answer of the question. Referring to the followings, learn to guess which method would be promising; Write helpful `Hint` for giving a better shot on guessing `Successful Method` to solve the `Question` correctly.
 
 Learn to infer which method would work and which not:
 
@@ -221,13 +221,15 @@ Answer: 14
 Evaluation: Correct
 
 
-Now, given the `Question`, start writing an appropriate `Hint` to correctly choose `Successful Method` based on your learnings.
+Now, given the `Question`, start writing steps to provide a `Hint` that helps choose `Successful Method` based on your learnings, and then solve the `Question` correctly.
 
 Question: [QUESTION]
 
 <format>
-Failed Method: <A method that might be tricky to correctly answer the `Question`>
-Hint: <write a concise sentence that help the method choice for answering correctly>
+Failed Method: <Outline a method that seems viable but fails for this specific problem>
+Solution: <Solution attempt that does not work>
+Reflection: <Spot a faultly part that starts going wrong in the solution above>
+Hint: <Provide a hint to help choose the best method>
 Successful Method: <A method that might work perfectly for the `Question`> 
-Solution: <show your works by `Successful Method`>
+Solution: <Show your work by`Successful Method`>
 </format>
