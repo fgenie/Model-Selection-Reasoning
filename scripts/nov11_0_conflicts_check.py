@@ -39,6 +39,7 @@ def main():
             pal_ans_consistent = pal_ans_consistent.sum()
             cot_ans_consistent = cot_ans_consistent.sum()
             
+            # consistency result 
             resd = dict()
             resd['model'] = model 
             resd['pair'] = (p1, p2)
@@ -48,6 +49,8 @@ def main():
             resd['cot_gen_consistent'] = cot_gen_consistent
             resd['pal_ans_consistent'] = pal_ans_consistent
             resd['cot_ans_consistent'] = cot_ans_consistent
+
+            
             results.append(resd)
     df_fin = pd.DataFrame(results)
     xl = pd.ExcelWriter('nov11_0_conflicts_check.xlsx')

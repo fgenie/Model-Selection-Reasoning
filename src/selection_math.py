@@ -13,8 +13,8 @@ from tool import *
 from prompts.prep_reflexion.actor_prompt_utils import PromptStr
 import random 
 from collections import OrderedDict
-from tenacity import retry, wait_chain, wait_fixed
-from itertools import combinations
+# from tenacity import retry, wait_chain, wait_fixed
+# from itertools import combinations
 from pathlib import Path
 
 
@@ -394,17 +394,46 @@ def query_enhanced_coh(data: dict,
                           prompt_f: str, 
                           key: str, 
                           backbone: str,
-                          n_fewshot:int=8) -> OrderedDict[str,str]:
+                          n_fewshot:int=8,
+                          turn_based_coh:bool=False) -> OrderedDict[str,str]:
     # 5_cohlike_prompt.txt
     # 6-shot default maximum is used
 
 
     if backbone == 'chatgpt':
-        model_name = 'gpt-3.5-turbo-16k' if n_fewshot>=5 else 'gpt-3.5-turbo'  # this prompt is kind of lengthy
+        model_name = 'gpt-3.5-turbo-16k' # if n_fewshot>=5 else 'gpt-3.5-turbo'  # this prompt is kind of lengthy
     elif backbone == 'gpt4':
         model_name = 'gpt-4'
 
+    def get_turn_based_coh_prompt(
+                                prompt_f,
+                                q:str='',
+                                n_fewshot:int=8)->list:
+        assert q, 'need question to be fed'
+        messages = []
+        # start constructing messages
+        src_d = yaml.full_load(prompt_f)
+        # system
+        sys = {'role': 'system', 'content': src_d['system']} 
+        messages.append(sys)
+        # fewshot
+        actual_n_fewshots = min(n_fewshot, len(src_d['assistant']))
+        for i in range(actual_n_fewshots):
+            usr1 = {'role': 'user', 'content': src_d['user'].pop(0)}
+            ast1 = {'role': 'assistant', 'content': src_d['assistant'].pop(0)}
+            messages.append(usr1)
+            messages.append(ast1)
+        # question of interest
+        messages.append({'role':'user', 'content': src_d['user_tmp'].replace('[QUESTION]', q)})
+        
+        # assert length of the message
+        assert len(messages) == 2+actual_n_fewshots, 'L430: get_turn_based_coh_prompt() fails'
+        return messages
+    
     def reduce_fewshots(rawtext:str, n_fewshot:int)->str:
+        '''
+        helper function for turn_based_coh=False
+        '''
         chunks = rawtext.split("\n\n\n")
         fewshots = chunks[1:-1]
         random.shuffle(fewshots) # in-place operation
@@ -414,6 +443,9 @@ def query_enhanced_coh(data: dict,
         return reduced
     
     def parse_raw2dict(rawqueryout:str)->OrderedDict:
+        '''
+        helper function for output (universal for both turn_based_coh=True|False)
+        '''
         lines = rawqueryout.split('\n')
         parse_d = OrderedDict()
         # gather each line's index
@@ -446,29 +478,35 @@ def query_enhanced_coh(data: dict,
         return parse_dd
 
     # prep prompt
-    rawprompt = open(prompt_f).read().strip()
-    if 'cotpal' not in prompt_f:
-        if n_fewshot > 6:
-            print(f'max k_fewshot for cotpalp2c is 6 ({n_fewshot=}->6)') 
-            n_fewshot = 6
-        if n_fewshot>0 and n_fewshot<6:
-            rawprompt = reduce_fewshots(rawprompt, n_fewshot)
-    else:
-        if n_fewshot > 2:
-            print(f'max k_fewshot for cotpal is 2 ({n_fewshot=}->2)') 
-            n_fewshot = 2
-        if n_fewshot>0 and n_fewshot<2:
-            rawprompt = reduce_fewshots(rawprompt, n_fewshot)
-    prompt_tmp = PromptStr(rawprompt)
-    prompt = prompt_tmp.sub('QUESTION', data['question'])
-    assert isinstance(prompt, str)
-    messages = [
-        {'role':'user', 'content': prompt}
-    ]
+    if turn_based_coh: # *.yaml
+        messages = get_turn_based_coh_prompt(prompt_f, 
+                                             q=data['question'],
+                                             n_fewshot=n_fewshot)
+    else: #*.txt 
+        rawprompt = open(prompt_f).read().strip()
+        if 'cotpal' not in prompt_f:
+            if n_fewshot > 6:
+                print(f'max k_fewshot for cotpalp2c is 6 ({n_fewshot=}->6)') 
+                n_fewshot = 6
+            if n_fewshot>0 and n_fewshot<6:
+                rawprompt = reduce_fewshots(rawprompt, n_fewshot)
+        else:
+            if n_fewshot > 2:
+                print(f'max k_fewshot for cotpal is 2 ({n_fewshot=}->2)') 
+                n_fewshot = 2
+            if n_fewshot>0 and n_fewshot<2:
+                rawprompt = reduce_fewshots(rawprompt, n_fewshot)
+        prompt_tmp = PromptStr(rawprompt)
+        prompt = prompt_tmp.sub('QUESTION', data['question'])
+        assert isinstance(prompt, str)
+        messages = [
+            {'role':'user', 'content': prompt}
+        ]
+    print('T=0 for query_enhanced_coh() (manually set)')
     raw_query_out = completion_with_backoff(
             api_key=key,
             model=model_name,
-            max_tokens=500, 
+            max_tokens=1024, 
             stop='\nEvaluation: ', 
             messages=messages,
             temperature=0.,
@@ -496,6 +534,7 @@ def query_math(
         prog_hint_prompting:bool=False, # 10/14 whether to do `hint injection`
         cohprompt:str='', # 10/19 coh exp
         when_only_conflict:int=-1, # oct26~ exp
+        turn_based_coh:bool=False, # nov11 exp 
         ):
     '''
     This function is used to query OpenAI for answers in arithmetic tasks. It contains three steps:
@@ -580,7 +619,7 @@ def query_math(
             
             ##########
             ## I guess this part could be hugely improvable (readability, conciseness). 
-            ## - only_conflict option should dangle just before the baseline routine or should be merged into it.
+            ## `args.when_only_conflict` option should dangle just before the baseline routine or should be merged into it. but let us avoid unnecessary confusion for now...
             ##########
             if cohprompt: 
                 # Does not matter when_only_conflict==2 or 3. Below works for both.
@@ -591,7 +630,8 @@ def query_math(
                                                                 prompt_f=cohprompt, 
                                                                 key=key, 
                                                                 backbone=backbone,
-                                                                n_fewshot=k_fewshot)
+                                                                n_fewshot=k_fewshot,
+                                                                turn_based_coh=turn_based_coh)
                     good_solution = parse_dd['Solution:']
                     try:
                         good_method = parse_method(parse_dd['Successful Method:'])
@@ -990,10 +1030,18 @@ if __name__ == '__main__':
         4. repeat `2` and `3` until the answer is correct or the number of cycle exceeds `n_cycle`
     '''
 
+    # 11/11 targetting only conflict
+    '''
+    our algorithm applies only when the results from three methods are disconcordant.
+    thus apply those only on conflict cases to test urgently 
+    '''
+    parser.add_argument('--tgt_conflict', action='store_true', help='this flag will allow running algorithms only on conflict cases.')
+    parser.add_argument('--dbg', action='store_true', help='this flag will disable retrying logics to catch bugs')
+
+
     args = parser.parse_args()
 
     key = open('../openai_key.txt').read().strip()
-    # print(key)
 
     # prep experiements-common
     start_index = args.start
@@ -1027,78 +1075,76 @@ if __name__ == '__main__':
         dataset = jsonlines_load('../dataset/single_addsub.jsonl')
     elif dataset_name == 'multiarith':
         dataset = jsonlines_load('../dataset/multiarith.jsonl')
+    
+    if args.tgt_conflict:
+        conflict_jsls = list(Path('../output/nov11_tgt_conflict').glob(f'**/conflict*.jsonl'))
+        datasets_backbones_paths = [(jsonlines_load(jslf), jslf.parent.parent.name, jslf) for jslf in conflict_jsls]
+        datasets = [e[0] for e in datasets_backbones_paths]
+        backbones = [e[1] for e in datasets_backbones_paths]
+        paths = [e[2] for e in datasets_backbones_paths]
+    else: # only one dataset
+        datasets = [dataset]
 
     # === slice data based on start and end ===
-    total_num = len(dataset)
-    print('total data: ', total_num)
-    if end_index == -1:
-        end_index = total_num
+    for ii, dataset in enumerate(datasets): 
+        total_num = len(dataset)
+        print('total data: ', total_num)
+        unfinished_tasks = []
+        if args.tgt_conflict: # conflict case only run
+            assert args.cohprompt, f'when --tgt_conflict, need --cohprompt {args.cohprompt}'
+            # adjust the following arguments for `tgt_conflict==True` setting 
+            datasetpath = paths[ii]
+            args.when_only_conflict = 3 if datasetpath.parent=='coh' else 2 # 3 for 3model-coh 2 for 2model-coh
+            backbone = backbones[ii]
+            output_path = paths[ii].parent/Path(args.cohprompt).stem
+            turn_based_coh = False
+            if args.cohprompt.endswith('.yaml'):
+                turn_based_coh = True
+            if not os.path.exists(output_path):
+                os.makedirs(output_path)
+            save_path = outputpath/f"{dt_string}_{datasetpath}"
 
-    if end_index > total_num:
-        end_index = total_num
+            print('Current total tasks: ', task_num)
+            print(f"{datasetpath=}")
+            print(f'{args.tgt_conflict=}')
+            print(f"\t{args.when_only_conflict=}")
+            print(f"\t{backbone=}")
+            print(f"\t{args.cohprompt=}")
+            print(f"\t{turn_based_coh=}")
+            print(f"\t{save_path=}")
 
-    tasks = dataset[start_index:end_index]
-    task_num = len(tasks)
-    print('Current total tasks: ', task_num)
-
-    unfinished_tasks = []
-
-    
-    
-    # model-selection / ablation study
-    output_path = os.path.join(output_dir, f'{backbone}/')
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
-    save_path = os.path.join(output_path,
-                            f'{dataset_name}_k{args.k_fewshot}_sc{sc_num}_s{start_index}_e{end_index}_{dt_string}.jsonl')
-    print(save_path)
-
-    # === run experiments ===
-    progress_bar = tqdm(range(task_num))
-    for i in range(task_num):
-        task = tasks[i]
-        start_time = time.time()
-        count = 0
         
-        if dataset_name == 'dbg':
-            try:
-                ans = query_math(
-                    task, key=key, cot_temperature=cot_temperature,
-                    pal_temperature=pal_temperature, sc_num=sc_num,backbone=backbone,
-                    plan_temperature=args.plan_temperature,
-                    code_temperature=args.code_temperature,
-                    k_fewshot=args.k_fewshot,
-                    use_plancode=args.use_plancode, # for model selection experiment
-                    ablation=args.ablation, # for onlyone method ablation study
-                    actor_selection_prompt=args.actor_selection_prompt, # for actor selection prompt test
-                    prog_hint_prompting=args.prog_hint_prompting, # whether to inject hint to query solution
-                    cohprompt=args.cohprompt, # for custom prompt experiment,
-                    when_only_conflict=args.when_only_conflict, 
-                    )
-                # # only when dbg
-                # progress_bar.update(1)
-                # if ans is not None:
-                #     with open(save_path, "a+") as fout:
-                #         fout.write(json.dumps(ans)+'\n')
-                            
-            except Exception as e:
-                print(e)
-                ans = None
-            progress_bar.update(1)
-            if ans is not None:
-                with open(save_path, "a+") as fout:
-                    fout.write(json.dumps(ans)+'\n')
+        else: # normal run
+            if end_index == -1:
+                end_index = total_num
 
-        else:
-            while True:
+            if end_index > total_num:
+                end_index = total_num
+
+            tasks = dataset[start_index:end_index]
+            task_num = len(tasks)
+            print('Current total tasks: ', task_num)
+
+
+
+            
+            
+            output_path = os.path.join(output_dir, f'{backbone}/')
+            if not os.path.exists(output_path):
+                os.makedirs(output_path)
+            save_path = os.path.join(output_path,
+                                    f'{dataset_name}_k{args.k_fewshot}_sc{sc_num}_s{start_index}_e{end_index}_{dt_string}.jsonl')
+            print(save_path)
+
+        # === run experiments ===
+        progress_bar = tqdm(range(task_num))
+        for i in range(task_num):
+            task = tasks[i]
+            start_time = time.time()
+            count = 0
+            
+            if dataset_name == 'dbg' or args.dbg:
                 try:
-                    count += 1
-
-                    # if args.cohprompt.endswith('prompts/prep_reflexion/5_cohlike_prompt.txt') and args.k_fewshot>6: # oct19 exp
-                    #     args.k_fewshot = 6
-                    #     print('for 5_cohlike_prompt.txt, k_fewshot is maximum at 6')
-                        
-
                     ans = query_math(
                         task, key=key, cot_temperature=cot_temperature,
                         pal_temperature=pal_temperature, sc_num=sc_num,backbone=backbone,
@@ -1111,46 +1157,80 @@ if __name__ == '__main__':
                         prog_hint_prompting=args.prog_hint_prompting, # whether to inject hint to query solution
                         cohprompt=args.cohprompt, # for custom prompt experiment,
                         when_only_conflict=args.when_only_conflict, 
+                        turn_based_coh = turn_based_coh,
                         )
-
                                 
                 except Exception as e:
                     print(e)
                     ans = None
+                progress_bar.update(1)
                 if ans is not None:
                     with open(save_path, "a+") as fout:
                         fout.write(json.dumps(ans)+'\n')
-                    progress_bar.update(1)
-                    break
-                else: 
-                    if count>3:
-                        print(f'tried {count} times, passing')
-                        print('Current Task: ', i)
-                        unfinished_tasks.append(task)
-                        count=0
+
+            else:
+                while True:
+                    try:
+                        count += 1
+
+                        # if args.cohprompt.endswith('prompts/prep_reflexion/5_cohlike_prompt.txt') and args.k_fewshot>6: # oct19 exp
+                        #     args.k_fewshot = 6
+                        #     print('for 5_cohlike_prompt.txt, k_fewshot is maximum at 6')
+                            
+
+                        ans = query_math(
+                            task, key=key, cot_temperature=cot_temperature,
+                            pal_temperature=pal_temperature, sc_num=sc_num,backbone=backbone,
+                            plan_temperature=args.plan_temperature,
+                            code_temperature=args.code_temperature,
+                            k_fewshot=args.k_fewshot,
+                            use_plancode=args.use_plancode, # for model selection experiment
+                            ablation=args.ablation, # for onlyone method ablation study
+                            actor_selection_prompt=args.actor_selection_prompt, # for actor selection prompt test
+                            prog_hint_prompting=args.prog_hint_prompting, # whether to inject hint to query solution
+                            cohprompt=args.cohprompt, # for custom prompt experiment,
+                            when_only_conflict=args.when_only_conflict, 
+                            turn_based_coh = turn_based_coh,
+                            )
+
+                                    
+                    except Exception as e:
+                        print(e)
+                        ans = None
+                    if ans is not None:
+                        with open(save_path, "a+") as fout:
+                            fout.write(json.dumps(ans)+'\n')
+                        progress_bar.update(1)
                         break
-                    else:
-                        print("retrying (main)")
-                        time.sleep(random.uniform(1,3))
-        
+                    else: 
+                        if count>3:
+                            print(f'tried {count} times, passing')
+                            print('Current Task: ', i)
+                            unfinished_tasks.append(task)
+                            count=0
+                            break
+                        else:
+                            print("retrying (main)")
+                            time.sleep(random.uniform(1,3))
+            
+                
+
+        end_time_0 = time.time()
+        print('Finish at time: ', time.strftime(
+            "%Y-%m-%d %H:%M:%S", time.localtime()))
+        print(f'Time used: {end_time_0 - start_time_0} seconds')
+        if len(unfinished_tasks) > 0:
+            unfinished_path = Path(save_path).parent/'unfinished'/Path(save_path).name.replace('.jsonl', '_unfinished.jsonl')
+            if not unfinished_path.parent.exists():
+                unfinished_path.parent.mkdir(exsits_ok=True, parents=True)
+            unfinished_path = str(unfinished_path)
+            with jsl.open(unfinished_path, 'w') as writer:
+                writer.write_all(unfinished_tasks)
+                print(f'Unfinished tasks at: \n\t{unfinished_path}')
+            with open(f'{unfinished_path}.args', 'w') as f:
+                print(args, file=f)
+            print(f'Unfinished args at: \n\t{unfinished_path}.args')
+
             
 
-    end_time_0 = time.time()
-    print('Finish at time: ', time.strftime(
-        "%Y-%m-%d %H:%M:%S", time.localtime()))
-    print(f'Time used: {end_time_0 - start_time_0} seconds')
-    if len(unfinished_tasks) > 0:
-        unfinished_path = Path(save_path).parent/'unfinished'/Path(save_path).name.replace('.jsonl', '_unfinished.jsonl')
-        if not unfinished_path.parent.exists():
-            unfinished_path.parent.mkdir(exsits_ok=True, parents=True)
-        unfinished_path = str(unfinished_path)
-        with jsl.open(unfinished_path, 'w') as writer:
-            writer.write_all(unfinished_tasks)
-            print(f'Unfinished tasks at: \n\t{unfinished_path}')
-        with open(f'{unfinished_path}.args', 'w') as f:
-            print(args, file=f)
-        print(f'Unfinished args at: \n\t{unfinished_path}.args')
-
-        
-
-    print('Done')
+        print('Done')

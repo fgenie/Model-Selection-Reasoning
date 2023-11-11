@@ -1,4 +1,34 @@
-## Nov 6~10
+## Nov 6~11
+* without running ablation, you can calculate one-method-only performance (we've already recorded it)
+    - [x] gpt4
+    - `scripts/nov11_1_onemethod_acc.py`
+
+    | model | cot | pal | p2c |   
+    |-|–|-|-|   
+    | gpt-3.5-turbo | 1037/1319 (0.786) | 1055/1319 (0.800) | 975/1319 (0.739) |   
+    | gpt4 | 1244/1319 (0.943 (-1.2\%p)) | 1235/1319 (0.936 (-1.9\%p)) | 1209/1319 (0.917 (-3.8 \%p)) |
+
+* how inconsistent output does `T=0` model generate? **QUITE**
+    - [x] chatgpt
+    - [x] gpt4   
+
+    It is QUITE INCONSISTENT. See `scripts/nov11_0_conflicts_check.xlsx` for more. (Note that by anwser-wise, consistency improves).
+
+    | | gpt-3.5-turbo | gpt-4 | 
+    |-|-|-|
+    | PAL  | 1193/1308 | 873.0/1319 |
+    | CoT | 907/1308 | 607.3/1319 |
+
+* Is it acceptable to run things on conflict cases only? Is this consistent enough w/o setting a proper `seed`? **"Probably"**
+    * chatgpt: we do not care much about this since it already recorded quite a gap compared to the baseline (for both 2-model or 3-model'ed cases)
+    * gpt4: already we counted how much the overlap of conflict cases (indices) between two separate runs and over 75 conflict cases, 61 of those were common idxs that had conflict (see `output/nov4_gpt4greedy/baseline/gpt4/compare_idxs.py`)
+    
+    | | num conflict idxs |
+    |-|-|
+    |baseline run| 75 |
+    |coh run| 75 |
+    |intersection| 61 (81.3\%) | 
+
 * it is possible that we only run prompts on **conflict cases only** that is... we don't need to run over 1319 examples.
     * `=` success rate.
     - [ ] implement conflict only runs
@@ -6,8 +36,7 @@
 * possible prompt change
     * change coh system prompt (from: choose -> to: solve) so that see if it changes performance
     * more fewshots for cotpal case?
-        - [x] `6_cohlike_solve_prompt*.txt`
-        - [x] `6_cohlike_solve_prompt_cotpal_2|3.txt` (added one|two more pair of examples for this)
+        - [x] `6_cohlike_solve_prompt_1|2|3.txt` (added 2*1|2|3 pairs of examples for this)
         - run
             - [ ] chatgpt
             - [ ] gpt-4
@@ -19,10 +48,6 @@
         - [ ] prompt utils for querying
         - run
             - [ ] chatgpt
-* without running ablation, you can calculate one-method-only performance (we've already recorded it)
-* how inconsistent does `T=0` shows?
-    - [ ] chatgpt
-    - [ ] gpt4
 * after things are all done, do constructing `training blurb`
 
 ### re-do things (after completing above)
@@ -55,9 +80,6 @@ https://community.openai.com/t/a-question-on-determinism/8185
 `compare_idxs.py`
 n_conflict: 75
 intersection_indices: 61
-
-* for chatgpt this does hold too?
-
 
 
 ## Oct 27: coh when conflict only (select amongst 3, select btw 2) --> bug: k_fewshot = 6 for all
