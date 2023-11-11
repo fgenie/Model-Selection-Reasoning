@@ -412,7 +412,7 @@ def query_enhanced_coh(data: dict,
         assert q, 'need question to be fed'
         messages = []
         # start constructing messages
-        src_d = yaml.full_load(prompt_f)
+        src_d = yaml.full_load(open(prompt_f))
         # system
         sys = {'role': 'system', 'content': src_d['system']} 
         messages.append(sys)
@@ -427,7 +427,7 @@ def query_enhanced_coh(data: dict,
         messages.append({'role':'user', 'content': src_d['user_tmp'].replace('[QUESTION]', q)})
         
         # assert length of the message
-        assert len(messages) == 2+actual_n_fewshots, 'L430: get_turn_based_coh_prompt() fails'
+        assert len(messages) == 2+actual_n_fewshots*2, 'L430: get_turn_based_coh_prompt() fails'
         return messages
     
     def reduce_fewshots(rawtext:str, n_fewshot:int)->str:
@@ -441,15 +441,15 @@ def query_enhanced_coh(data: dict,
         # assert n_fewshot >= len(fewshots), 'give smaller n_fewshot to reduce'
         reduced = "\n\n\n".join([chunks[0]] + fewshots + [chunks[-1]]) # join
         return reduced
+        
     
-    def parse_raw2dict(rawqueryout:str)->OrderedDict:
+    def parse_raw2dict(rawqueryout:str, toparse:list=None)->OrderedDict:
         '''
         helper function for output (universal for both turn_based_coh=True|False)
         '''
-        lines = rawqueryout.split('\n')
+        lines = rawqueryout.strip().split('\n')
         parse_d = OrderedDict()
         # gather each line's index
-        toparse = ['Failed Method:', 'Hint:', 'Successful Method:', 'Solution:', 'Answer:']
         keys = []
         for i, l in enumerate(lines):
             for k in toparse:
@@ -474,7 +474,13 @@ def query_enhanced_coh(data: dict,
             parse_dd['Solution:'] = None
             print(f'paring failed:\n{rawqueryout}')
         else:
-            parse_dd['Solution:'] = parse_dd['Solution:'].replace('Solution:', '').strip()
+            try: 
+                parse_dd['Solution:'] = parse_dd['Solution:'].replace('Solution:', '').strip()
+                if '\nAnswer: ' in parse_dd['Solution:']:
+                    parse_dd['Solution:'] = parse_dd['Solution:'].split('\nAnswer: ')[0]
+            except:
+                print('no Solution: found')
+                pass
         return parse_dd
 
     # prep prompt
@@ -504,17 +510,28 @@ def query_enhanced_coh(data: dict,
         ]
     print('T=0 for query_enhanced_coh() (manually set)')
     print('seed=777 for query_enhanced_coh() (manually set) from nov 11')
+    
+    if 'solvetwice' in prompt_f:
+        stop_tok = "\n\n\n"
+    else:
+        stop_tok = "\nEvaluation: "
     raw_query_out = completion_with_backoff(
             api_key=key,
             seed=777,
             model=model_name,
             max_tokens=1024, 
-            stop='\nEvaluation: ', 
+            stop=stop_tok, 
             messages=messages,
             temperature=0.,
             top_p=1.0,
             n=1)['choices'][0]['message']['content'] # str
-    parsed_dict = parse_raw2dict(raw_query_out)
+    if 'solvetwice' in prompt_f:
+        toparse = ['Failed Method:', 'Failed Attempt:', 'Answer:', 'Evaluation:', 'Reflection:', 'Hint:', 'Successful Method:', 'Solution:']
+    else:
+        toparse = ['Failed Method:', 'Hint:', 'Successful Method:', 'Solution:', 'Answer:']
+    parsed_dict = parse_raw2dict(raw_query_out, toparse = toparse)
+        
+    
 
     return parsed_dict, raw_query_out, messages
 
@@ -641,7 +658,7 @@ def query_math(
             if cohprompt: 
                 # Does not matter when_only_conflict==2 or 3. Below works for both.
                 final_ans = get_concordant_answer(answers_above)
-                if final_ans is None: # (answers_above are all None) OR (not concordant)
+                if final_ans is None: # (answers_above are all None) OR (not concordant) 
                     parse_dd, rawout, query_msg = query_enhanced_coh(
                                                                 data, 
                                                                 prompt_f=cohprompt, 
@@ -692,14 +709,37 @@ def query_math(
                     if when_only_conflict == 3:
                         ansmap['p2c'] = p2c_ans
                         solmap['p2c'] = (plan, p2c_solution)
-                    reattempt = {'reattempt': good_method, 'ans_before': ansmap[good_method], 'ans_after': final_ans, 'sol_before': solmap[good_method][0], 'sol_after': good_solution} 
+                    
+                    reattempt = {'good_method': good_method, 
+                                 'actual_method': actual_method, 
+                                 'good_solution': good_solution} 
+                    
                     try:
                         bad_method = parse_method(parse_dd['Failed Method:'])
                     except Exception as e:
                         print(e)
                         print("parse_dd['Failed Method:'] failed")
                         bad_method = None
+                    reattempt['bad_method'] = bad_method
+                    if 'Failed Attempt:' in parse_dd.keys():
+                        bad_solution = parse_dd['Failed Attempt:']
+                        reattempt['bad_solution'] = bad_solution # Failed Attempt solution considered Correct and stops generation (chatgpt) --> use that attempt
+                        if final_ans is None and 'Successful Method: ' not in rawout and 'Evaluation: Correct' in rawout:
+                            actual_method = f"{bad_method} (failed attempt considered `correct`)"
+                            if bad_method =='p2c':
+                                plan, code = separate_plan_code(bad_solution)
+                                good_solution = (plan, code)
+                                final_ans = safe_execute_turbo(code)
+                            elif bad_method == 'pal':
+                                final_ans = safe_execute_turbo(bad_solution)
+                            elif bad_method == 'cot':
+                                final_ans = extract_num_turbo(bad_solution)
+                            else:
+                                raise ValueError('failed to generate proper answer format (for both)')                    
+
+
                 else:
+                    assert not tgt_conflict, '--tgt_conflict cannot reach here.'
                     rawout = 'no coh (concordant)'
                     query_msg = 'no coh (concordant)'
                     good_solution = ''
@@ -1094,7 +1134,12 @@ if __name__ == '__main__':
         dataset = jsonlines_load('../dataset/multiarith.jsonl')
     
     if args.tgt_conflict:
-        conflict_jsls = list(Path('../output/nov11_tgt_conflict').glob(f'**/conflict*.jsonl'))
+        cotpal_conflict_jsls = list(Path('../output/nov11_tgt_conflict').glob(f'**/coh_cotpal_1/conflict*.jsonl'))
+        if 'cotpal' in args.cohprompt:
+            conflict_jsls = cotpal_conflict_jsls        
+        else:
+            conflict_jsls = list(Path('../output/nov11_tgt_conflict').glob(f'**/conflict*.jsonl'))
+            conflict_jsls = [p for p in conflict_jsls if p not in cotpal_conflict_jsls]
         datasets_backbones_paths = [(jsonlines_load(jslf), jslf.parent.parent.name, jslf) for jslf in conflict_jsls]
         datasets = [e[0] for e in datasets_backbones_paths]
         backbones = [e[1] for e in datasets_backbones_paths]
@@ -1108,9 +1153,12 @@ if __name__ == '__main__':
         print('total data: ', total_num)
         unfinished_tasks = []
         if args.tgt_conflict: # conflict case only run
-            task_num = total_num
-            print('Current total tasks: ', task_num)
+            
             tasks = dataset 
+            if args.dbg:
+                tasks = dataset[:10]
+            task_num = len(tasks)
+            print('Current total tasks: ', task_num)
 
             assert args.cohprompt, f'when --tgt_conflict, need --cohprompt {args.cohprompt}'
             # adjust the following arguments for `tgt_conflict==True` setting 
@@ -1125,8 +1173,11 @@ if __name__ == '__main__':
             if not os.path.exists(output_path):
                 os.makedirs(output_path)
             args.output_dir = output_path
-            save_path = output_path/f"tgt_conflict_{dt_string}_{datasetpath.name}"
-
+            if args.dbg:
+                save_path = output_path/f"dbg_tgt_conflict_{dt_string}_{datasetpath.name}"
+            else:
+                save_path = output_path/f"tgt_conflict_{dt_string}_{datasetpath.name}"
+            
 
             print(f"{datasetpath=}")
             print(f'{args.tgt_conflict=}')
@@ -1229,7 +1280,7 @@ if __name__ == '__main__':
                         progress_bar.update(1)
                         break
                     else: 
-                        if count>3:
+                        if count>1:
                             print(f'tried {count} times, passing')
                             print('Current Task: ', i)
                             unfinished_tasks.append(task)

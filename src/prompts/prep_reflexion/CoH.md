@@ -33,7 +33,7 @@ Previous attempts and reflections:
 Question: 
 Trial Method: 
 Answer: 
-Evalutaion: 
+Evaluation: 
 Reflection: 
 Hint: 
 Promising Method
@@ -61,7 +61,7 @@ Learn to infer which method would work and which not:
 Question: 
 Failed Method: 
 Answer: 
-Evalutaion: 
+Evaluation: 
 Reflection: 
 Hint: 
 Successful Method

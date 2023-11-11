@@ -14,7 +14,7 @@ Solution: def solution():
     result = distance_per_train
     return result
 Answer: 115.0
-Evalutaion: Wrong
+Evaluation: Wrong
 Reflection: The initial solution incorrectly divided the distance by each of the two trains with the number of trains.
 Hint: Some math problems tricks with the semantics in the question, stressing the need for accurate thinking in semantics.
 Successful Method: Chain of Thought (CoT)
@@ -50,7 +50,7 @@ Year 28: $69,305.02 + ($69,305.02 * 5%) = $69,305.02 + $3,465.25 = $72,770.27
 Year 29: $72,770.27 + ($72,770.27 * 5%) = $72,770.27 + $3,638.51 = $76,408.78
 Year 30: $76,408.78 + ($76,408.78 * 5%) = $76,408.
 Answer: 76408.0
-Evalutaion: Wrong
+Evaluation: Wrong
 Reflection: The agent made a mistake by assuming Marcy's annual pension starts from $50,000 per year from year 20 and it increases 5% annually, while the $50,000 per year is the 100% of the pension which could be entitled when she worked for 40 or more years.
 Hint: Remember to accurately understand the conditions in the questions and then calculate from. For concise reasoning and computation, programming might help.
 Successful Method: Program-aided Language Model (PAL)

@@ -23,7 +23,7 @@ Year 28: $69,305.02 + ($69,305.02 * 5%) = $69,305.02 + $3,465.25 = $72,770.27
 Year 29: $72,770.27 + ($72,770.27 * 5%) = $72,770.27 + $3,638.51 = $76,408.78
 Year 30: $76,408.78 + ($76,408.78 * 5%) = $76,408.
 Answer: 76408.0
-Evalutaion: Wrong
+Evaluation: Wrong
 Reflection: The agent made a mistake by assuming Marcy's annual pension starts from $50,000 per year from year 20 and it increases 5% annually, while the $50,000 per year is the 100% of the pension which could be entitled when she worked for 40 or more years.
 Hint: Remember to accurately understand the conditions in the questions and then calculate from. Programming solution might help concise and accurate reasoning.
 Trial Method: pal
@@ -49,7 +49,7 @@ Trixie has had 12 kittens.
 Therefore, the total number of kittens is x + 3x + 12 = 4x + 12.
 Since we don't know the value of x, we cannot determine the exact number of kittens the Doubtfire family now has.
 Answer: nan
-Evalutaion: Wrong
+Evaluation: Wrong
 Reflection: The solution creates an equation correctly about number of kittens, but fails to plug the number of adopted kittens into, fail to conclude the number.
 Hint: If a question is properly comprehended, using programming to find a solution could assist in arriving at the right answer.
 Promising Method: p2c
@@ -85,7 +85,7 @@ Solution Steps: def solution():
     result = distance_per_train
     return result
 Answer: 115.0
-Evalutaion: Wrong
+Evaluation: Wrong
 Reflection: The initial solution incorrectly divided the distance by each of the two trains with the number of trains.
 Hint: Some math problems tricks with the semantics in the question, stressing the need for accurate thinking in semantics.
 Trial Method: cot
@@ -113,7 +113,7 @@ Solution Steps: def solution():
     result = speed
     return result
 Answer: 1.904761904761905
-Evalutaion: Wrong
+Evaluation: Wrong
 Reflection: The error in the agent's initial solution arises from incorrectly calculating the total running hours per week by subtracting the running hours of the first day from total miles and dividing by remaining days.
 Hint: Getting help from the programming only works when you program the question correctly. Determining what to compute before programming would be helpful.
 Trial Method: p2c
@@ -167,7 +167,7 @@ def solution():
     
     return money_saved
 Answer: 3.0
-Evalutaion: Wrong
+Evaluation: Wrong
 Reflection: The initial solution fails at understanding what to compute and also hallucinates about regular price in the code which shows lack of question understanding.
 Hint: Accurate understanding of what to figure out from the question is the key.
 Trial Method: cot
@@ -205,7 +205,7 @@ def solution():
     
     return years_ago
 Answer: 17.0
-Evalutaion: Wrong
+Evaluation: Wrong
 Reflection: Raymond's age is wrongly recognized from the start of the solution, and the following plans are also poor at understanding ages and chronological orders.
 Hint: Be careful not to confuse adding or subtracting when solving problems with chronological concepts if you choose to write a code to solve.
 Trial Method: pal
