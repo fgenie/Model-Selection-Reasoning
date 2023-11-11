@@ -1,0 +1,12 @@
+# other conflict only files has bug of k=6 which is inconsistent with the current config of the experiments
+chatgpt:
+    2models:
+        - ../output/nov6_onlyconflict_dbggd/coh/chatgpt/gsm8k_k8_sc1_s0_e1319_11_06_12_35.jsonl
+        - ../output/oct27_rerun_baseline/chatgpt/gsm8k_k8_sc1_s0_e1319_10_27_03_12.jsonl
+gpt4:
+    2models:
+        - ../output/nov4_gpt4greedy/coh/gpt4/gsm8k_k8_sc1_s0_e1319_11_05_13_37.jsonl
+        - ../output/nov4_gpt4greedy/coh_cotpal_1/gpt4/gsm8k_k8_sc1_s0_e1319_11_04_22_35.jsonl
+        - ../output/nov4_gpt4greedy/baseline/gpt4/gsm8k_k8_sc1_s0_e1319_11_05_06_12.jsonl
+    3models:
+        - ../output/nov4_gpt4greedy/coh/gpt4/gsm8k_k8_sc1_s0_e1319_11_05_13_37.jsonl
