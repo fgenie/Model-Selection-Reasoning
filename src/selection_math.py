@@ -503,8 +503,10 @@ def query_enhanced_coh(data: dict,
             {'role':'user', 'content': prompt}
         ]
     print('T=0 for query_enhanced_coh() (manually set)')
+    print('seed=777 for query_enhanced_coh() (manually set) from nov 11')
     raw_query_out = completion_with_backoff(
             api_key=key,
+            seed=777,
             model=model_name,
             max_tokens=1024, 
             stop='\nEvaluation: ', 
@@ -534,7 +536,11 @@ def query_math(
         prog_hint_prompting:bool=False, # 10/14 whether to do `hint injection`
         cohprompt:str='', # 10/19 coh exp
         when_only_conflict:int=-1, # oct26~ exp
+        tgt_conflict:bool=False, # nov11 exp
         turn_based_coh:bool=False, # nov11 exp 
+
+        dbg:bool =False,  # dbgmode
+
         ):
     '''
     This function is used to query OpenAI for answers in arithmetic tasks. It contains three steps:
@@ -582,37 +588,47 @@ def query_math(
             p2c_ans = None
             # selection_ans = None # this for model-selection
             final_ans = None
-            cot_solution, query_msg = query_cot(
-                data, key, cot_temperature, backbone=backbone)
-            # do cot
-            if cot_solution is None:
-                print('Time out') 
-                return None
+            if tgt_conflict:
+                cot_ans = data['cot_executed'][0]
+                pal_ans = data['pal_executed'][0]
+                cot_solution = data['cot_generated']
+                pal_solution = data['pal_generated']
+                if when_only_conflict==3:
+                    p2c_ans = data['p2c_executed'][0]
+                    p2c_solution = data['p2c_generated']
+                    
             else:
-                cot_ans = extract_num_turbo(cot_solution[0])
-                cot_answers.append(cot_ans)
-                cot_solutions.append(cot_solution[0])
-            # do pal
-            pal_solution, query_msg = query_pal(
-                data, key, pal_temperature, backbone=backbone)
-            if pal_solution is None:
-                print('Time out')
-                return None
-            else:
-                pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
-                pal_answers.append(pal_ans)
-                pal_solutions.append(pal_solution[0])
-            if when_only_conflict==3:
-                # do p2c 
-                p2c_solution, plans, query_msg = query_plancode(data, key=key, plan_temperature=plan_temperature, code_temperature=code_temperature, backbone=backbone, k_fewshot=k_fewshot)
-                if p2c_solution is None:
+                cot_solution, query_msg = query_cot(
+                    data, key, cot_temperature, backbone=backbone)
+                # do cot
+                if cot_solution is None:
+                    print('Time out') 
+                    return None
+                else:
+                    cot_ans = extract_num_turbo(cot_solution[0])
+                    cot_answers.append(cot_ans)
+                    cot_solutions.append(cot_solution[0])
+                # do pal
+                pal_solution, query_msg = query_pal(
+                    data, key, pal_temperature, backbone=backbone)
+                if pal_solution is None:
                     print('Time out')
                     return None
                 else:
-                    p2c_ans = safe_execute_turbo(p2c_solution[0]) # testing p2c-generated code and getting answer from it
-                    p2c_answers.append(p2c_ans)
-                    p2c_solutions.append(p2c_solution[0])
-            # apply --cohprompt | --actor_selection_prompt
+                    pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
+                    pal_answers.append(pal_ans)
+                    pal_solutions.append(pal_solution[0])
+                if when_only_conflict==3:
+                    # do p2c 
+                    p2c_solution, plans, query_msg = query_plancode(data, key=key, plan_temperature=plan_temperature, code_temperature=code_temperature, backbone=backbone, k_fewshot=k_fewshot)
+                    if p2c_solution is None:
+                        print('Time out')
+                        return None
+                    else:
+                        p2c_ans = safe_execute_turbo(p2c_solution[0]) # testing p2c-generated code and getting answer from it
+                        p2c_answers.append(p2c_ans)
+                        p2c_solutions.append(p2c_solution[0])
+                # apply --cohprompt | --actor_selection_prompt
             answers_above = [cot_ans, pal_ans]
             if when_only_conflict==3:
                 answers_above.append(p2c_ans)
@@ -621,6 +637,7 @@ def query_math(
             ## I guess this part could be hugely improvable (readability, conciseness). 
             ## `args.when_only_conflict` option should dangle just before the baseline routine or should be merged into it. but let us avoid unnecessary confusion for now...
             ##########
+
             if cohprompt: 
                 # Does not matter when_only_conflict==2 or 3. Below works for both.
                 final_ans = get_concordant_answer(answers_above)
@@ -1091,26 +1108,34 @@ if __name__ == '__main__':
         print('total data: ', total_num)
         unfinished_tasks = []
         if args.tgt_conflict: # conflict case only run
+            task_num = total_num
+            print('Current total tasks: ', task_num)
+            tasks = dataset 
+
             assert args.cohprompt, f'when --tgt_conflict, need --cohprompt {args.cohprompt}'
             # adjust the following arguments for `tgt_conflict==True` setting 
             datasetpath = paths[ii]
             args.when_only_conflict = 3 if datasetpath.parent=='coh' else 2 # 3 for 3model-coh 2 for 2model-coh
             backbone = backbones[ii]
             output_path = paths[ii].parent/Path(args.cohprompt).stem
+            
             turn_based_coh = False
             if args.cohprompt.endswith('.yaml'):
                 turn_based_coh = True
             if not os.path.exists(output_path):
                 os.makedirs(output_path)
-            save_path = outputpath/f"{dt_string}_{datasetpath}"
+            args.output_dir = output_path
+            save_path = output_path/f"tgt_conflict_{dt_string}_{datasetpath.name}"
 
-            print('Current total tasks: ', task_num)
+
             print(f"{datasetpath=}")
             print(f'{args.tgt_conflict=}')
+            print(f"running with --tgt_conflict will override --output_dir")
             print(f"\t{args.when_only_conflict=}")
             print(f"\t{backbone=}")
             print(f"\t{args.cohprompt=}")
             print(f"\t{turn_based_coh=}")
+            print(f"\t{args.output_dir=}")
             print(f"\t{save_path=}")
 
         
@@ -1144,8 +1169,7 @@ if __name__ == '__main__':
             count = 0
             
             if dataset_name == 'dbg' or args.dbg:
-                try:
-                    ans = query_math(
+                ans = query_math(
                         task, key=key, cot_temperature=cot_temperature,
                         pal_temperature=pal_temperature, sc_num=sc_num,backbone=backbone,
                         plan_temperature=args.plan_temperature,
@@ -1155,14 +1179,14 @@ if __name__ == '__main__':
                         ablation=args.ablation, # for onlyone method ablation study
                         actor_selection_prompt=args.actor_selection_prompt, # for actor selection prompt test
                         prog_hint_prompting=args.prog_hint_prompting, # whether to inject hint to query solution
-                        cohprompt=args.cohprompt, # for custom prompt experiment,
+                        cohprompt=args.cohprompt, # for cohprompt exps,
                         when_only_conflict=args.when_only_conflict, 
+                        tgt_conflict = args.tgt_conflict,
                         turn_based_coh = turn_based_coh,
+                        dbg = args.dbg
                         )
                                 
-                except Exception as e:
-                    print(e)
-                    ans = None
+
                 progress_bar.update(1)
                 if ans is not None:
                     with open(save_path, "a+") as fout:
@@ -1190,7 +1214,9 @@ if __name__ == '__main__':
                             prog_hint_prompting=args.prog_hint_prompting, # whether to inject hint to query solution
                             cohprompt=args.cohprompt, # for custom prompt experiment,
                             when_only_conflict=args.when_only_conflict, 
+                            tgt_conflict = args.tgt_conflict,
                             turn_based_coh = turn_based_coh,
+                            dbg= args.dbg,
                             )
 
                                     
@@ -1222,7 +1248,7 @@ if __name__ == '__main__':
         if len(unfinished_tasks) > 0:
             unfinished_path = Path(save_path).parent/'unfinished'/Path(save_path).name.replace('.jsonl', '_unfinished.jsonl')
             if not unfinished_path.parent.exists():
-                unfinished_path.parent.mkdir(exsits_ok=True, parents=True)
+                unfinished_path.parent.mkdir(exist_ok=True, parents=True)
             unfinished_path = str(unfinished_path)
             with jsl.open(unfinished_path, 'w') as writer:
                 writer.write_all(unfinished_tasks)
