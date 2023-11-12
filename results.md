@@ -28,9 +28,12 @@
 
 * prompt notation
     * 8 = turn-based prompting
+        * `src/prompts/prep_reflexion/8_cohlike_solvetwice_prompt_cotpal_1.yaml`
     * 7 = let LLM write failure attempt with failed method before writing the correct solution with successful method
+        * `src/prompts/prep_reflexion/7_cohlike_solvetwice_prompt_cotpal_1.txt`
     * 6 = choose --> solve... (why it records the worst?)
-
+        * `src/prompts/prep_reflexion/6_cohlike_solve_prompt_cotpal_1.txt`
+    * (note) previous prompt = `src/prompts/prep_reflexion/5_cohlike_prompt_cotpal_1.txt`
 
 * chatgpt / 3 models  
     * prev. 84.2\% == **1110 corrects** 
