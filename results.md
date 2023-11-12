@@ -36,6 +36,28 @@
     * 6 = choose --> solve... (why it records the worst?)
         * `src/prompts/prep_reflexion/6_cohlike_solve_prompt_cotpal_1.txt`
     * (note) previous prompt = `src/prompts/prep_reflexion/5_cohlike_prompt_cotpal_1.txt`
+    <detail>
+    <summary>llm query message</summary>
+    ```python
+    # 8
+    [
+        {'role': 'system', 'content': ''}
+        {'role': 'user', 'content':'Question: ${fewshot question 1}'}
+        {'role': 'assistant', 'content': '${fewshot blurb1 failed method / failed attempt / answer / evaluation1 / reflection / hint / successful method / solution / answer / evaluation2}'}
+        {'role': 'user', 'content':}
+        {'role': 'assistant', 'content':}
+        ..
+        .
+        {'role': 'user', 'content':}
+    ]
+
+    # 7, 6
+    [
+        {'role': 'user', 'content': '${open(f).read()}'}
+    ]
+
+    ```
+    </detail>
 
 * chatgpt / 3 models  
     * prev. 84.2\% == **1110 corrects** 
