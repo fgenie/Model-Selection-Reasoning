@@ -23,7 +23,9 @@ from pathlib import Path
 def completion_with_backoff(**kwargs):
     return openai.ChatCompletion.create(**kwargs)
 
-def get_user_assistant_messages(system_message: str, user_message: str, assistant_message: str):
+def get_user_assistant_messages(system_message: str, 
+                                user_message: str, 
+                                assistant_message: str):
     '''
     This function is used to convert the prompt into the message format used by OpenAI Chat API.
     '''
@@ -1139,6 +1141,8 @@ if __name__ == '__main__':
             conflict_jsls = cotpal_conflict_jsls        
         else:
             conflict_jsls = list(Path('../output/nov11_tgt_conflict').glob(f'**/conflict*.jsonl'))
+            # conflict_jsls = list(Path('../output/nov12_later_or_donot/baseline/').glob(f'**/conflict*.jsonl'))
+            print(f"{conflict_jsls=}")
             conflict_jsls = [p for p in conflict_jsls if p not in cotpal_conflict_jsls]
         datasets_backbones_paths = [(jsonlines_load(jslf), jslf.parent.parent.name, jslf) for jslf in conflict_jsls]
         datasets = [e[0] for e in datasets_backbones_paths]
@@ -1201,9 +1205,6 @@ if __name__ == '__main__':
             task_num = len(tasks)
             print('Current total tasks: ', task_num)
 
-
-
-            
             
             output_path = os.path.join(output_dir, f'{backbone}/')
             if not os.path.exists(output_path):

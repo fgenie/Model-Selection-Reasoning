@@ -1,14 +1,13 @@
 import subprocess as sb
 from pathlib import Path
 
-outroot = "../output/nov11_tgt_conflicts/"
-paths = list(Path(outroot).glob("**/tgt_conflict_gsm8k*.jsonl"))
+outroot = "/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/output/nov11_tgt_conflict"
+paths = list(Path(outroot).glob("**/tgt_conflict*_gsm*.jsonl"))
 
 for jslf in paths:
-    cmd = f'bash eval_an_outjsl.sh {jslf}'
-    print(cmd)
-    sb.call(cmd, shell=True)
-
-
-
-
+    if 'unfinished' in str(jslf):
+        pass
+    else:
+        cmd = f'bash eval_an_outjsl.sh {jslf}'
+        print(cmd)
+        sb.call(cmd, shell=True)

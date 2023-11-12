@@ -1,12 +1,80 @@
+## Nov 12: results of RIMS prompt variants (from ideal training blurbs)
+
+### nonconflicts 
+<details>
+<summary>majority vote between 3|2 models </summary>
+
+* chatgpt
+
+| total\=1319 | n_nonconflict | correct | 
+|-|-|-|-|
+| 3models | 1158 | 1049 (pal-0.45\%p, cot+1.10\%p, p2c+5.61\%p) | 
+| 2models |  |  |
+
+* gpt4
+
+| total\=1319 | n_nonconflict | nonconfl_correct | 
+|-|-|-|
+| 3models | 1304 | 1255 (palonly+0.83\%p) |
+| 2models | 1244 | 1215 (palonly-2.20\%p) |
+
+</details>
+
+### on conflicts
+* TLDR; RIMS prompts variants results
+    * chatgpt / 3 models --> slightly worse but still outperform model-selection baseline significantly
+    * gpt4 / 3 models --> almost the same
+    * gpt4 / 2 models --> almost the same
+
+* prompt notation
+    * 8 = turn-based prompting
+    * 7 = let LLM write failure attempt with failed method before writing the correct solution with successful method
+    * 6 = choose --> solve... (why it records the worst?)
+
+
+* chatgpt / 3 models  
+    * prev. 84.2\% == **1110 corrects** 
+    * baseline 80.2\% == 1058 corrects
+
+(total 1308, 11 examples --> failed to genereate)
+
+| prompt | in total | correct / conflict | correct / otherwise |
+|-|-|-|-|
+|7| **1092**/1319 | 43/150 | 1049/1158 |
+|6| **1104**/1319 | 55/150 | - |
+*k=6 for all
+
+* gpt4 / 3 models (prev. 95.7\% == 1262 corrects)
+
+| prompt | in total | correct / conflict | correct / otherwise |
+|-|-|-|-|
+|8| 1259/1319 | 4/15 | 1255/1304 |
+|7| 1260/1319 | 5/15 | - |
+|6| 1258/1319 | 3/15 | - |
+*k=6 for all
+
+* gpt4 / 2 models
+
+| prompt | in total | correct / conflict | correct / otherwise |
+|-|-|-|-|
+|8(k=4)| 1260/1319 | 45/75 | 1215/1244 |
+|8(k=6)| **1263/1319** | 48/75 | - |
+|7(k=2)| 1258/1319 | 45/75 | - |
+|7(k=4)| 1254/1319 | 39/75 | - |
+|7(k=6)| 1254/1319 | 39/75 | - |
+|6(k=4)| 1232/1319 | 17/75 | - |
+|6(k=6)| 1230/1319 | 15/75 | - |
+
+
 ## Nov 6~11
-* without running ablation, you can calculate one-method-only performance (we've already recorded it)
+* one-method-only performance (drops from 95.5\%)
     - [x] gpt4
     - `scripts/nov11_1_onemethod_acc.py`
 
-    | model | cot | pal | p2c |   
-    |-|–|-|-|   
-    | gpt-3.5-turbo | 1037/1319 (0.786) | 1055/1319 (0.800) | 975/1319 (0.739) |   
-    | gpt4 | 1244/1319 (0.943 (-1.2\%p)) | 1235/1319 (0.936 (-1.9\%p)) | 1209/1319 (0.917 (-3.8 \%p)) |
+    | model | cot | pal | p2c |
+    |-|-|-|-|
+    | gpt-3.5-turbo | 1037/1319 (0.786) | 1055/1319 (0.800) | 975/1319 (0.739) |
+    | gpt4 | 1244/1319 (0.943 (-1.2\%p)) | 1235/1319 (0.936 (-1.9\%p)) | 1209/1319 (0.917 (-3.8\%p)) |
 
 * how inconsistent output does `T=0` model generate? **QUITE**
     - [x] chatgpt
@@ -31,21 +99,21 @@
 
 * it is possible that we only run prompts on **conflict cases only** that is... we don't need to run over 1319 examples.
     * `=` success rate.
-    - [ ] implement conflict only runs
-    - [ ] combining results code
+    - [x] implement conflict only runs
+    - [x] combining results code
 * possible prompt change
     * change coh system prompt (from: choose -> to: solve) so that see if it changes performance
     * more fewshots for cotpal case?
         - [x] `6_cohlike_solve_prompt_1|2|3.txt` (added 2*1|2|3 pairs of examples for this)
         - run
-            - [ ] chatgpt
-            - [ ] gpt-4
+            - [x] chatgpt
+            - [x] gpt-4
     * transform into a turn-based few-shot prompt (p2c v1 `<` v2 for this reason)
         - [x] `8_cohlike_solvetwice_prompt.yaml`
         - [x] `8_cohlike_solvetwice_prompt_cotpal_1.yaml`
-        - [ ] `8_cohlike_solvetwice_prompt_cotpal_2.yaml`
-        - [ ] `8_cohlike_solvetwice_prompt_cotpal_3.yaml`
-        - [ ] prompt utils for querying
+        - [x] `8_cohlike_solvetwice_prompt_cotpal_2.yaml`
+        - [x] `8_cohlike_solvetwice_prompt_cotpal_3.yaml`
+        - [x] prompt utils for querying
         - run
             - [ ] chatgpt
 * after things are all done, do constructing `training blurb`

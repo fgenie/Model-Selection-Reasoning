@@ -1,0 +1,46 @@
+
+3model chatgpt
+
+bash eval_an_outjsl.sh chatgpt/coh/7_cohlike_solvetwice_prompt/tgt_conflict_11_12_02_47_conflict_gsm8k_k8_sc1_s0_e1319_11_06_12_35.jsonl
+Accuracy: 0.287, Total: 150, Correct: 43, Error: 107
+
+bash eval_an_outjsl.sh chatgpt/coh/6_cohlike_solve_prompt/tgt_conflict_11_12_02_18_conflict_gsm8k_k8_sc1_s0_e1319_11_06_12_35.jsonl
+Accuracy: 0.367, Total: 150, Correct: 55, Error: 95
+
+
+
+3model gpt4 (coh)
+
+bash eval_an_outjsl.sh gpt4/coh/8_cohlike_solvetwice_prompt/tgt_conflict_11_12_13_11_conflict_gsm8k_k8_sc1_s0_e1319_11_05_13_37.jsonl
+Accuracy: 0.267, Total: 15, Correct: 4, Error: 11
+
+bash eval_an_outjsl.sh gpt4/coh/7_cohlike_solvetwice_prompt/tgt_conflict_11_12_02_47_conflict_gsm8k_k8_sc1_s0_e1319_11_05_13_37.jsonl
+Accuracy: 0.333, Total: 15, Correct: 5, Error: 10
+
+bash eval_an_outjsl.sh gpt4/coh/6_cohlike_solve_prompt/tgt_conflict_11_12_02_18_conflict_gsm8k_k8_sc1_s0_e1319_11_05_13_37.jsonl
+Accuracy: 0.200, Total: 15, Correct: 3, Error: 12
+
+
+
+2model gpt4 (cotpal_1) 
+
+bash eval_an_outjsl.sh gpt4/coh_cotpal_1/8_cohlike_solvetwice_prompt_cotpal_2/tgt_conflict_11_12_04_34_conflict_gsm8k_k8_sc1_s0_e1319_11_04_22_35.jsonl
+Accuracy: 0.600, Total: 75, Correct: 45, Error: 30
+
+bash eval_an_outjsl.sh gpt4/coh_cotpal_1/8_cohlike_solvetwice_prompt_cotpal_3/tgt_conflict_11_12_05_41_conflict_gsm8k_k8_sc1_s0_e1319_11_04_22_35.jsonl
+Accuracy: 0.640, Total: 75, Correct: 48, Error: 27
+
+bash eval_an_outjsl.sh gpt4/coh_cotpal_1/7_cohlike_solvetwice_prompt_cotpal_1/tgt_conflict_11_12_03_24_conflict_gsm8k_k8_sc1_s0_e1319_11_04_22_35.jsonl
+Accuracy: 0.600, Total: 75, Correct: 45, Error: 30
+
+bash eval_an_outjsl.sh gpt4/coh_cotpal_1/7_cohlike_solvetwice_prompt_cotpal_2/tgt_conflict_11_12_04_06_conflict_gsm8k_k8_sc1_s0_e1319_11_04_22_35.jsonl
+Accuracy: 0.520, Total: 75, Correct: 39, Error: 36
+
+bash eval_an_outjsl.sh gpt4/coh_cotpal_1/7_cohlike_solvetwice_prompt_cotpal_3/tgt_conflict_11_12_05_14_conflict_gsm8k_k8_sc1_s0_e1319_11_04_22_35.jsonl
+Accuracy: 0.520, Total: 75, Correct: 39, Error: 36
+
+bash eval_an_outjsl.sh gpt4/coh_cotpal_1/6_cohlike_solve_prompt_cotpal_2/tgt_conflict_11_12_03_53_conflict_gsm8k_k8_sc1_s0_e1319_11_04_22_35.jsonl
+Accuracy: 0.227, Total: 75, Correct: 17, Error: 58
+
+bash eval_an_outjsl.sh gpt4/coh_cotpal_1/6_cohlike_solve_prompt_cotpal_3/tgt_conflict_11_12_05_01_conflict_gsm8k_k8_sc1_s0_e1319_11_04_22_35.jsonl
+Accuracy: 0.200, Total: 75, Correct: 15, Error: 60
