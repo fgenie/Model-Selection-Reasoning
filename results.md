@@ -36,29 +36,7 @@
     * 6 = choose --> solve... (why it records the worst?)
         * `src/prompts/prep_reflexion/6_cohlike_solve_prompt_cotpal_1.txt`
     * (note) previous prompt = `src/prompts/prep_reflexion/5_cohlike_prompt_cotpal_1.txt`
-    <detail>
-    <summary>llm query message</summary>
-    ```python
-    # 8
-    [
-        {'role': 'system', 'content': ''}
-        {'role': 'user', 'content':'Question: ${fewshot question 1}'}
-        {'role': 'assistant', 'content': '${fewshot blurb1 failed method / failed attempt / answer / evaluation1 / reflection / hint / successful method / solution / answer / evaluation2}'}
-        {'role': 'user', 'content':}
-        {'role': 'assistant', 'content':}
-        ..
-        .
-        {'role': 'user', 'content':}
-    ]
-
-    # 7, 6
-    [
-        {'role': 'user', 'content': '${open(f).read()}'}
-    ]
-
-    ```
-    </detail>
-
+    
 * chatgpt / 3 models  
     * prev. 84.2\% == **1110 corrects** 
     * baseline 80.2\% == 1058 corrects
@@ -84,11 +62,13 @@
 
 | prompt | in total | correct / conflict | correct / otherwise |
 |-|-|-|-|
-|8(k=4)| 1260/1319 | 45/75 | 1215/1244 |
+|8(k=2)| /1319 | /75 | 1215/1244 |
+|8(k=4)| 1260/1319 | 45/75 | - |
 |8(k=6)| **1263/1319** | 48/75 | - |
 |7(k=2)| 1258/1319 | 45/75 | - |
 |7(k=4)| 1254/1319 | 39/75 | - |
 |7(k=6)| 1254/1319 | 39/75 | - |
+|6(k=2)| /1319 | /75 | - |
 |6(k=4)| 1232/1319 | 17/75 | - |
 |6(k=6)| 1230/1319 | 15/75 | - |
 
@@ -142,7 +122,7 @@
         - [x] `8_cohlike_solvetwice_prompt_cotpal_3.yaml`
         - [x] prompt utils for querying
         - run
-            - [ ] chatgpt
+            - [x] chatgpt
 * after things are all done, do constructing `training blurb`
 
 ### re-do things (after completing above)
@@ -159,19 +139,18 @@
 
 ## Nov 4: GPT-4 greedy (T=exact 0.)
 * Corresponds to gsm8K result on Table 1 (greedy decoded results)
-    * 
+
 | | accuracy (\%) / GPT-4 greedy | 
 |-|-|
 | model-selection (cot;pal)*  | 95.5 \% |
-| coh_conflictonly (cot;pal;p2c) | 95.7 \% |
-| coh_conflictonly (cot;pal_1) | 95.5 \% |
+| coh_conflictonly (cot;pal;p2c) | <u> 95.7 \% (+2 problems) </u> |
+| coh_conflictonly (cot;pal_1) | <u> 95.5 \% (+0 problems) </u>  |
 
 *exactly the same performance (1260 correct for 1st and 3rd row.)
 *2 more questions correct on 2nd row.
 
 ### GPT-4 greedy decoding does not seem deterministic
 https://community.openai.com/t/a-question-on-determinism/8185 
-
 `compare_idxs.py`
 n_conflict: 75
 intersection_indices: 61
