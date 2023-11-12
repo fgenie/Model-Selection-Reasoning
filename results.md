@@ -6,10 +6,12 @@
 
 * chatgpt
 
-| total\=1319 | n_nonconflict | correct | 
-|-|-|-|-|
+| | n_nonconflict | correct | 
+|-|-|-|
 | 3models | 1158 | 1049 (pal-0.45\%p, cot+1.10\%p, p2c+5.61\%p) | 
-| 2models |  |  |
+| 2models | 982 | 932 |
+
+*2models from `output/oct27_only_conflict/coh_cotpal_1/chatgpt/gsm8k_k8_sc1_s306_e1319_10_28_12_23.jsonl`
 
 * gpt4
 
