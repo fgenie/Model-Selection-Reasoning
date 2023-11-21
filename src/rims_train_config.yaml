@@ -1,3 +1,4 @@
+dbg: true # dbg option
 
 verbal_T: 1. # temperature querying LLM for verbal outputs (e.g. cot, plan generation, reflection, etc.)
 code_T: 1. # temperature querying LLM for code outputs (e.g. plan2code or pal)
@@ -16,3 +17,7 @@ backbone: chatgpt # chatgpt, gpt4, gpt4turbo
 dataset_f: gsm8k_train.jsonl
 num_train_sample: 100 # interval of sampling from the trainset
 heuristics: wordcount
+
+
+
+out_yamlf: {Path(rims_prompt_f).stem}/{verbal_T}{code_T}{backbone}{heuristics}{num_train_sample}.yaml

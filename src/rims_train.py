@@ -1,9 +1,10 @@
 import pandas as pd 
-from pprint import pprint
-
-
 from fire import Fire
-# using Fire --> *args, **kwargs of the main will define the exp arguments alone
+
+
+
+from functools import partial
+from pprint import pprint
 
 from selection_math import *
 # query_cot, query_pal, query_p2c
@@ -25,10 +26,14 @@ def main(
     if not Path(dataset_f).is_file():
         gsm8k_train_download_and_parse()
         assert Path(dataset_f).is_file(), 'why is it not downloaded?'
-    dataset = jsl.open(dataset_f)
 
     # sort and sample trainset (no length bias)
-    kshots = get_k_train_shots(k=num_train_sample, train_f=dataset_f, heuristics=heuristics)
+    train_samples = get_k_train_shots(k=num_train_sample, train_f=dataset_f, heuristics=heuristics)
+    if dbg:
+        train_samples = train_samples[:1]
+        verbal_T = 1.5
+        code_T = 1.5
+        backbone = 'chatgpt'
 
     # for cot, pal, and p2c, find the examples that successes reflection and resolution.
     method2query_f = {
@@ -37,7 +42,26 @@ def main(
         'p2c': query_plancode, 
     }
     for method in ['cot', 'pal', 'p2c']:
-        query_f =     
+        f = method2query_f[method]
+        if method == 'cot':
+            query_f = partial(f, key = openai.api_key, cot_temperature=verbal_T, backbone=backbone)
+        elif method == 'pal':
+            query_f = partial(f, key = openai.api_key, pal_temperature=verbal_T, backbone=backbone)
+        elif method == 'p2c':
+            query_f = partial(f, key = openai.api_key, plan_temperature=verbal_T, code_temperature=code_T, backbone=backbone)
+        else:
+            raise ValueError(f'unknown method {method}')    
+
+        for row in tqdm(train_samples):
+            out = query_f(row)
+            if method == 'p2c':
+                codelst, planlst, querymsg_d = out
+            else: # pal, cot
+                strlst, querymsg_lst = out
+            
+            
+            
+
 
 
 def get_k_train_shots(
