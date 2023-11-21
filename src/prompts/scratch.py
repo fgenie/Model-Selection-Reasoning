@@ -112,48 +112,6 @@ def prep_gpt_input(
 
 
 
-def get_k_train_shots(
-                k:int=10,
-                train_f:str='gsm8k_train.jsonl', 
-                heuristics:str='wordcount'
-                ): 
-    if heuristics == 'wordcount':
-        df = pd.DataFrame(jsl.open(train_f))
-        df['wordcount'] = df.question.apply(lambda q:len(q.split()))
-        df_ = df.sort_values(by='wordcount')
-        idxs = [i for i in range(0, len(df), len(df)//k)][:k]
-        resdf = df_.iloc[idxs]
-        kshots = resdf.to_dict(orient='records')
-    else:
-        raise NotImplementedError(f'heuristics {heuristics} not implemented.')
-    
-    return kshots # List[Dict[str,str]]
-
-# util for gsm8k train split download and parsing
-def gsm8k_train_download_and_parse(root:str='./'):
-    # check if exists
-    root = Path(root)
-    target_path = root/"gsm8k_train.jsonl"
-    if target_path.exists():
-        records = list(jsl.open(target_path))
-        print(f"found train set @:\n\t{str(target_path)}")
-        print(f"\t{records[0]=}")
-        print(f"\t{len(records)=}")
-    else: 
-        # download 
-        gsm_train = datasets.load_dataset('gsm8k', 'main')['train']
-
-        # parse
-        def parse_raw_target(answer_raw:str)-> str:
-            return answer_raw.split("### ")[-1].strip()
-        df = pd.DataFrame(gsm_train)
-        df['ans'] = df.answer.apply(parse_raw_target)
-        df['idx'] = df.index
-        records = df.to_dict(orient='records')
-        with jsl.open(target_path, 'w') as writer:
-            writer.write_all(records)
-            print(f'gsm8k train download and write: done.\n\t{str(target_path)}')
-    return str(target_path)
 
 
 def test_utils():

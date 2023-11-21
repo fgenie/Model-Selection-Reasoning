@@ -1,0 +1,18 @@
+
+verbal_T: 1. # temperature querying LLM for verbal outputs (e.g. cot, plan generation, reflection, etc.)
+code_T: 1. # temperature querying LLM for code outputs (e.g. plan2code or pal)
+
+max_retry: 10, # max. resampling of the output for a reflected output
+how_many_onedir: 3, # number of successful reflection cases to be obtained eventually. will multiply directly to querying times.
+
+
+
+rims_prompt_f: '' # prompt for reflection and hint and so on. can change
+    # reflect_prompt_f 
+    # hint_prompt_f
+    # eval_prompt_f # possible fissions of prompts... hope this does not happen...
+backbone: chatgpt # chatgpt, gpt4, gpt4turbo
+
+dataset_f: gsm8k_train.jsonl
+num_train_sample: 100 # interval of sampling from the trainset
+heuristics: wordcount

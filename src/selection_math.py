@@ -47,7 +47,7 @@ def get_cot_prompt(data: dict, backbone: str, hint:str=''):
     '''
     This function is used to generate the CoT prompt.
     '''
-    if backbone == 'gpt4':
+    if backbone == 'gpt4' or backbone == 'gpt4turbo' or 'gpt4turbo':
         system_message = math_prompt.GPT4_COT_SYSTEM
         user_message = math_prompt.GPT4_COT_USER
         assistant_message = math_prompt.GPT4_COT_ASSISTANT
@@ -73,7 +73,7 @@ def get_pal_prompt(data: dict, backbone: str, hint:str=''):
     '''
     This function is used to generate the PAL prompt.
     '''
-    if backbone == 'gpt4':
+    if backbone == 'gpt4' or backbone == 'gpt4turbo':
         system_message = math_prompt.GPT4_PAL_SYSTEM
         user_message = math_prompt.GPT4_PAL_USER
         assistant_message = math_prompt.GPT4_PAL_ASSISTANT
@@ -108,7 +108,7 @@ def get_select_prompt(data: dict, cot_solution: list, pal_solution: list, backbo
     '''
     This function is used to generate the selection prompt.
     '''
-    if backbone == 'gpt4':
+    if backbone == 'gpt4' or backbone == 'gpt4turbo':
         system_message = math_prompt.GPT4_SELECT_SYSTEM
         user_message = math_prompt.GPT4_SELECT_USER
         assistant_message = math_prompt.GPT4_SELECT_ASSISTANT
@@ -165,6 +165,8 @@ def query_cot(data: dict, key: str, cot_temperature: float, backbone: str, hint:
     query_message = get_cot_prompt(data, backbone=backbone, hint=hint)
     if backbone == 'gpt4':
         model_name = 'gpt-4'
+    elif backbone == 'gpt4turbo':
+        model_name  = 'gpt-4-1106-preview'
     elif backbone == 'chatgpt':
         model_name = 'gpt-3.5-turbo'
 
@@ -214,6 +216,8 @@ def query_plancode(data: dict, key: str='', plan_temperature: float=.0, code_tem
     # specify model
     if backbone == 'gpt4':
         model_name = 'gpt-4'
+    elif backbone == 'gpt4turbo':
+        model_name = 'gpt-4-1106-preview'
     elif backbone == 'chatgpt':
         model_name = 'gpt-3.5-turbo'
     if model_name == 'gpt-4': # k_fewshot==8 is default.
@@ -251,6 +255,8 @@ def query_pal(data: dict, key: str, pal_temperature: float, backbone: str, hint:
     query_message = get_pal_prompt(data, backbone=backbone, hint=hint)
     if backbone == 'gpt4':
         model_name = 'gpt-4'
+    elif backbone == 'gpt4turbo':
+        model_name = 'gpt-4-1106-preview'
     elif backbone == 'chatgpt':
         model_name = 'gpt-3.5-turbo'
     completions = []
@@ -288,6 +294,8 @@ def query_selection(data: dict, key: str, cot_solution: list, pal_solution: list
         data, cot_solution, pal_solution, backbone=backbone)
     if backbone == 'gpt4':
         model_name = 'gpt-4'
+    elif backbone == 'gpt4turbo':
+        model_name = 'gpt-4-1106-preview'
     elif backbone == 'chatgpt':
         model_name = 'gpt-3.5-turbo'
     completions = []
@@ -314,6 +322,8 @@ def query_actor_selection(data: dict,
         model_name = 'gpt-3.5-turbo'
     elif backbone == 'gpt4':
         model_name = 'gpt-4'
+    elif backbone == 'gpt4turbo':
+        model_name = 'gpt-4-1106-preview'
     
     def parse_hint_selection(rawstr:str)-> tuple:
         rawstr = rawstr.strip()
@@ -406,6 +416,8 @@ def query_enhanced_coh(data: dict,
         model_name = 'gpt-3.5-turbo-16k' # if n_fewshot>=5 else 'gpt-3.5-turbo'  # this prompt is kind of lengthy
     elif backbone == 'gpt4':
         model_name = 'gpt-4'
+    elif backbone == 'gpt4turbo':
+        model_name = 'gpt-4-1106-preview'
 
     def get_turn_based_coh_prompt(
                                 prompt_f,
