@@ -149,7 +149,7 @@ Which of the above two choices can correctly answer the math problem?'''
     return messages
 
 
-def query_cot(data: dict, key: str, cot_temperature: float, backbone: str, hint:str=''):
+def query_cot(data: dict, key: str, cot_temperature: float, backbone: str, hint:str='', n=1, seed=777):
     '''
     This function is used to query OpenAI for CoT solutions.
 
@@ -179,13 +179,16 @@ def query_cot(data: dict, key: str, cot_temperature: float, backbone: str, hint:
             messages=query_message,
             temperature=cot_temperature,
             top_p=1.0,
-            n=1)
-
-    completions = [cot_solution['choices'][0]['message']['content']]
+            seed=seed,
+            n=n)
+    if n ==1 :
+        completions = [cot_solution['choices'][0]['message']['content']]
+    else:
+        completions = [cot_solution['choices'][i]['message']['content'] for i in range(n)]
     return completions, query_message
 
 
-def _query(key, model_name='gpt-3.5-turbo', max_tokens=2048, stop='</end>', messages=None, temperature=0., top_p=1.0, n=1, mode='plan', k_fewshot:int=0): # mode = plan or code
+def _query(key, model_name='gpt-3.5-turbo', max_tokens=2048, stop='</end>', messages=None, temperature=0., top_p=1.0, n=1, mode='plan', k_fewshot:int=0, seed=777): # mode = plan or code
     resp = openai.ChatCompletion.create(api_key=key,
                                 model=model_name,
                                 max_tokens=max_tokens,
@@ -193,16 +196,22 @@ def _query(key, model_name='gpt-3.5-turbo', max_tokens=2048, stop='</end>', mess
                                 messages=messages,
                                 temperature=temperature,
                                 top_p=top_p,
-                                n=n)
-    content = resp['choices'][0]['message']['content'] # str
-    if mode == 'plan':
-        plan = postprocess_plan(content) # it will complain when failing
-        return plan
-    elif mode == 'code':
-        code = postprocess_code(content)
-        return code 
+                                n=n, seed=seed)
+    if n ==1:
+        content = resp['choices'][0]['message']['content'] # str
+        if mode == 'plan':
+            plan = postprocess_plan(content) # it will complain when failing
+            return plan
+        elif mode == 'code':
+            code = postprocess_code(content)
+            return code 
+    else: # n>1
+        contents = [ch['message']['content'] for ch in resp['choices']]
+        postprocess = postprocess_plan if mode=='plan' else postprocess_code
+        res_strs = [postprocess(c) for c in contents]
+        return res_strs
 
-def query_plancode(data: dict, key: str='', plan_temperature: float=.0, code_temperature: float=.0, backbone: str='gpt-3.5-turbo', k_fewshot:int=0, hint:str=''):
+def query_plancode(data: dict, key: str='', plan_temperature: float=.0, code_temperature: float=.0, backbone: str='gpt-3.5-turbo', k_fewshot:int=0, hint:str='', n=1, seed:int=777):
     '''
     PAL variant: 1. generate planning for the given question 2. based on 1, generate code like PAL does.
 
@@ -226,20 +235,20 @@ def query_plancode(data: dict, key: str='', plan_temperature: float=.0, code_tem
 
     # generate plan (retry included)
     plan_query_msg = get_plan_prompt(data, k_fewshot=k_fewshot, hint=hint)
-    plan = _query(key, model_name=model_name, max_tokens=1024, stop='Question: ', messages=plan_query_msg, temperature=plan_temperature, top_p=1.0, n=1, mode='plan')
+    plan = _query(key, model_name=model_name, max_tokens=1024, stop='Question: ', messages=plan_query_msg, temperature=plan_temperature, top_p=1.0, n=1, mode='plan', seed=seed)
 
     if plan:
         code_query_msg = get_plan2code_prompt(data, plan=plan, k_fewshot=k_fewshot, hint=hint)
-        code = _query(key, model_name=model_name, max_tokens=1024, stop='Question: ', messages=code_query_msg, temperature=code_temperature, top_p=1.0, n=1, mode='code')#, 
+        code = _query(key, model_name=model_name, max_tokens=1024, stop='Question: ', messages=code_query_msg, temperature=code_temperature, top_p=1.0, n=n, mode='code', seed=seed)#, 
         if not code:
             return [None], [plan], {'codequery': code_query_msg, 'planquery': plan_query_msg}
         else: 
-            return [code], [plan], {'codequery': code_query_msg, 'planquery': plan_query_msg}
+            return [code] if n==1 else code, [plan], {'codequery': code_query_msg, 'planquery': plan_query_msg}
     else:
         return None, None, {'codequery': code_query_msg, 'planquery': plan_query_msg}
 
 
-def query_pal(data: dict, key: str, pal_temperature: float, backbone: str, hint:str=''):
+def query_pal(data: dict, key: str, pal_temperature: float, backbone: str, hint:str='', n=1, seed=777):
     '''
     This function is used to query OpenAI for PAL solutions.
 
@@ -268,12 +277,15 @@ def query_pal(data: dict, key: str, pal_temperature: float, backbone: str, hint:
                                 messages=query_message,
                                 temperature=pal_temperature,
                                 top_p=1.0,
-                                n=1)
+                                seed=777,
+                                n=n)
 
-
-    completions.extend([choice['message']['content']
+    if n ==1:
+        completions.extend([choice['message']['content']
                         for choice in pal_solution['choices']]) # wtf this code...
-    completions = completions[:1]
+        completions = completions[:1]
+    else: # this line might not be compatible with self-consistency setting in the original code
+        completions = [pal_solution['choices'][i]['message']['content'] for i in range(n)]
     return completions, query_message
 
 def query_selection(data: dict, key: str, cot_solution: list, pal_solution: list, backbone: str):

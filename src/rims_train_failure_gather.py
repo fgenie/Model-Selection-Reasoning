@@ -1,14 +1,40 @@
 import pandas as pd 
 from fire import Fire
+from tenacity import retry, wait_chain, wait_fixed
 
 
 
 from functools import partial
 from pprint import pprint
+from collections import defaultdict
+from typing import Union 
 
 from selection_math import *
 # query_cot, query_pal, query_p2c
 # jsl, pd, math, re... etc will already been loaded 
+
+
+@retry(wait=wait_chain(*[wait_fixed(3) for i in range(5)])) #defining backoff for retrying.
+def do_with_tenacity(func, *args, **kwargs):
+    # print(f'running with {args=}, {kwargs=}')
+    return func(*args, **kwargs)
+
+def sln_eval(sln:str='', ans:Union[float, int]=-9999., method:str='')->bool:
+    assert sln
+    assert method in ['cot', 'pal', 'p2c']
+    assert isinstance(sln, str)
+    assert ans!=-9999., 'ans kwarg required'
+    
+    if method == 'cot':
+        pred = extract_num_turbo(sln)
+    else: #pal, p2c
+        pred = safe_execute_turbo(sln)
+    
+    if pred is None:
+        return False
+    else: # pred worked!
+        return abs(pred-ans) < 1e-3 # eval logic same as model-selection paper original code
+
 
 
 def main(
@@ -29,11 +55,13 @@ def main(
 
     # sort and sample trainset (no length bias)
     train_samples = get_k_train_shots(k=num_train_sample, train_f=dataset_f, heuristics=heuristics)
-    if dbg:
-        train_samples = train_samples[:1]
-        verbal_T = 1.5
-        code_T = 1.5
-        backbone = 'chatgpt'
+    
+    
+    # if dbg:
+    #     train_samples = train_samples[:1]
+    #     verbal_T = 1.5
+    #     code_T = 1.5
+    #     backbone = 'chatgpt'
 
     # for cot, pal, and p2c, find the examples that successes reflection and resolution.
     method2query_f = {
@@ -41,25 +69,53 @@ def main(
         'pal': query_pal,
         'p2c': query_plancode, 
     }
+    method2failed_questions = defaultdict(list)
+
     for method in ['cot', 'pal', 'p2c']:
         f = method2query_f[method]
         if method == 'cot':
-            query_f = partial(f, key = openai.api_key, cot_temperature=verbal_T, backbone=backbone)
+            query_f = partial(f, key = openai.api_key, cot_temperature=verbal_T, backbone=backbone, n=n_llmquery, seed=seed)
         elif method == 'pal':
-            query_f = partial(f, key = openai.api_key, pal_temperature=verbal_T, backbone=backbone)
+            query_f = partial(f, key = openai.api_key, pal_temperature=verbal_T, backbone=backbone, n=n_llmquery, seed=seed)
         elif method == 'p2c':
-            query_f = partial(f, key = openai.api_key, plan_temperature=verbal_T, code_temperature=code_T, backbone=backbone)
+            query_f = partial(f, key = openai.api_key, plan_temperature=verbal_T, code_temperature=code_T, backbone=backbone, n=n_llmquery, seed=seed)
         else:
             raise ValueError(f'unknown method {method}')    
 
-        for row in tqdm(train_samples):
-            out = query_f(row)
+        # find the ones that fails at first.
+        for row in tqdm(train_samples, desc=f'gathering failure cases ({method=}, {n_llmquery=})'):
+            ans = float(row['ans'])
+            if dbg:
+                row = ''
+            out = do_with_tenacity(query_f, row)
             if method == 'p2c':
-                codelst, planlst, querymsg_d = out
+                predlst, planlst, querymsg_d = out
+                row['query_msgs'] = querymsg_d
             else: # pal, cot
-                strlst, querymsg_lst = out
+                predlst, querymsg_lst = out
+            print()
+            eval_lst = [sln_eval(sln=sln, ans=ans, method=method) for sln in predlst]
+            if eval_lst.count(True) < eval_lst.count(False):
+                row['howmany_failed'] = f"{backbone}: {eval_lst.count(False)}/{n_llmquery}"
+                method2failed_questions[method].append(row)
+                print(f"gotcha! {len(method2failed_questions[method])}/{n_candids}")
+            if len(method2failed_questions[method]) == n_candids:
+                print(f"at {row['idx']=}, gathering candids are done ({n_candids=}, {num_train_sample=})")
+                break
+        
+        for method, candidlist in method2failed_questions.items():
+            outdir_ = Path(outdir)
+            if not outdir_.exists():
+                outdir_.mkdir(parents=True, exist_ok=True)
+            fname = f"failed_{method}_n{n_llmquery}_numtrain{num_train_sample}_{backbone}_vT{verbal_T}_cT{code_T}_seed{seed}.jsonl"
+            outpath = outdir_/fname
+            with jsl.open(outpath, 'w') as writer:
+                writer.write_all(candidlist)
+                print(f"{method} failure cases written to:\n\t{str(outpath)}")
+        
+        
             
-            
+
             
 
 
