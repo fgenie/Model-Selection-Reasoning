@@ -22,7 +22,7 @@ rims_prompt_f: '' # prompt for reflection and hint and so on. can change
 backbone: gpt4turbo # chatgpt, gpt4, gpt4turbo
 
 dataset_f: gsm8k_train.jsonl
-num_train_sample: 1500 # interval of sampling from the trainset
+num_train_sample: 1000 # interval of sampling from the trainset
 heuristics: wordcount
 
-outdir: rims_train_out
+outdir: rims_train_out/nov25

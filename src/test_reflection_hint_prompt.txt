@@ -1,0 +1,192 @@
+wrong_method='Chain-of-Thought (cot)'
+correct_method='Plan-and-then-Code (p2c)'
+
+
+Question: How many portions of 200 ml milk can Jasmine pour from a full 2-liter container of milk?
+Approach: Chain-of-Thought (cot)
+Attempt: Answer:
+First, we convert 2-liter to milliliters because we want to pour portions of 200 ml.
+1 liter is equivalent to 1000 milliliters, so 2 liters are equivalent to 2 * 1000 = 2000 milliliters.
+
+Jasmine wants to pour 200 ml portions from a 2000 ml container.
+
+Now, we divide the total milliliters by the portion size to determine how many portions she can pour:
+
+2000 ml / 200 ml per portion = 10 portions.
+
+So, Jasmine can pour 10 portions of 200 ml milk from the 2-liter container.
+Answer: 2.0
+Evaluation: Wrong (correct answer: 10.0)
+Mistakes: <one_liner_explanation_for_whats_gone_wrong_in_the_attempt>
+Hint to Workaround: <one_liner_hint_to_workaround_with_different_approach>
+Workarund Approach: Plan-and-then-Code (p2c)
+Correct Attempt: '''1. Start by converting the 2-liter container of milk into milliliters.
+2. Multiply the volume of a liter (1000 ml) by 2, which gives us the total volume of the 2-liter container (2000 ml).
+3. Divide the total volume of the 2-liter container by the volume of each portion (200 ml).
+4. The result of the division will give us the number of portions of 200 ml milk that Jasmine can pour from the full 2-liter container.
+5. Return the result as the answer to the problem.'''
+
+def solution():
+    container_volume = 2 * 1000  # Convert 2 liters to milliliters
+    portion_volume = 200
+
+    portions_possible = container_volume // portion_volume
+    
+    return portions_possible
+Answer: 10.0
+Evaluation: Correct
+====================
+
+
+
+Question: How many portions of 200 ml milk can Jasmine pour from a full 2-liter container of milk?
+Approach: Chain-of-Thought (cot)
+Attempt: Answer:
+First, we convert 2-liter to milliliters because we want to pour portions of 200 ml.
+1 liter is equivalent to 1000 milliliters, so 2 liters are equivalent to 2 * 1000 = 2000 milliliters.
+
+Jasmine wants to pour 200 ml portions from a 2000 ml container.
+
+Now, we divide the total milliliters by the portion size to determine how many portions she can pour:
+
+2000 ml / 200 ml per portion = 10 portions.
+
+So, Jasmine can pour 10 portions of 200 ml milk from the 2-liter container.
+Answer: 2.0
+Evaluation: Wrong (correct answer: 10.0)
+Mistakes: <one_liner_explanation_for_whats_gone_wrong_in_the_attempt>
+Hint to Workaround: <one_liner_hint_to_workaround_with_different_approach>
+Workarund Approach: Plan-and-then-Code (p2c)
+Correct Attempt: '''1. Start by converting the 2-liter container of milk into milliliters.
+2. Multiply the volume of a liter (1000 ml) by 2, which gives us the total volume of the 2-liter container (2000 ml).
+3. Divide the total volume of the 2-liter container by the volume of each portion (200 ml).
+4. The result of the division will give us the number of portions of 200 ml milk that Jasmine can pour from the full 2-liter container.
+5. Return the result as the answer to the problem.'''
+
+def solution():
+    container_volume = 2 * 1000   # Convert 2 liters to milliliters
+    portion_volume = 200
+    
+    portions = container_volume // portion_volume
+    
+    return portions
+Answer: 10.0
+Evaluation: Correct
+====================
+
+
+
+wrong_method='Chain-of-Thought (cot)'
+correct_method='Program-aided Language Modeling (pal)'
+
+
+Question: How many portions of 200 ml milk can Jasmine pour from a full 2-liter container of milk?
+Approach: Chain-of-Thought (cot)
+Attempt: Answer:
+First, we convert 2-liter to milliliters because we want to pour portions of 200 ml.
+1 liter is equivalent to 1000 milliliters, so 2 liters are equivalent to 2 * 1000 = 2000 milliliters.
+
+Jasmine wants to pour 200 ml portions from a 2000 ml container.
+
+Now, we divide the total milliliters by the portion size to determine how many portions she can pour:
+
+2000 ml / 200 ml per portion = 10 portions.
+
+So, Jasmine can pour 10 portions of 200 ml milk from the 2-liter container.
+Answer: 2.0
+Evaluation: Wrong (correct answer: 10.0)
+Mistakes: <one_liner_explanation_for_whats_gone_wrong_in_the_attempt>
+Hint to Workaround: <one_liner_hint_to_workaround_with_different_approach>
+Workarund Approach: Program-aided Language Modeling (pal)
+Correct Attempt: def solution():
+    """How many portions of 200 ml milk can Jasmine pour from a full 2-liter container of milk?"""
+    container_capacity = 2 * 1000  # 2 liters in ml
+    portion_size = 200
+    portions = container_capacity // portion_size
+    result = portions
+    return result
+Answer: 10.0
+Evaluation: Correct
+====================
+
+
+
+Question: How many portions of 200 ml milk can Jasmine pour from a full 2-liter container of milk?
+Approach: Chain-of-Thought (cot)
+Attempt: Answer:
+First, we convert 2-liter to milliliters because we want to pour portions of 200 ml.
+1 liter is equivalent to 1000 milliliters, so 2 liters are equivalent to 2 * 1000 = 2000 milliliters.
+
+Jasmine wants to pour 200 ml portions from a 2000 ml container.
+
+Now, we divide the total milliliters by the portion size to determine how many portions she can pour:
+
+2000 ml / 200 ml per portion = 10 portions.
+
+So, Jasmine can pour 10 portions of 200 ml milk from the 2-liter container.
+Answer: 2.0
+Evaluation: Wrong (correct answer: 10.0)
+Mistakes: <one_liner_explanation_for_whats_gone_wrong_in_the_attempt>
+Hint to Workaround: <one_liner_hint_to_workaround_with_different_approach>
+Workarund Approach: Program-aided Language Modeling (pal)
+Correct Attempt: def solution():
+    """How many portions of 200 ml milk can Jasmine pour from a full 2-liter container of milk?"""
+    container_volume = 2 * 1000  # 2 liters converted to ml
+    portion_volume = 200
+    portions = container_volume // portion_volume
+    result = portions
+    return result
+Answer: 10.0
+Evaluation: Correct
+====================
+
+
+
+wrong_method='Program-aided Language Modeling (pal)'
+correct_method='Plan-and-then-Code (p2c)'
+
+
+Question: Juan needs 10 half-gallons of milk to bake 40 cookies with. How many half-gallons of milk does Juan need to bake 200 dozen cookies?
+Approach: Program-aided Language Modeling (pal)
+Attempt: def solution():
+    half_gallons_per_40_cookies = 10
+    cookies_per_dozen = 12  # there are 12 cookies in a dozen
+    total_cookies_for_200_dozen = 200 * cookies_per_dozen
+
+    # Find the proportion of milk to cookies
+    milk_to_cookie_ratio = half_gallons_per_40_cookies / 40
+
+    # Use the ratio to determine the required milk for 200 dozen (2400) cookies
+    half_gallons_needed = milk_to_cookie_ratio * total_cookies_for_200_dozen
+    result = half_gallons_needed
+    return result
+
+# Let's run the function to get the answer.
+print(solution())
+Answer: 600.0
+Evaluation: Wrong (correct answer: 50.0)
+Mistakes: <one_liner_explanation_for_whats_gone_wrong_in_the_attempt>
+Hint to Workaround: <one_liner_hint_to_workaround_with_different_approach>
+Workarund Approach: Plan-and-then-Code (p2c)
+Correct Attempt: '''1. Start by calculating the ratio of cookies to half-gallons of milk needed for the initial situation.
+2. Divide the number of cookies (40) by the number of half-gallons of milk needed (10) to find the ratio.
+3. Calculate the ratio of half-gallons of milk needed per dozen cookies by dividing the ratio from step 2 by 40.
+4. Divide the total number of dozen cookies needed (200 dozen) by the ratio from step 3 to find the number of half-gallons of milk required.
+5. Return the result as the number of half-gallons of milk Juan needs to bake 200 dozen cookies.'''
+
+def solution():
+    cookies_initial = 40
+    milk_initial = 10
+    
+    cookies_target = 200 * 12
+    
+    ratio = cookies_initial / milk_initial
+    
+    milk_needed = cookies_target / ratio / 12
+    
+    return milk_needed
+Answer: 50.0
+Evaluation: Correct
+====================
+
+

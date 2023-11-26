@@ -229,9 +229,12 @@ def query_plancode(data: dict, key: str='', plan_temperature: float=.0, code_tem
         model_name = 'gpt-4-1106-preview'
     elif backbone == 'chatgpt':
         model_name = 'gpt-3.5-turbo'
-    if model_name == 'gpt-4': # k_fewshot==8 is default.
-        print(f'gpt-4 uses k_fewshot=5 as default --> if the current setting is default for chatgpt (k= {k_fewshot})\n k_fewshot = 8 -> 5')
+        print(f'gpt-3.5 uses k_fewshot=8 as default (p2c fs-prompting)')
+    if model_name.startswith('gpt-4'): # k_fewshot==8 is default.
+        print(f'gpt-4 uses k_fewshot=5 as default (p2c fs_prompting)')
         k_fewshot = 5
+    elif model_name.startswith('gpt-3.5-turbo'):
+        k_fewshot = 8 
 
     # generate plan (retry included)
     plan_query_msg = get_plan_prompt(data, k_fewshot=k_fewshot, hint=hint)

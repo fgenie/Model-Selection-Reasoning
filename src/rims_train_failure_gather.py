@@ -1,44 +1,53 @@
 import pandas as pd 
 from fire import Fire
 from tenacity import retry, wait_chain, wait_fixed
+import datasets
 
-
-
+import copy
 from functools import partial
 from pprint import pprint
 from collections import defaultdict
-from typing import Union 
+from typing import Union, Tuple
 
 from selection_math import *
 # query_cot, query_pal, query_p2c
 # jsl, pd, math, re... etc will already been loaded 
 
 
-@retry(wait=wait_chain(*[wait_fixed(3) for i in range(5)])) #defining backoff for retrying.
+# @retry(wait=wait_chain(*[wait_fixed(3) for i in range(5)])) #defining backoff for retrying.
 def do_with_tenacity(func, *args, **kwargs):
     # print(f'running with {args=}, {kwargs=}')
     return func(*args, **kwargs)
 
-def sln_eval(sln:str='', ans:Union[float, int]=-9999., method:str='')->bool:
+def sln_eval(sln:str='', ans:Union[float, int]=-9999., method:str='')->Tuple[bool, Union[float, int]]:
+    # eval logic same as model-selection paper original code
     assert sln
     assert method in ['cot', 'pal', 'p2c']
     assert isinstance(sln, str)
     assert ans!=-9999., 'ans kwarg required'
     
-    if method == 'cot':
-        pred = extract_num_turbo(sln)
-    else: #pal, p2c
-        pred = safe_execute_turbo(sln)
-    
+    try:
+        if method == 'cot':
+            pred = extract_num_turbo(sln)
+        else: #pal, p2c
+            pred = safe_execute_turbo(sln)
+    except:
+        pred = None
+        
+    iscorrect = False
     if pred is None:
-        return False
+        return iscorrect, None # eval, pred
     else: # pred worked!
-        return abs(pred-ans) < 1e-3 # eval logic same as model-selection paper original code
+        try:
+            iscorrect = (abs(pred-ans) < 1e-3)
+        except Exception as e:
+            print(e)
+        return iscorrect, pred # eval, pred 
 
 
 
 def main(
-    config_f:str = 'rims_train_config.yaml',
+    config_f:str = 'rims_gather_config.yaml',
 ):
     print(f'loaded config from:\n\t{config_f}')
     kwargs = yaml.full_load(open(config_f))
@@ -55,14 +64,11 @@ def main(
 
     # sort and sample trainset (no length bias)
     train_samples = get_k_train_shots(k=num_train_sample, train_f=dataset_f, heuristics=heuristics)
-    
-    
-    # if dbg:
-    #     train_samples = train_samples[:1]
-    #     verbal_T = 1.5
-    #     code_T = 1.5
-    #     backbone = 'chatgpt'
+    # print(id(train_samples))
 
+    if dbg:
+        train_samples = train_samples[:1]
+    
     # for cot, pal, and p2c, find the examples that successes reflection and resolution.
     method2query_f = {
         'cot': query_cot,
@@ -74,44 +80,57 @@ def main(
     for method in ['cot', 'pal', 'p2c']:
         f = method2query_f[method]
         if method == 'cot':
-            query_f = partial(f, key = openai.api_key, cot_temperature=verbal_T, backbone=backbone, n=n_llmquery, seed=seed)
+            kwargs = dict(cot_temperature=verbal_T, backbone=backbone, n=n_llmquery, seed=seed)
+            query_f = partial(f, key = openai.api_key, **kwargs)
         elif method == 'pal':
-            query_f = partial(f, key = openai.api_key, pal_temperature=verbal_T, backbone=backbone, n=n_llmquery, seed=seed)
+            kwargs = dict(pal_temperature=verbal_T, backbone=backbone, n=n_llmquery, seed=seed)
+            query_f = partial(f, key = openai.api_key, **kwargs)
         elif method == 'p2c':
-            query_f = partial(f, key = openai.api_key, plan_temperature=verbal_T, code_temperature=code_T, backbone=backbone, n=n_llmquery, seed=seed)
+            kwargs = dict(plan_temperature=verbal_T, code_temperature=code_T, backbone=backbone, n=n_llmquery, seed=seed)
+            query_f = partial(f, key = openai.api_key, **kwargs)
         else:
             raise ValueError(f'unknown method {method}')    
 
         # find the ones that fails at first.
-        for row in tqdm(train_samples, desc=f'gathering failure cases ({method=}, {n_llmquery=})'):
-            ans = float(row['ans'])
-            if dbg:
-                row = ''
-            out = do_with_tenacity(query_f, row)
-            if method == 'p2c':
-                predlst, planlst, querymsg_d = out
-                row['query_msgs'] = querymsg_d
-            else: # pal, cot
-                predlst, querymsg_lst = out
-            print()
-            eval_lst = [sln_eval(sln=sln, ans=ans, method=method) for sln in predlst]
-            if eval_lst.count(True) < eval_lst.count(False):
-                row['howmany_failed'] = f"{backbone}: {eval_lst.count(False)}/{n_llmquery}"
-                method2failed_questions[method].append(row)
-                print(f"gotcha! {len(method2failed_questions[method])}/{n_candids}")
-            if len(method2failed_questions[method]) == n_candids:
-                print(f"at {row['idx']=}, gathering candids are done ({n_candids=}, {num_train_sample=})")
-                break
-        
-        for method, candidlist in method2failed_questions.items():
-            outdir_ = Path(outdir)
-            if not outdir_.exists():
-                outdir_.mkdir(parents=True, exist_ok=True)
-            fname = f"failed_{method}_n{n_llmquery}_numtrain{num_train_sample}_{backbone}_vT{verbal_T}_cT{code_T}_seed{seed}.jsonl"
-            outpath = outdir_/fname
-            with jsl.open(outpath, 'w') as writer:
-                writer.write_all(candidlist)
-                print(f"{method} failure cases written to:\n\t{str(outpath)}")
+        for row in tqdm(train_samples, desc=method):
+            try:
+                ans = row['ans']
+                row = copy.deepcopy(row) # row.copy()
+                out = do_with_tenacity(query_f, row)
+                if method == 'p2c':
+                    slnlst, planlst, querymsg_d = out
+                    # row['query_msgs'] = querymsg_d # this makes the output unreadable
+                else: # pal, cot
+                    slnlst, querymsg_lst = out
+                eval_pred_lst = [sln_eval(sln=sln, ans=ans, method=method) for sln in slnlst]
+                eval_lst = [eval_ for eval_, pred in eval_pred_lst if pred is not None] # drop when answer wasn't parseable
+                if eval_lst.count(True) < eval_lst.count(False): # majority
+                    row['fail_freq'] = f"{backbone}: {eval_lst.count(False)}/{n_llmquery}"
+                    row['fail_preds'] = [eval_pred[-1] for eval_pred, eval in zip(eval_pred_lst, eval_lst) if not eval]
+                    row['fail_solutions'] = [sln for sln, e  in zip(slnlst, eval_lst) if (not e) and (sln is not None)] # only failed solutio gathered
+                    row['fail_method'] = method
+                    row['llmquery_kwargs'] = kwargs
+                    method2failed_questions[method].append(row)
+                    print(f"gotcha! {len(method2failed_questions[method])}/{n_candids}")
+                if len(method2failed_questions[method]) == n_candids:
+                    print(f"at {row['idx']=}, gathering candids are done ({n_candids=}, {num_train_sample=})")
+                    break
+            except Exception as e:
+                print(e)
+                continue
+
+
+    for method, candidlist in method2failed_questions.items():
+        outdir_ = Path(outdir)
+        if not outdir_.exists():
+            outdir_.mkdir(parents=True, exist_ok=True)
+        fname = f"failed_{method}_n{n_llmquery}_numtrain{num_train_sample}_{backbone}_vT{verbal_T}_cT{code_T}_seed{seed}.jsonl"
+        if dbg:
+            fname = f"dbg_{fname}"
+        outpath = outdir_/fname
+        with jsl.open(outpath, 'w') as writer:
+            writer.write_all(candidlist)
+            print(f"{method} failure cases written to:\n\t{str(outpath)}")
         
         
             
@@ -153,7 +172,12 @@ def gsm8k_train_download_and_parse(root:str='./'):
 
         # parse
         def parse_raw_target(answer_raw:str)-> str:
-            return answer_raw.split("### ")[-1].strip()
+            ans_str = answer_raw.split("### ")[-1].strip().replace(",","_")
+            try:
+                ans = float(ans_str)
+            except:
+                ans = ans_str
+            return ans
         df = pd.DataFrame(gsm_train)
         df['ans'] = df.answer.apply(parse_raw_target)
         df['idx'] = df.index
