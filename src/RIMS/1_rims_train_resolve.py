@@ -9,7 +9,7 @@ from pprint import pprint
 from collections import defaultdict
 from typing import Union, Tuple
 
-from selection_math import *
+from ..selection_math import *
 # query_cot, query_pal, query_p2c
 # jsl, pd, math, re... etc will already been loaded 
 
@@ -123,8 +123,9 @@ def main(
                         llm_kwargs = kwargs,
                     )   
                     if method == 'p2c': # for p2c, don't forget to cap the plan string to the code
-                        plan = planlst[0] if planlst else None
-                        correct_sln_lst = [f"'''{plan}'''\n\n{sln}" for sln in correct_sln_lst]
+                        # plan = planlst[0] if planlst else None
+                        correct_plan_lst = [plan for (eval, pred), plan in zip(eval_pred_lst, planlst) if eval]
+                        correct_sln_lst = [f"'''{plan}'''\n\n{sln}" for plan, sln in zip(correct_plan_lst, correct_sln_lst)]
                         retries['correct_solution'] = correct_sln_lst
                     # embed the retries into the row 
                     if 'retries' in row.keys():

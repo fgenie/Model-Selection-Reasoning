@@ -303,4 +303,13 @@ def get_concordant_answer(answers:list):
             if abs(a1-a2)<1e-3:
                 return a1
         return None # no concordant answers
-        
+    
+
+
+def parse_python_code_from_string(unparsed_txt: str):
+    ptn = r"```python((.|\n)*?)```"
+    match = re.search(ptn, unparsed_txt)
+    if match is not None:
+        return match.group(1)
+    else:
+        return None

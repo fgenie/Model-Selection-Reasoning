@@ -9,7 +9,7 @@ from pprint import pprint
 from collections import defaultdict
 from typing import Union, Tuple
 
-from selection_math import *
+from ..selection_math import *
 # query_cot, query_pal, query_p2c
 # jsl, pd, math, re... etc will already been loaded 
 

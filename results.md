@@ -1,10 +1,23 @@
+
+## Dec 3:
+- errors in blurbs
+    - pal done with fewshot prompting with gpt-4-turbo sometimes tell something long in front of the code
+        - need to parse the code only to prompt right
+    - (bug) p2c "plan" part mistakenly dropped for failed solution --> need to reinference. 
+- prompt for hint and mistake generation: mostly successful
+    
+
+## Nov 28:
+- preparing blurb (1)
+    - if some method does more wrongs within 3 trials, find a alternative
+    - not reflection / just retries with alternative method
+
 ## Nov 21:
-* 세상도 난리고, 사내 공개 임박한 회사도 미쳐 돌아가고, 버근줄 알았던 회사 내 개인 실험은 버그가 아니라 예후가 좋은거였고, 근데 시간은 없고 하지만 실험을 할 정도로는 있는 것 같고 나는 오늘 다시 시작합니다!
 - [x] Success rate 보기 
     - 세상에 내가 이미 해놨잖아?
     - [x] 논문과 값 비교하기, 내 프롬의 success rate 이랑 얼마나 차이나는지 보기
-- [ ] RHMS 프롬만들기 프롬 돌리기
-    - [ ] 실험하여 위의 지표 측정
+- [x] RHMS 프롬만들기 프롬 돌리기
+    - 
 
 ## Nov 13~20: 
 * Slacked off or just needed excessive dose of fun to wrestle against my life again (I really enjoyed).
