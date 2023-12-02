@@ -7,6 +7,7 @@
 - errors in blurbs
     - ~~pal done with fewshot prompting with gpt-4-turbo sometimes tell something long in front of the code~~
         - [x] need to parse the code only to prompt right
+    - p2c and pal are not clearly distinguished sometimes, but not much of a concern
     - (bug) p2c "plan" part mistakenly dropped when gathering failure cases --> need re-inference.
 - before running experiment
     - [ ] adapt the inference prompt to hint/mistake prompt
