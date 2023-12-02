@@ -1,10 +1,18 @@
 
 ## Dec 3:
-- errors in blurbs
-    - pal done with fewshot prompting with gpt-4-turbo sometimes tell something long in front of the code
-        - need to parse the code only to prompt right
-    - (bug) p2c "plan" part mistakenly dropped for failed solution --> need to reinference. 
 - prompt for hint and mistake generation: mostly successful
+    - [mistake/hint prompt](https://github.com/fgenie/Model-Selection-Reasoning/blob/main/src/RIMS/3_prompt_generate_reflection_forceformat.yaml)
+    - [blurbs generated](https://github.com/fgenie/Model-Selection-Reasoning/blob/main/src/RIMS/3_blurb_1.json)
+        - [txtfile](https://github.com/fgenie/Model-Selection-Reasoning/blob/main/src/RIMS/3_blurb_1.json_print.txt)
+- errors in blurbs
+    - ~~pal done with fewshot prompting with gpt-4-turbo sometimes tell something long in front of the code~~
+        - [x] need to parse the code only to prompt right
+    - (bug) p2c "plan" part mistakenly dropped when gathering failure cases --> need re-inference.
+- before running experiment
+    - [ ] adapt the inference prompt to hint/mistake prompt
+    - [ ] llm filter that evaluates and exclude transcription (parsing) error for cot
+        - cot frequently fails not because of its calculation error but transcription error (last number parsed is not the answer but no way to parse it out mechanically -- parsing could be easier than now if prompting changes a bit, but the public standards are not considering it.)
+
     
 
 ## Nov 28:
