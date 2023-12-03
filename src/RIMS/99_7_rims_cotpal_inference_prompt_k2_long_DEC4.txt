@@ -1,0 +1,130 @@
+You are now solving math word problems. You brilliantly detects the errors in the wrong solution and find `Workaround Method` to correct the solution. The methods you are taking are as follows. Each has its strength and weakness:
+
+- Chain of Thought (cot): Solving problem with writing steps of reasoning in a natural language. Might help correct understanding of the problem but this could be weaker in precise computation.
+- Program-aided Language Model (pal): Using python language to reason and obtain an accurate answer to the given question, but this could be weaker in understanding the problem. 
+
+Followings are the examples of correcting the wrong solutions with a `Workaround Method` based on diagnosis (`Mistakes`) and `Hint for a better Method choice`.
+
+
+`Question`: Kristin can run three times faster than Sarith. If Kristin runs 12 times around the adult football field and Sarith runs at the same time around the children's football field that is half the distance as the other field, how many laps did Sarith go around the children's football field?
+`Method`: Program-aided Language Modeling (pal)
+`Attempt`: 
+def solution():
+    kristin_speed_ratio = 3 # Kristin can run 3 times faster than Sarith
+    kristin_laps = 12
+    children_field_ratio = 0.5 # The children's field is half the distance of the adult's field
+
+    # For each lap Kristin runs, Sarith runs 3 times slower, but the distance is half so:
+    # It means Sarith would complete 3 * 0.5 = 1.5 laps on the children's field for each of Kristin's laps
+    sarith_laps_per_kristin_lap = kristin_speed_ratio * children_field_ratio
+
+    # Calculate Sarith's total laps
+    sarith_total_laps = kristin_laps * sarith_laps_per_kristin_lap
+    return sarith_total_laps
+
+# Call the function and print the result
+print(solution())
+
+`Answer`: 18.0
+`Evaluation`: Wrong (correct answer: 8.0)
+`Mistakes`: The attempt wrongly calculated Sarith's laps by multiplying Kristin's speed ratio with the children's field ratio, which does not take into account accurately how the reduced distance impacts the number of laps completed.
+`Hint for a better Method choice`: A Chain of Thought method would help to better conceptualize the relationship between speeds and distances to determine the correct lap count.
+`Workaround Method`: Chain-of-Thought (cot)
+`Corrected Attempt`: Answer:
+Since Kristin can run three times faster than Sarith and she runs 12 laps around the adult football field, we need to determine how many laps Sarith would run around the smaller field in the same time.
+
+Let's assume the adult football field is full-size and the children's football field is half that distance. Since Sarith's field is half the distance of Kristin's field, Sarith can run 2 laps on the children's field in the time it takes Kristin to run 1 lap on the adult field.
+
+Since Kristin runs 3 times faster than Sarith, she would run 3 laps on the adult field in the same time Sarith runs 1 lap on the children's field if they were both running around fields of the same size. However, because Sarith's field is half the distance, Sarith can run 2 laps there in the same time Kristin runs 3 laps on the adult field.
+
+To find out how many laps Sarith can run on the children's field while Kristin runs 12 laps on the adult field, we need to determine the ratio of their speeds given the different field sizes. 
+
+As Kristin's speed in terms of laps is 3 times that of Sarith's speed and her distance is 2 times as much (as Sarith's field is half), we can equate the speed-distance factor by doubling Sarith's lap count for the comparison (2 laps on children's field for Sarith is equivalent to 1 lap on adult's field due to half size). Now, the speed ratio effectively becomes 3:2 (3 laps by Kristin to 2 laps by Sarith).
+
+We can say:
+
+Kristin's laps : Sarith's laps
+12 : x (where x is the laps Sarith runs)
+
+Using the 3:2 speed ratio:
+
+3 Kristin's laps = 2 Sarith's laps
+
+Now let's find the equivalent number of laps for Sarith when Kristin runs 12 laps:
+
+(3 Kristin's laps / 2 Sarith's laps) = (12 Kristin's laps / x Sarith's laps)
+
+Cross-multiplying gives us:
+
+3 * x = 2 * 12
+
+Now we solve for x:
+
+3x = 24
+
+x = 24 / 3
+
+x = 8
+
+Sarith ran 8 laps around the children's football field.
+`Answer`: 8.0
+`Evaluation`: Correct
+
+
+`Question`: Danny has three picnics blankets. When they are unfolded they each have an area of 8 x 8. After he folds them up, their total area is 48 square feet. How many times did he fold them?
+`Method`: Chain-of-Thought (cot)
+`Attempt`: Let's first find out the total area of the three picnic blankets when they are unfolded.
+
+Each blanket has an area of 8 feet by 8 feet, which is:
+8 feet * 8 feet = 64 square feet (for one blanket)
+
+Danny has three picnic blankets, so the total area for three blankets is:
+3 * 64 square feet = 192 square feet
+
+Now, when Danny folds them up, their total area becomes 48 square feet.
+
+To find out how many times the total area is reduced, we'll divide the original total area by the final total area:
+192 square feet / 48 square feet = 4
+
+The area is reduced by a factor of 4. Since every time Danny folds a blanket the area is reduced by half, we need to determine how many times the blanket needs to be halved to reduce the area by a factor of 4.
+
+Now let's determine how many folds that would require:
+1 fold: Area reduced by half
+2 folds: Area reduced by another half, so now we're at 1/4 of the original area.
+
+Thus, we find that folding the blankets twice (two times) will reduce the total area of each blanket by a factor of 4. Since the area was reduced to 48 square feet from 192 square feet (which is a reduction by a factor of 4), Danny would have folded the blankets twice.
+
+Therefore, each individual blanket was folded two times to achieve the necessary reduction in area.
+`Answer`: 2.0
+`Evaluation`: Wrong (correct answer: 4.0)
+`Mistakes`: The problem is that dividing the total area by the folded area does not give the number of folds directly. Area reduction is exponential, not linear, with folding. The reasoning ignored that each fold reduces the area of the blanket to one-quarter, not one-half, since folding is done in two dimensions.
+`Hint for a better Method choice`: Use a Program-aided Language Model to calculate the folds precisely, allowing for exponential area reductions with each fold. 
+`Workaround Method`: Program-aided Language Modeling (pal)
+`Corrected Attempt`: 
+def solution():
+    # Initial area of one blanket
+    area_per_blanket = 8 * 8
+    # Initial total area of all blankets
+    total_area_unfolded = area_per_blanket * 3
+    # Final total area after folding
+    total_area_folded = 48
+    # Calculate area reduction ratio (not the number of folds)
+    area_reduction_ratio = total_area_unfolded / total_area_folded
+    
+    return area_reduction_ratio
+
+# Now we call the function to get the result
+result = solution()
+print(f"The area was reduced by a factor of {result}.")
+
+`Answer`: 4.0
+`Evaluation`: Correct
+
+
+Now, try the `Question` below following the same procedure as above. Try the question with the choice of your `Method`, and evaluate the `Answer`. If your `Attempt` is considered wrong, identify the `Mistakes` and reason to take `Workaround Method` by writing `Hint for a better Method choice`. Based on it, reattempt correctly on `Corrected Attempt`.
+
+`Question`: [Question]
+`Method`: <your first choice how to approach>
+`Attempt`: <your first attempt to solve> 
+`Answer`: <answer from the attempt>
+`Evaluation`: <evaluate your answer. If your answer evaluates wrong, start re-attempting with identifying `Mistakes`. Otherwise, stop solving and finish> 

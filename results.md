@@ -1,3 +1,12 @@
+## Dec 4: 
+- [x] run cot pal (2 models) experiment first: only blurbs with swtiching.
+    - conflict only runs: **prompt need to contain `cotpal` when 2 model running required** (`--tgt_conflict` implies this. internally controlls other flags)
+- [ ] do others
+    - [ ] blurb classifier to automate useful/useless blurb distinction (useless example: `src/RIMS/3_blurb_1.json:L47`: caused by limitation of automated result parsing of cot output)
+        - [ ] prepare the blurb that the first attempt is actually correct [openaiplayground](https://platform.openai.com/playground/p/6YujhXQUB1pfCuGHHK6k7hWY?model=gpt-4-1106-preview&mode=chat)
+        - [ ] prepare the blurb that the workaround method is still the same method as the first choice (but answer corrects.) [openaiplayground](https://platform.openai.com/playground/p/2abad5yzZQquHD7XLtMzMPAE?model=gpt-4-1106-preview&mode=chat)
+    - [ ] (debug) p2c -> * blurbs re-prep
+
 
 ## Dec 3:
 - prompt for hint and mistake generation: mostly successful
@@ -11,8 +20,6 @@
     - (bug) p2c "plan" part mistakenly dropped when gathering failure cases --> need re-inference.
 - before running experiment
     - [ ] adapt the inference prompt to hint/mistake prompt
-    - [ ] llm filter that evaluates and exclude transcription (parsing) error for cot
-        - cot frequently fails not because of its calculation error but transcription error (last number parsed is not the answer but no way to parse it out mechanically -- parsing could be easier than now if prompting changes a bit, but the public standards are not considering it.)
 
     
 
@@ -26,7 +33,6 @@
     - 세상에 내가 이미 해놨잖아?
     - [x] 논문과 값 비교하기, 내 프롬의 success rate 이랑 얼마나 차이나는지 보기
 - [x] RHMS 프롬만들기 프롬 돌리기
-    - 
 
 ## Nov 13~20: 
 * Slacked off or just needed excessive dose of fun to wrestle against my life again (I really enjoyed).

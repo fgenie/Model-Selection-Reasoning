@@ -422,10 +422,7 @@ def query_enhanced_coh(data: dict,
                           key: str, 
                           backbone: str,
                           n_fewshot:int=8,
-                          turn_based_coh:bool=False) -> OrderedDict[str,str]:
-    # 5_cohlike_prompt.txt
-    # 6-shot default maximum is used
-
+                          turn_based:bool=False) -> OrderedDict[str,str]:
 
     if backbone == 'chatgpt':
         model_name = 'gpt-3.5-turbo-16k' # if n_fewshot>=5 else 'gpt-3.5-turbo'  # this prompt is kind of lengthy
@@ -434,7 +431,7 @@ def query_enhanced_coh(data: dict,
     elif backbone == 'gpt4turbo':
         model_name = 'gpt-4-1106-preview'
 
-    def get_turn_based_coh_prompt(
+    def get_turn_based_prompt(
                                 prompt_f,
                                 q:str='',
                                 n_fewshot:int=8)->list:
@@ -456,12 +453,12 @@ def query_enhanced_coh(data: dict,
         messages.append({'role':'user', 'content': src_d['user_tmp'].replace('[QUESTION]', q)})
         
         # assert length of the message
-        assert len(messages) == 2+actual_n_fewshots*2, 'L430: get_turn_based_coh_prompt() fails'
+        assert len(messages) == 2+actual_n_fewshots*2, 'L430: get_turn_based_prompt() fails'
         return messages
     
     def reduce_fewshots(rawtext:str, n_fewshot:int)->str:
         '''
-        helper function for turn_based_coh=False
+        helper function for turn_based=False
         '''
         chunks = rawtext.split("\n\n\n")
         fewshots = chunks[1:-1]
@@ -471,10 +468,10 @@ def query_enhanced_coh(data: dict,
         reduced = "\n\n\n".join([chunks[0]] + fewshots + [chunks[-1]]) # join
         return reduced
         
-    
+
     def parse_raw2dict(rawqueryout:str, toparse:list=None)->OrderedDict:
         '''
-        helper function for output (universal for both turn_based_coh=True|False)
+        helper function for output (universal for both turn_based=True|False)
         '''
         lines = rawqueryout.strip().split('\n')
         parse_d = OrderedDict()
@@ -512,9 +509,11 @@ def query_enhanced_coh(data: dict,
                 pass
         return parse_dd
 
+
+
     # prep prompt
-    if turn_based_coh: # *.yaml
-        messages = get_turn_based_coh_prompt(prompt_f, 
+    if turn_based: # *.yaml
+        messages = get_turn_based_prompt(prompt_f, 
                                              q=data['question'],
                                              n_fewshot=n_fewshot)
     else: #*.txt 
@@ -537,6 +536,7 @@ def query_enhanced_coh(data: dict,
         messages = [
             {'role':'user', 'content': prompt}
         ]
+
     print('T=0 for query_enhanced_coh() (manually set)')
     print('seed=777 for query_enhanced_coh() (manually set) from nov 11')
     
@@ -559,10 +559,111 @@ def query_enhanced_coh(data: dict,
     else:
         toparse = ['Failed Method:', 'Hint:', 'Successful Method:', 'Solution:', 'Answer:']
     parsed_dict = parse_raw2dict(raw_query_out, toparse = toparse)
-        
-    
 
     return parsed_dict, raw_query_out, messages
+
+
+def query_rims_inference(data: dict, 
+                          prompt_f: str, 
+                          key: str, 
+                          backbone: str,
+                          n_fewshot:int=8,
+                          turn_based:bool=False) -> OrderedDict[str,str]:
+    # 5_cohlike_prompt.txt
+    # 6-shot default maximum is used
+
+
+    if backbone == 'chatgpt':
+        model_name = 'gpt-3.5-turbo-16k' # if n_fewshot>=5 else 'gpt-3.5-turbo'  # this prompt is kind of lengthy
+    elif backbone == 'gpt4':
+        model_name = 'gpt-4'
+    elif backbone == 'gpt4turbo':
+        model_name = 'gpt-4-1106-preview'
+
+    def get_turn_based_prompt(
+                                prompt_f,
+                                q:str='',
+                                n_fewshot:int=8)->list:
+        raise NotImplementedError('see 99_*yaml to implement here + query_enhanced_coh:get_turn_based_prompt()')
+
+        
+    
+    def parse_raw(rawqueryout:str, toparse:list=None)->OrderedDict:
+        '''
+        helper function for output (universal for both turn_based=True|False)
+        '''
+        eval_starts = rawqueryout.find("`Evaluation`")
+
+        cannotfind = []
+        parse_idx_d = OrderedDict() 
+        if eval_starts ==-1: # solved at once
+            toparse = "`Method`: `Attempt`: `Answer`:".split()      
+            for k in toparse:
+                idx = rawqueryout.rfind(k)
+                if idx == -1:
+                    cannotfind.append(k)
+                else:
+                    parse_idx_d[k] = idx
+      
+        else: # parse last part
+            toparse = "`Mistakes`: `Hint for a better Method`: `Workaround Method`: `Corrected Attempt`: `Answer`:".split()
+            for k in toparse:
+                idx = rawqueryout.rfind(k)
+                if idx == -1:
+                    cannotfind.append(k)
+                else:
+                    parse_idx_d[k] = idx
+
+        # remove not-found keys
+        for c in cannotfind:
+            toparse.remove(c)
+        
+        # indices to strings
+        for i, k in enumerate(toparse):
+            if i == len(toparse)-1:
+                content = rawqueryout[parse_idx_d[k]:]
+            else:
+                content = rawqueryout[parse_idx_d[k]:parse_idx_d[toparse[i+1]]]
+            assert content, 'empty content'
+            parse_dd[k] = content
+        # strip the keys
+        parse_dd_ = {k:v.replace(k, "").strip() for k,v in parse_dd}
+
+        return parse_dd_
+
+    # prep prompt
+    if turn_based: # *.yaml
+        messages = get_turn_based_prompt(prompt_f, 
+                                             q=data['question'],
+                                             n_fewshot=n_fewshot)
+    else: #*.txt  # DEC4 exps
+        rawprompt = open(prompt_f).read().strip()
+        prompt_tmp = PromptStr(rawprompt)
+        prompt = prompt_tmp.sub('QUESTION', data['question'])
+        assert isinstance(prompt, str)
+        messages = [
+            {'role':'user', 'content': prompt}
+        ]
+    print('T=0 for query_enhanced_coh() (manually set)')
+    print('seed=777 for query_enhanced_coh() (manually set) from nov 11')
+    
+    stop_tok = ["\n`Evaluation`: Correct", "Evaluation: Correct"] # could be a list or a single string object. Defaults: None
+    raw_query_out = completion_with_backoff(
+            api_key=key,
+            seed=777,
+            model=model_name,
+            max_tokens=1024, 
+            stop=stop_tok, 
+            messages=messages,
+            temperature=0.,
+            top_p=1.0,
+            n=1)['choices'][0]['message']['content'] # str
+    # toparse = ['`Attempt', '`Answer', '`Evaluation', '`Mistakes', '`Hint', '`Corrected Attempt', '`Answer',]
+    parsed_dict = parse_raw(raw_query_out)
+        
+
+    return parsed_dict, raw_query_out, messages
+
 
 
 def query_math(
@@ -581,9 +682,10 @@ def query_math(
         actor_selection_prompt:str='', # 10/14 assuming kshot harvesting is done, test actor potential
         prog_hint_prompting:bool=False, # 10/14 whether to do `hint injection`
         cohprompt:str='', # 10/19 coh exp
+        rimsprompt:str='',
         when_only_conflict:int=-1, # oct26~ exp
         tgt_conflict:bool=False, # nov11 exp
-        turn_based_coh:bool=False, # nov11 exp 
+        turn_based:bool=False, # nov11 exp 
 
         dbg:bool =False,  # dbgmode
 
@@ -674,7 +776,6 @@ def query_math(
                         p2c_ans = safe_execute_turbo(p2c_solution[0]) # testing p2c-generated code and getting answer from it
                         p2c_answers.append(p2c_ans)
                         p2c_solutions.append(p2c_solution[0])
-                # apply --cohprompt | --actor_selection_prompt
             answers_above = [cot_ans, pal_ans]
             if when_only_conflict==3:
                 answers_above.append(p2c_ans)
@@ -684,7 +785,90 @@ def query_math(
             ## `args.when_only_conflict` option should dangle just before the baseline routine or should be merged into it. but let us avoid unnecessary confusion for now...
             ##########
 
-            if cohprompt: 
+            if rimsprompt:
+                # Does not matter when_only_conflict==2 or 3. Below works for both.
+                final_ans = get_concordant_answer(answers_above)
+                if final_ans is None: # (answers_above are all None) OR (not concordant) 
+                    parse_dd, rawout, query_msg = query_rims_inference(
+                                                                data, 
+                                                                prompt_f=rimsprompt, 
+                                                                key=key, 
+                                                                backbone=backbone,
+                                                                n_fewshot=k_fewshot,
+                                                                turn_based=turn_based)
+                    good_solution = parse_dd['Solution:']
+                    try:
+                        good_method = parse_method(parse_dd['Successful Method:'])
+                    except Exception as e:
+                        print(e)
+                        print("parse_dd['Successful Method:'] failed")
+                        good_method = None
+                    # start parsing
+                    if good_method is None:
+                        final_ans, actual_method = None, None
+                    elif good_method == 'cot':
+                        final_ans = extract_num_turbo(good_solution)
+                        actual_method = good_method
+                    elif good_method == 'pal':
+                        try:
+                            final_ans = safe_execute_turbo(good_solution)
+                            actual_method = good_method
+                        except: 
+                            final_ans = extract_num_turbo(good_solution)
+                            actual_method = 'cot'
+                    elif good_method == 'p2c':
+                        plan, code = separate_plan_code(good_solution)
+                        try: 
+                            final_ans = safe_execute_turbo(code)
+                            actual_method = good_method
+                        except: #if code is None:
+                            final_ans = extract_num_turbo(good_solution)
+                            actual_method = 'cot'
+                    # record re-attempted answer and solutions
+
+                    ansmap = {
+                        'cot': cot_ans,
+                        'pal': pal_ans,
+                        # 'p2c': p2c_ans,
+                    }
+                    solmap = {
+                        'cot': cot_solution,
+                        'pal': pal_solution,
+                        # 'p2c': (plan, p2c_solution),
+                    }
+                    if when_only_conflict == 3:
+                        ansmap['p2c'] = p2c_ans
+                        solmap['p2c'] = (plan, p2c_solution)
+                    
+                    reattempt = {'good_method': good_method, 
+                                 'actual_method': actual_method, 
+                                 'good_solution': good_solution} 
+                    
+                    try:
+                        bad_method = parse_method(parse_dd['Failed Method:'])
+                    except Exception as e:
+                        print(e)
+                        print("parse_dd['Failed Method:'] failed")
+                        bad_method = None
+                    reattempt['bad_method'] = bad_method
+                    if 'Failed Attempt:' in parse_dd.keys():
+                        bad_solution = parse_dd['Failed Attempt:']
+                        reattempt['bad_solution'] = bad_solution # Failed Attempt solution considered Correct and stops generation (chatgpt) --> use that attempt
+                        if final_ans is None and 'Successful Method: ' not in rawout and 'Evaluation: Correct' in rawout:
+                            actual_method = f"{bad_method} (failed attempt considered `correct`)"
+                            if bad_method =='p2c':
+                                plan, code = separate_plan_code(bad_solution)
+                                good_solution = (plan, code)
+                                final_ans = safe_execute_turbo(code)
+                            elif bad_method == 'pal':
+                                final_ans = safe_execute_turbo(bad_solution)
+                            elif bad_method == 'cot':
+                                final_ans = extract_num_turbo(bad_solution)
+                            else:
+                                raise ValueError('failed to generate proper answer format (for both)')                    
+
+
+            elif cohprompt: 
                 # Does not matter when_only_conflict==2 or 3. Below works for both.
                 final_ans = get_concordant_answer(answers_above)
                 if final_ans is None: # (answers_above are all None) OR (not concordant) 
@@ -694,7 +878,7 @@ def query_math(
                                                                 key=key, 
                                                                 backbone=backbone,
                                                                 n_fewshot=k_fewshot,
-                                                                turn_based_coh=turn_based_coh)
+                                                                turn_based=turn_based)
                     good_solution = parse_dd['Solution:']
                     try:
                         good_method = parse_method(parse_dd['Successful Method:'])
@@ -1105,7 +1289,8 @@ if __name__ == '__main__':
     parser.add_argument('--prog_hint_prompting', action='store_true', help='this flag will run prog_hint_prompting test: prepend hint when querying the solution')
 
     # cohprompt (coh exp)
-    parser.add_argument('--cohprompt', type=str, default='', help='path to customprompt file')
+    parser.add_argument('--cohprompt', type=str, default='', help='path to customprompt (nov end exps) file')
+    parser.add_argument('--rimsprompt', type=str, default='', help='path to customprompt (dec start exps) file')
 
     # 10/26, 27... only conflict
     parser.add_argument('--when_only_conflict', type=int, help='selecting from 2 or 3', default=-1)
@@ -1164,7 +1349,7 @@ if __name__ == '__main__':
     
     if args.tgt_conflict:
         cotpal_conflict_jsls = list(Path('../output/nov11_tgt_conflict').glob(f'**/coh_cotpal_1/conflict*.jsonl'))
-        if 'cotpal' in args.cohprompt:
+        if 'cotpal' in args.cohprompt or 'cotpal' in args.rimsprompt:
             conflict_jsls = cotpal_conflict_jsls        
         else:
             conflict_jsls = list(Path('../output/nov11_tgt_conflict').glob(f'**/conflict*.jsonl'))
@@ -1175,6 +1360,9 @@ if __name__ == '__main__':
         datasets = [e[0] for e in datasets_backbones_paths]
         backbones = [e[1] for e in datasets_backbones_paths]
         paths = [e[2] for e in datasets_backbones_paths]
+        print(conflict_jsls)
+        print(paths)
+        print(backbones)
     else: # only one dataset
         datasets = [dataset]
 
@@ -1191,16 +1379,18 @@ if __name__ == '__main__':
             task_num = len(tasks)
             print('Current total tasks: ', task_num)
 
-            assert args.cohprompt, f'when --tgt_conflict, need --cohprompt {args.cohprompt}'
+            assert args.cohprompt or args.rimsprompt, f'when --tgt_conflict, need --cohprompt or --rimsprompt'
             # adjust the following arguments for `tgt_conflict==True` setting 
             datasetpath = paths[ii]
             args.when_only_conflict = 3 if datasetpath.parent=='coh' else 2 # 3 for 3model-coh 2 for 2model-coh
             backbone = backbones[ii]
             output_path = paths[ii].parent/Path(args.cohprompt).stem
             
-            turn_based_coh = False
-            if args.cohprompt.endswith('.yaml'):
-                turn_based_coh = True
+            turn_based = False
+
+            promptf = args.cohprompt if args.cohprompt else args.rimsprompt
+            if promptf.endswith('.yaml'):
+                turn_based = True
             if not os.path.exists(output_path):
                 os.makedirs(output_path)
             args.output_dir = output_path
@@ -1216,9 +1406,11 @@ if __name__ == '__main__':
             print(f"\t{args.when_only_conflict=}")
             print(f"\t{backbone=}")
             print(f"\t{args.cohprompt=}")
-            print(f"\t{turn_based_coh=}")
+            print(f"\t{args.rimsprompt=}")
+            print(f"\t{turn_based=}")
             print(f"\t{args.output_dir=}")
             print(f"\t{save_path=}")
+            print()
 
         
         else: # normal run
@@ -1259,9 +1451,10 @@ if __name__ == '__main__':
                         actor_selection_prompt=args.actor_selection_prompt, # for actor selection prompt test
                         prog_hint_prompting=args.prog_hint_prompting, # whether to inject hint to query solution
                         cohprompt=args.cohprompt, # for cohprompt exps,
+                        rimsprompt=args.rimsprompt, # for cohprompt exps,
                         when_only_conflict=args.when_only_conflict, 
                         tgt_conflict = args.tgt_conflict,
-                        turn_based_coh = turn_based_coh,
+                        turn_based = turn_based,
                         dbg = args.dbg
                         )
                                 
@@ -1292,9 +1485,10 @@ if __name__ == '__main__':
                             actor_selection_prompt=args.actor_selection_prompt, # for actor selection prompt test
                             prog_hint_prompting=args.prog_hint_prompting, # whether to inject hint to query solution
                             cohprompt=args.cohprompt, # for custom prompt experiment,
+                            rimsprompt=args.rimsprompt, # for custom prompt experiment,
                             when_only_conflict=args.when_only_conflict, 
                             tgt_conflict = args.tgt_conflict,
-                            turn_based_coh = turn_based_coh,
+                            turn_based = turn_based,
                             dbg= args.dbg,
                             )
 
