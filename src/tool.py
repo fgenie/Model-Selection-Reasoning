@@ -369,3 +369,15 @@ def parse_python_code_from_string(unparsed_txt: str):
         return match.group(1)
     else:
         return None
+    
+def parse_num_from_answer(rawstr)->float:
+    '''
+    used for parsing number out from Answer (dec 4 exp)
+    '''
+    ptn = r'(-?\d+\.\d+|\d+)'
+    nums = re.findall(ptn, rawstr)
+    if not nums:
+        return None
+    else: # more than one number 
+        return float(nums[-1])
+

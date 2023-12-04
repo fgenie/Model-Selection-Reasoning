@@ -100,7 +100,6 @@ def get_pal_prompt(data: dict, backbone: str, hint:str=''):
             question_message += f" ({hint})"
         messages += [{"role": "user",
                       "content": f"Answer the following question in Python: {question_message}"}]
-    # print(question_message)
     return messages
 
 
@@ -886,7 +885,7 @@ def query_math(
                         
                         # final_ans
                         if good_method == 'cot':
-                            final_ans = float(extract_num_turbo(parse_dd["`Answer`:"])) # in case of cot, parses `Answer`: field and return it.
+                            final_ans = float(parse_num_from_answer(parse_dd["`Answer`:"])) # in case of cot, parses `Answer`: field and return it.
                             print()
                         elif good_method == 'pal':
                             final_ans = safe_execute_turbo(good_solution)
@@ -1316,7 +1315,7 @@ def query_math(
         final_answers.append(final_ans)
 
         count = Counter(final_answers)
-        majority_ans = count.most_common(1)[0][0]
+        majority_ans = count.most_common(1)[0][0] # pick most common finalans (amongst self-consistency of final answers (final_answers))
 
     # === dump data ===
     to_dump_data = OrderedDict(
@@ -1332,7 +1331,7 @@ def query_math(
         to_dump_data['ansmap'] = ansmap
         to_dump_data['solmap'] = solmap
         if final_ans is not None:
-            to_dump_data['ans==majority_ans'] = abs(final_ans-majority_ans) < 1e-3
+            to_dump_data['ans==majority_ans'] = abs(float(data['answer'])-majority_ans) < 1e-3
         else:
             to_dump_data['ans==majority_ans'] = False
     elif when_only_conflict in [2,3]:
@@ -1508,7 +1507,7 @@ if __name__ == '__main__':
             datasetpath = paths[ii]
             args.when_only_conflict = 3 if datasetpath.parent=='coh' else 2 # 3 for 3model-coh 2 for 2model-coh
             backbone = backbones[ii]
-            output_path = paths[ii].parent/(Path(promptf).stem + backbone)
+            output_path = paths[ii].parent/(Path(promptf).stem + "_" + backbone)
             
             turn_based = False
 
