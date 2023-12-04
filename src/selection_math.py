@@ -422,12 +422,16 @@ def parse_method2(methodstr:str)->str:
     normalized = methodstr.replace("-", ' ').replace("_", " ").lower()
     norm2short = {
         'chain of thought': 'cot',
+        'cot': 'cot',
         'program aided language modeling': 'pal',
         'program aided language model': 'pal',
+        'pal': 'pal',
         'plan and then code': 'p2c',
-    }
-    if normalized in norm2short.keys():
-        return norm2short[normalized]
+        'p2c': 'p2c',
+    } # this should be key as abb, and value as a set of component patterns for capturing
+    for k in norm2short.keys():
+        if k in normalized:
+            return norm2short[k]
     else:
         return methodstr
 
@@ -621,7 +625,7 @@ def query_rims_inference(data: dict,
                     parse_idx_d[k] = idx
       
         else: # parse last part
-            toparse = "`Method`: `Attempt`: `Mistakes`: `Hint for a better Method`: `Workaround Method`: `Corrected Attempt`: `Answer`:".split()
+            toparse = ["`Method`:", "`Attempt`:", "`Mistakes`:", "`Hint for a better Method`:", "`Workaround Method`:", "`Corrected Attempt`:", "`Answer`:"]
             for k in toparse:
                 idx = rawqueryout.rfind(k)
                 if idx == -1:
@@ -640,7 +644,6 @@ def query_rims_inference(data: dict,
                 content = rawqueryout[parse_idx_d[k]:]
             else:
                 content = rawqueryout[parse_idx_d[k]:parse_idx_d[toparse[i+1]]]
-            assert content, 'empty content'
             parse_dd[k] = content
         # strip the keys
         parse_dd_ = {k:v.replace(k, "").strip() for k,v in parse_dd.items()}
@@ -871,8 +874,15 @@ def query_math(
                         did_reflect = True
                         good_solution = parse_dd['`Corrected Attempt`:']
                         good_method = parse_method2(parse_dd['`Workaround Method`:'])
-                        mistakes = '`Mistakes`: ' + parse_dd['`Mistakes`:']
-                        hint = '`Hint for a better Method`: ' + parse_dd['`Hint for a better Method`:']
+                        try:
+                            
+                            mistakes = '`Mistakes`: ' + parse_dd['`Mistakes`:']
+                        except Exception as e:
+                            mistakes = e.__str__()
+                        try:
+                            hint = '`Hint for a better Method`: ' + parse_dd['`Hint for a better Method`:']
+                        except Exception as e:
+                            hint = e.__str__()
                         bad_solution = parse_dd['`Attempt`:']
                         bad_method = parse_method2(parse_dd['`Method`:'])
                         
@@ -910,6 +920,7 @@ def query_math(
                             'rawout': rawout,
                             'gptmessage': query_msg,
                             } 
+                    print()
                         
                     # else:
                     #     try:
@@ -1329,7 +1340,7 @@ def query_math(
          'cot_executed': cot_answers, 'pal_executed': pal_answers,
          'cot_generated': cot_solutions, 'pal_generated': pal_solutions,
          'choice_solution': selection_solutions,
-         'iscorrect': majority_ans==data['answer'] }
+          }
     )
     if rimsprompt:
         to_dump_data['reattempt'] = reattempt
@@ -1499,9 +1510,9 @@ if __name__ == '__main__':
         if args.tgt_conflict: # conflict case only run
             
             tasks = dataset 
-            # if args.dbg:
-            #     print("--dbg: dataset = dataset[:10]")
-            #     tasks = dataset[:3]
+            if args.dbg:
+                print("--dbg: dataset = dataset[:1]")
+                tasks = dataset[:1]
             task_num = len(tasks)
             print('Current total tasks: ', task_num)
 

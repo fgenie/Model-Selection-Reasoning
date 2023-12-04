@@ -1,7 +1,7 @@
-Current time:  2023-12-05 00:42:40
+Current time:  2023-12-05 02:08:42
 [PosixPath('../output/nov11_tgt_conflict/gpt4/coh_cotpal_1/conflict_gsm8k_k8_sc1_s0_e1319_11_04_22_35.jsonl')]
-[PosixPath('../output/nov11_tgt_conflict/gpt4/coh_cotpal_1/conflict_gsm8k_k8_sc1_s0_e1319_11_04_22_35.jsonl')]
-['gpt4']
+[PosixPath('../output/nov11_tgt_conflict/gpt4/coh_cotpal_1/conflict_gsm8k_k8_sc1_s0_e1319_11_04_22_35.jsonl'), PosixPath('../dataset/gsm8K_test.jsonl')]
+['gpt4', 'gpt4']
 
 total data:  75
 Current total tasks:  75
@@ -14,25 +14,23 @@ running with --tgt_conflict will override --output_dir
 	args.rimsprompt='/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/RIMS/99_9_rims_cotpal_inference_prompt_k2_long_DEC4.txt'
 	turn_based=False
 	args.output_dir=PosixPath('../output/nov11_tgt_conflict/gpt4/coh_cotpal_1/99_9_rims_cotpal_inference_prompt_k2_long_DEC4_gpt4')
-	save_path=PosixPath('../output/nov11_tgt_conflict/gpt4/coh_cotpal_1/99_9_rims_cotpal_inference_prompt_k2_long_DEC4_gpt4/tgt_conflict_12_05_00_42_conflict_gsm8k_k8_sc1_s0_e1319_11_04_22_35.jsonl')
+	save_path=PosixPath('../output/nov11_tgt_conflict/gpt4/coh_cotpal_1/99_9_rims_cotpal_inference_prompt_k2_long_DEC4_gpt4/tgt_conflict_12_05_02_08_conflict_gsm8k_k8_sc1_s0_e1319_11_04_22_35.jsonl')
 
 T=0 for query_enhanced_coh() (manually set)
 seed=777 for query_enhanced_coh() (manually set) from nov 11
 T=0 for query_enhanced_coh() (manually set)
 seed=777 for query_enhanced_coh() (manually set) from nov 11
-`Question`: A car travels at a speed of 60 miles per hour. How many miles will the car travel in 2 hours and 30 minutes?
-`Method`: Chain-of-Thought (cot)
-`Attempt`: The car travels at a speed of 60 miles per hour. This means that in one hour, the car will travel 60 miles. 
-
-To find out how many miles the car will travel in 2 hours and 30 minutes, we can simply multiply the speed of the car by the number of hours. 
-
-However, we need to convert the 30 minutes into hours because the speed of the car is given in miles per hour. There are 60 minutes in an hour, so 30 minutes is equal to 0.5 hours. 
-
-Therefore, the total time the car is traveling is 2 hours + 0.5 hours = 2.5 hours. 
-
-Now, we can multiply the speed of the car by the total time to find out how many miles the car will travel: 
-
-60 miles/hour * 2.5 hours = 150 miles
-`Answer`: 150 miles
-====================
-Exception message: could not convert string to float: '150 miles'
+empty content
+retrying (main)
+T=0 for query_enhanced_coh() (manually set)
+seed=777 for query_enhanced_coh() (manually set) from nov 11
+T=0 for query_enhanced_coh() (manually set)
+seed=777 for query_enhanced_coh() (manually set) from nov 11
+T=0 for query_enhanced_coh() (manually set)
+seed=777 for query_enhanced_coh() (manually set) from nov 11
+empty content
+retrying (main)
+T=0 for query_enhanced_coh() (manually set)
+seed=777 for query_enhanced_coh() (manually set) from nov 11
+T=0 for query_enhanced_coh() (manually set)
+seed=777 for query_enhanced_coh() (manually set) from nov 11
