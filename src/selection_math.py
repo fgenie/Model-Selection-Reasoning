@@ -854,6 +854,7 @@ def query_math(
                 # Does not matter when_only_conflict==2 or 3. Below works for both.
                 reattempt = dict() # init
                 final_ans = get_concordant_answer(answers_above)
+                did_reflect = False
                 if final_ans is None: # (answers_above are all None) OR (not concordant) 
                     parse_dd, rawout, query_msg = query_rims_inference(
                                                                 data, 
@@ -864,105 +865,109 @@ def query_math(
                                                                 turn_based=turn_based)
                     
                     
-                    if dbg:
-                        if "`Corrected Attempt`:" in parse_dd.keys(): 
-                            # solved after hint
-                            good_solution = parse_dd['`Corrected Attempt`:']
-                            good_method = parse_method2(parse_dd['`Workaround Method`:'])
-                            mistakes = '`Mistakes`: ' + parse_dd['`Mistakes`:']
-                            hint = '`Hint for a better Method`: ' + parse_dd['`Hint for a better Method`:']
-                            bad_solution = parse_dd['`Attempt`:']
-                            bad_method = parse_method2(parse_dd['`Method`:'])
-                            
-                        else:
-                            # solved at once
-                            good_solution = parse_dd['`Attempt`:']
-                            good_method = parse_method2(parse_dd['`Method`:'])
-                            mistakes = '1shot 1kill'
-                            hint = "1shot 1kill"
-                            bad_method = "1shot 1kill"
-                            bad_solution ="1shot 1kill"
-                        
-                        # final_ans
-                        if good_method == 'cot':
-                            final_ans = float(parse_num_from_answer(parse_dd["`Answer`:"])) # in case of cot, parses `Answer`: field and return it.
-                            print()
-                        elif good_method == 'pal':
-                            final_ans = safe_execute_turbo(good_solution)
-                        elif good_method == 'p2c': # p2c
-                            plan, code = separate_plan_code(good_solution)
-                            final_ans = safe_execute_turbo(code)
-                            raise NotImplementedError('need to check the debug logics here')
-                        else:
-                            ValueError(f'failed to parse good_method ({good_method=})')
-                        reattempt = {'good_method': good_method, 
-                                'good_solution': good_solution,
-                                'good_answer': final_ans,
-                                'mistakes': mistakes,
-                                'hint': hint,
-                                'bad_method': bad_method,
-                                'bad_solution': bad_solution,
-                                'rawout': rawout,
-                                'gptmessage': query_msg,
-                                } 
+                    # if dbg:
+                    if "`Corrected Attempt`:" in parse_dd.keys(): 
+                        # solved after hint
+                        did_reflect = True
+                        good_solution = parse_dd['`Corrected Attempt`:']
+                        good_method = parse_method2(parse_dd['`Workaround Method`:'])
+                        mistakes = '`Mistakes`: ' + parse_dd['`Mistakes`:']
+                        hint = '`Hint for a better Method`: ' + parse_dd['`Hint for a better Method`:']
+                        bad_solution = parse_dd['`Attempt`:']
+                        bad_method = parse_method2(parse_dd['`Method`:'])
                         
                     else:
-                        try:
-                            if "`Corrected Attempt`:" in parse_dd.keys(): 
-                                # solved after hint
-                                good_solution = parse_dd['`Corrected Attempt`:']
-                                good_method = parse_method2(parse_dd['`Workaround Method`:'])
-                                mistakes = '`Mistakes`: ' + parse_dd['`Mistakes`:']
-                                hint = '`Hint for a better Method`: ' + parse_dd['`Hint for a better Method`:']
-                                bad_solution = parse_dd['`Attempt`:']
-                                bad_method = parse_method2(parse_dd['`Method`:'])
+                        # solved at once
+                        did_reflect = False
+                        good_solution = parse_dd['`Attempt`:']
+                        good_method = parse_method2(parse_dd['`Method`:'])
+                        mistakes = '1shot 1kill'
+                        hint = "1shot 1kill"
+                        bad_method = "1shot 1kill"
+                        bad_solution ="1shot 1kill"
+                    
+                    # final_ans
+                    if good_method == 'cot':
+                        final_ans = float(parse_num_from_answer(parse_dd["`Answer`:"])) # in case of cot, parses `Answer`: field and return it.
+                        print()
+                    elif good_method == 'pal':
+                        final_ans = safe_execute_turbo(good_solution)
+                    elif good_method == 'p2c': # p2c
+                        plan, code = separate_plan_code(good_solution)
+                        final_ans = safe_execute_turbo(code)
+                        raise NotImplementedError('need to check the debug logics here')
+                    else:
+                        ValueError(f'failed to parse good_method ({good_method=})')
+                    reattempt = {
+                            'did_reflect': did_reflect,
+                            'good_method': good_method, 
+                            'good_solution': good_solution,
+                            'good_answer': final_ans,
+                            'mistakes': mistakes,
+                            'hint': hint,
+                            'bad_method': bad_method,
+                            'bad_solution': bad_solution,
+                            'rawout': rawout,
+                            'gptmessage': query_msg,
+                            } 
+                        
+                    # else:
+                    #     try:
+                    #         if "`Corrected Attempt`:" in parse_dd.keys(): 
+                    #             # solved after hint
+                    #             good_solution = parse_dd['`Corrected Attempt`:']
+                    #             good_method = parse_method2(parse_dd['`Workaround Method`:'])
+                    #             mistakes = '`Mistakes`: ' + parse_dd['`Mistakes`:']
+                    #             hint = '`Hint for a better Method`: ' + parse_dd['`Hint for a better Method`:']
+                    #             bad_solution = parse_dd['`Attempt`:']
+                    #             bad_method = parse_method2(parse_dd['`Method`:'])
                                 
-                            else:
-                                # solved at once
-                                good_solution = parse_dd['`Attempt`:']
-                                good_method = parse_method(parse_dd['`Method`:'])
-                                mistakes = '1shot 1kill'
-                                hint = "1shot 1kill"
-                                bad_method = "1shot 1kill"
-                                bad_solution ="1shot 1kill"
+                    #         else:
+                    #             # solved at once
+                    #             good_solution = parse_dd['`Attempt`:']
+                    #             good_method = parse_method(parse_dd['`Method`:'])
+                    #             mistakes = '1shot 1kill'
+                    #             hint = "1shot 1kill"
+                    #             bad_method = "1shot 1kill"
+                    #             bad_solution ="1shot 1kill"
                             
-                            # final_ans
-                            if good_method == 'cot':
-                                final_ans = float(parse_dd["`Answer`:"]) # in case of cot, parses `Answer`: field and return it.
-                            elif good_method == 'pal':
-                                final_ans = safe_execute_turbo(good_solution)
-                            else: # p2c
-                                plan, code = separate_plan_code(good_solution)
-                                final_ans = safe_execute_turbo(code)
-                                raise NotImplementedError('need to check the debug logics here')
-                            reattempt = {'good_method': good_method, 
-                                    'good_solution': good_solution,
-                                    'good_answer': final_ans,
-                                    'mistakes': mistakes,
-                                    'hint': hint,
-                                    'bad_method': bad_method,
-                                    'bad_solution': bad_solution,
-                                    'rawout': rawout,
-                                    'gptmessage': query_msg,
-                                    } 
+                    #         # final_ans
+                    #         if good_method == 'cot':
+                    #             final_ans = float(parse_num_from_answer(parse_dd["`Answer`:"])) # in case of cot, parses `Answer`: field and return it.
+                    #         elif good_method == 'pal':
+                    #             final_ans = safe_execute_turbo(good_solution)
+                    #         else: # p2c
+                    #             plan, code = separate_plan_code(good_solution)
+                    #             final_ans = safe_execute_turbo(code)
+                    #             raise NotImplementedError('need to check the debug logics here')
+                    #         reattempt = {'good_method': good_method, 
+                    #                 'good_solution': good_solution,
+                    #                 'good_answer': final_ans,
+                    #                 'mistakes': mistakes,
+                    #                 'hint': hint,
+                    #                 'bad_method': bad_method,
+                    #                 'bad_solution': bad_solution,
+                    #                 'rawout': rawout,
+                    #                 'gptmessage': query_msg,
+                    #                 } 
                             
-                        except Exception as e:
-                            print(rawout)
-                            print("="*20)
-                            print("Exception message:", e)
-                            final_ans = None
+                    #     except Exception as e:
+                    #         print(rawout)
+                    #         print("="*20)
+                    #         print("Exception message:", e)
+                    #         final_ans = None
                         
                         
-                            reattempt = {'good_method': e, 
-                                    'good_solution': e,
-                                    'good_answer': final_ans,
-                                    'mistakes': e,
-                                    'hint': e,
-                                    'bad_method': e,
-                                    'bad_solution': e,
-                                    'rawout': rawout,
-                                    'gptmessage': query_msg,
-                                    } 
+                    #         reattempt = {'good_method': e.__str__(), 
+                    #                 'good_solution': e.__str__(),
+                    #                 'good_answer': final_ans,
+                    #                 'mistakes': e.__str__(),
+                    #                 'hint': e.__str__(),
+                    #                 'bad_method': e.__str__(),
+                    #                 'bad_solution': e.__str__(),
+                    #                 'rawout': rawout,
+                    #                 'gptmessage': query_msg,
+                    #                 } 
                         
                         
                     
@@ -1494,9 +1499,9 @@ if __name__ == '__main__':
         if args.tgt_conflict: # conflict case only run
             
             tasks = dataset 
-            if args.dbg:
-                print("--dbg: dataset = dataset[:10]")
-                tasks = dataset[:3]
+            # if args.dbg:
+            #     print("--dbg: dataset = dataset[:10]")
+            #     tasks = dataset[:3]
             task_num = len(tasks)
             print('Current total tasks: ', task_num)
 
@@ -1557,6 +1562,7 @@ if __name__ == '__main__':
         # === run experiments ===
         progress_bar = tqdm(range(task_num))
         for i in range(task_num):
+            progress_bar.update(1)
             task = tasks[i]
             start_time = time.time()
             count = 0
@@ -1584,8 +1590,6 @@ if __name__ == '__main__':
             else:
                 while True:
                     try:
-                        count += 1
-
                         ans = query_math(
                             task, key=key, cot_temperature=cot_temperature,
                             pal_temperature=pal_temperature, sc_num=sc_num,backbone=backbone,
@@ -1603,31 +1607,28 @@ if __name__ == '__main__':
                             turn_based = turn_based,
                             dbg= args.dbg,
                             )
+                        if ans is not None:
+                            with open(save_path, "a+") as fout:
+                                fout.write(json.dumps(ans)+'\n')
+                                break # success so break while loop
 
                                     
                     except Exception as e:
                         print(e)
                         ans = None
-                    if ans is not None:
-                        with open(save_path, "a+") as fout:
-                            fout.write(json.dumps(ans)+'\n')
-                        progress_bar.update(1)
+
+                    if count>1: # retry only once
+                        print(f'tried {count} times, passing')
+                        print('Current Task: ', i)
+                        unfinished_tasks.append(task)
+                        count=0
                         break
-                    else: 
-                        if count>1:
-                            print(f'tried {count} times, passing')
-                            print('Current Task: ', i)
-                            unfinished_tasks.append(task)
-                            count=0
-                            break
-                        else:
-                            print("retrying (main)")
-                            time.sleep(random.uniform(1,3))
+                    else:
+                        print("retrying (main)")
+                        time.sleep(1)
+                        count+=1
         
-            progress_bar.update(1)
-            if ans is not None:
-                with open(save_path, "a+") as fout:
-                    fout.write(json.dumps(ans)+'\n')
+            
             
 
         end_time_0 = time.time()
