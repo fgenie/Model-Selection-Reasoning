@@ -11,5 +11,5 @@ python selection_math.py \
     --dataset 'gsm8k' \
     --sc_num 1 \
     --tgt_conflict \
-    --cohprompt $promptf
+    --rimsprompt $promptf
 

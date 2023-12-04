@@ -412,10 +412,26 @@ def parse_method(methodstr:str)->str:
         return 'pal'
     elif '(CoT)' in methodstr or 'Chain of Thought' in methodstr.replace('-', ' '):   
         return 'cot'
-    elif '(P2C)' in methodstr or 'Plan to Code' in methodstr.replace('-', ' '):
+    elif '(P2C)' in methodstr or 'Plan and then Code' in methodstr.replace('-', ' '):
+        raise NotImplementedError('need reimplement according to the prompting methods')
         return 'p2c'
     else:
         return None
+
+def parse_method2(methodstr:str)->str:
+    # works for --rimsprompt option
+    normalized = methodstr.replace("-", ' ').replace("_", " ").lower()
+    norm2short = {
+        'chain of thought': 'cot',
+        'program aided language modeling': 'pal',
+        'program aided language model': 'pal',
+        'plan and then code': 'p2c',
+    }
+    if normalized in norm2short.keys():
+        return norm2short[normalized]
+    else:
+        return methodstr
+
 
 def query_enhanced_coh(data: dict, 
                           prompt_f: str, 
@@ -588,7 +604,7 @@ def query_rims_inference(data: dict,
 
         
     
-    def parse_raw(rawqueryout:str, toparse:list=None)->OrderedDict:
+    def parse_raw(rawqueryout:str)->dict:
         '''
         helper function for output (universal for both turn_based=True|False)
         '''
@@ -606,7 +622,7 @@ def query_rims_inference(data: dict,
                     parse_idx_d[k] = idx
       
         else: # parse last part
-            toparse = "`Mistakes`: `Hint for a better Method`: `Workaround Method`: `Corrected Attempt`: `Answer`:".split()
+            toparse = "`Method`: `Attempt`: `Mistakes`: `Hint for a better Method`: `Workaround Method`: `Corrected Attempt`: `Answer`:".split()
             for k in toparse:
                 idx = rawqueryout.rfind(k)
                 if idx == -1:
@@ -619,6 +635,7 @@ def query_rims_inference(data: dict,
             toparse.remove(c)
         
         # indices to strings
+        parse_dd = dict() # actual parsed dict
         for i, k in enumerate(toparse):
             if i == len(toparse)-1:
                 content = rawqueryout[parse_idx_d[k]:]
@@ -627,7 +644,7 @@ def query_rims_inference(data: dict,
             assert content, 'empty content'
             parse_dd[k] = content
         # strip the keys
-        parse_dd_ = {k:v.replace(k, "").strip() for k,v in parse_dd}
+        parse_dd_ = {k:v.replace(k, "").strip() for k,v in parse_dd.items()}
 
         return parse_dd_
 
@@ -737,14 +754,49 @@ def query_math(
             # selection_ans = None # this for model-selection
             final_ans = None
             if tgt_conflict:
-                cot_ans = data['cot_executed'][0]
-                pal_ans = data['pal_executed'][0]
-                cot_solution = data['cot_generated']
-                pal_solution = data['pal_generated']
-                if when_only_conflict==3:
-                    p2c_ans = data['p2c_executed'][0]
-                    p2c_solution = data['p2c_generated']
+                if 'cot_executed' in data.keys():
+
+                    cot_ans = data['cot_executed'][0]
+                    pal_ans = data['pal_executed'][0]
+                    cot_solution = data['cot_generated']
+                    pal_solution = data['pal_generated']
+                    if when_only_conflict==3:
+                        p2c_ans = data['p2c_executed'][0]
+                        p2c_solution = data['p2c_generated']
+                        p2c_plan = data['plan']
+                else: # "--include_full_gsm8ktest", # same logic as else of tgt_conflict (query cot / pal /p2c)
+                    cot_solution, query_msg = query_cot(
+                        data, key, cot_temperature, backbone=backbone)
+                    # do cot
+                    if cot_solution is None:
+                        print('Time out') 
+                        return None
+                    else:
+                        cot_ans = extract_num_turbo(cot_solution[0])
+                        cot_answers.append(cot_ans)
+                        cot_solutions.append(cot_solution[0])
+                    # do pal
+                    pal_solution, query_msg = query_pal(
+                        data, key, pal_temperature, backbone=backbone)
+                    if pal_solution is None:
+                        print('Time out')
+                        return None
+                    else:
+                        pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
+                        pal_answers.append(pal_ans)
+                        pal_solutions.append(pal_solution[0])
+                    if when_only_conflict==3:
+                        # do p2c 
+                        p2c_solution, plans, query_msg = query_plancode(data, key=key, plan_temperature=plan_temperature, code_temperature=code_temperature, backbone=backbone, k_fewshot=k_fewshot)
+                        if p2c_solution is None:
+                            print('Time out')
+                            return None
+                        else:
+                            p2c_ans = safe_execute_turbo(p2c_solution[0]) # testing p2c-generated code and getting answer from it
+                            p2c_answers.append(p2c_ans)
+                            p2c_solutions.append(p2c_solution[0])
                     
+                        
             else:
                 cot_solution, query_msg = query_cot(
                     data, key, cot_temperature, backbone=backbone)
@@ -785,8 +837,23 @@ def query_math(
             ## `args.when_only_conflict` option should dangle just before the baseline routine or should be merged into it. but let us avoid unnecessary confusion for now...
             ##########
 
+
+            ansmap = {
+                'cot': cot_ans,
+                'pal': pal_ans,
+            }
+            solmap = {
+                'cot': cot_solution,
+                'pal': pal_solution,
+            }
+            if when_only_conflict == 3:
+                ansmap['p2c'] = p2c_ans
+                solmap['p2c'] = (p2c_plan, p2c_solution)
+            
+
             if rimsprompt:
                 # Does not matter when_only_conflict==2 or 3. Below works for both.
+                reattempt = dict() # init
                 final_ans = get_concordant_answer(answers_above)
                 if final_ans is None: # (answers_above are all None) OR (not concordant) 
                     parse_dd, rawout, query_msg = query_rims_inference(
@@ -796,76 +863,111 @@ def query_math(
                                                                 backbone=backbone,
                                                                 n_fewshot=k_fewshot,
                                                                 turn_based=turn_based)
-                    good_solution = parse_dd['Solution:']
-                    try:
-                        good_method = parse_method(parse_dd['Successful Method:'])
-                    except Exception as e:
-                        print(e)
-                        print("parse_dd['Successful Method:'] failed")
-                        good_method = None
-                    # start parsing
-                    if good_method is None:
-                        final_ans, actual_method = None, None
-                    elif good_method == 'cot':
-                        final_ans = extract_num_turbo(good_solution)
-                        actual_method = good_method
-                    elif good_method == 'pal':
-                        try:
+                    
+                    
+                    if dbg:
+                        if "`Corrected Attempt`:" in parse_dd.keys(): 
+                            # solved after hint
+                            good_solution = parse_dd['`Corrected Attempt`:']
+                            good_method = parse_method2(parse_dd['`Workaround Method`:'])
+                            mistakes = '`Mistakes`: ' + parse_dd['`Mistakes`:']
+                            hint = '`Hint for a better Method`: ' + parse_dd['`Hint for a better Method`:']
+                            bad_solution = parse_dd['`Attempt`:']
+                            bad_method = parse_method2(parse_dd['`Method`:'])
+                            
+                        else:
+                            # solved at once
+                            good_solution = parse_dd['`Attempt`:']
+                            good_method = parse_method2(parse_dd['`Method`:'])
+                            mistakes = '1shot 1kill'
+                            hint = "1shot 1kill"
+                            bad_method = "1shot 1kill"
+                            bad_solution ="1shot 1kill"
+                        
+                        # final_ans
+                        if good_method == 'cot':
+                            final_ans = float(extract_num_turbo(parse_dd["`Answer`:"])) # in case of cot, parses `Answer`: field and return it.
+                            print()
+                        elif good_method == 'pal':
                             final_ans = safe_execute_turbo(good_solution)
-                            actual_method = good_method
-                        except: 
-                            final_ans = extract_num_turbo(good_solution)
-                            actual_method = 'cot'
-                    elif good_method == 'p2c':
-                        plan, code = separate_plan_code(good_solution)
-                        try: 
+                        elif good_method == 'p2c': # p2c
+                            plan, code = separate_plan_code(good_solution)
                             final_ans = safe_execute_turbo(code)
-                            actual_method = good_method
-                        except: #if code is None:
-                            final_ans = extract_num_turbo(good_solution)
-                            actual_method = 'cot'
-                    # record re-attempted answer and solutions
-
-                    ansmap = {
-                        'cot': cot_ans,
-                        'pal': pal_ans,
-                        # 'p2c': p2c_ans,
-                    }
-                    solmap = {
-                        'cot': cot_solution,
-                        'pal': pal_solution,
-                        # 'p2c': (plan, p2c_solution),
-                    }
-                    if when_only_conflict == 3:
-                        ansmap['p2c'] = p2c_ans
-                        solmap['p2c'] = (plan, p2c_solution)
-                    
-                    reattempt = {'good_method': good_method, 
-                                 'actual_method': actual_method, 
-                                 'good_solution': good_solution} 
-                    
-                    try:
-                        bad_method = parse_method(parse_dd['Failed Method:'])
-                    except Exception as e:
-                        print(e)
-                        print("parse_dd['Failed Method:'] failed")
-                        bad_method = None
-                    reattempt['bad_method'] = bad_method
-                    if 'Failed Attempt:' in parse_dd.keys():
-                        bad_solution = parse_dd['Failed Attempt:']
-                        reattempt['bad_solution'] = bad_solution # Failed Attempt solution considered Correct and stops generation (chatgpt) --> use that attempt
-                        if final_ans is None and 'Successful Method: ' not in rawout and 'Evaluation: Correct' in rawout:
-                            actual_method = f"{bad_method} (failed attempt considered `correct`)"
-                            if bad_method =='p2c':
-                                plan, code = separate_plan_code(bad_solution)
-                                good_solution = (plan, code)
-                                final_ans = safe_execute_turbo(code)
-                            elif bad_method == 'pal':
-                                final_ans = safe_execute_turbo(bad_solution)
-                            elif bad_method == 'cot':
-                                final_ans = extract_num_turbo(bad_solution)
+                            raise NotImplementedError('need to check the debug logics here')
+                        else:
+                            ValueError(f'failed to parse good_method ({good_method=})')
+                        reattempt = {'good_method': good_method, 
+                                'good_solution': good_solution,
+                                'good_answer': final_ans,
+                                'mistakes': mistakes,
+                                'hint': hint,
+                                'bad_method': bad_method,
+                                'bad_solution': bad_solution,
+                                'rawout': rawout,
+                                'gptmessage': query_msg,
+                                } 
+                        
+                    else:
+                        try:
+                            if "`Corrected Attempt`:" in parse_dd.keys(): 
+                                # solved after hint
+                                good_solution = parse_dd['`Corrected Attempt`:']
+                                good_method = parse_method2(parse_dd['`Workaround Method`:'])
+                                mistakes = '`Mistakes`: ' + parse_dd['`Mistakes`:']
+                                hint = '`Hint for a better Method`: ' + parse_dd['`Hint for a better Method`:']
+                                bad_solution = parse_dd['`Attempt`:']
+                                bad_method = parse_method2(parse_dd['`Method`:'])
+                                
                             else:
-                                raise ValueError('failed to generate proper answer format (for both)')                    
+                                # solved at once
+                                good_solution = parse_dd['`Attempt`:']
+                                good_method = parse_method(parse_dd['`Method`:'])
+                                mistakes = '1shot 1kill'
+                                hint = "1shot 1kill"
+                                bad_method = "1shot 1kill"
+                                bad_solution ="1shot 1kill"
+                            
+                            # final_ans
+                            if good_method == 'cot':
+                                final_ans = float(parse_dd["`Answer`:"]) # in case of cot, parses `Answer`: field and return it.
+                            elif good_method == 'pal':
+                                final_ans = safe_execute_turbo(good_solution)
+                            else: # p2c
+                                plan, code = separate_plan_code(good_solution)
+                                final_ans = safe_execute_turbo(code)
+                                raise NotImplementedError('need to check the debug logics here')
+                            reattempt = {'good_method': good_method, 
+                                    'good_solution': good_solution,
+                                    'good_answer': final_ans,
+                                    'mistakes': mistakes,
+                                    'hint': hint,
+                                    'bad_method': bad_method,
+                                    'bad_solution': bad_solution,
+                                    'rawout': rawout,
+                                    'gptmessage': query_msg,
+                                    } 
+                            
+                        except Exception as e:
+                            print(rawout)
+                            print("="*20)
+                            print("Exception message:", e)
+                            final_ans = None
+                        
+                        
+                            reattempt = {'good_method': e, 
+                                    'good_solution': e,
+                                    'good_answer': final_ans,
+                                    'mistakes': e,
+                                    'hint': e,
+                                    'bad_method': e,
+                                    'bad_solution': e,
+                                    'rawout': rawout,
+                                    'gptmessage': query_msg,
+                                    } 
+                        
+                        
+                    
+                                   
 
 
             elif cohprompt: 
@@ -925,7 +1027,10 @@ def query_math(
                     
                     reattempt = {'good_method': good_method, 
                                  'actual_method': actual_method, 
-                                 'good_solution': good_solution} 
+                                 'good_solution': good_solution,
+                                'rawout': rawout,
+                                 'gptmessage': query_msg, 
+                    }
                     
                     try:
                         bad_method = parse_method(parse_dd['Failed Method:'])
@@ -1222,7 +1327,16 @@ def query_math(
          'choice_solution': selection_solutions,
          'iscorrect': majority_ans==data['answer'] }
     )
-    if when_only_conflict in [2,3]:
+    if rimsprompt:
+        to_dump_data['reattempt'] = reattempt
+        to_dump_data['ansmap'] = ansmap
+        to_dump_data['solmap'] = solmap
+        if final_ans is not None:
+            to_dump_data['ans==majority_ans'] = abs(final_ans-majority_ans) < 1e-3
+        else:
+            to_dump_data['ans==majority_ans'] = False
+    elif when_only_conflict in [2,3]:
+        raise NotImplemented('reimplement the if elif logic here to avoid buggy behavior later by accident!')
         to_dump_data['p2c_generated'] = p2c_solutions
         to_dump_data['p2c_executed'] = p2c_answers
         to_dump_data['when_only_conflict'] = when_only_conflict
@@ -1290,7 +1404,6 @@ if __name__ == '__main__':
 
     # cohprompt (coh exp)
     parser.add_argument('--cohprompt', type=str, default='', help='path to customprompt (nov end exps) file')
-    parser.add_argument('--rimsprompt', type=str, default='', help='path to customprompt (dec start exps) file')
 
     # 10/26, 27... only conflict
     parser.add_argument('--when_only_conflict', type=int, help='selecting from 2 or 3', default=-1)
@@ -1309,6 +1422,9 @@ if __name__ == '__main__':
     parser.add_argument('--tgt_conflict', action='store_true', help='this flag will allow running algorithms only on conflict cases.')
     parser.add_argument('--dbg', action='store_true', help='this flag will disable retrying logics to catch bugs')
 
+    # DEC4 experiments 
+    parser.add_argument('--rimsprompt', type=str, default='', help='path to customprompt (dec start exps) file')
+    parser.add_argument('--include_full_gsm8ktest', action='store_true', help='this flag will include full gsm8k test set in the experiment with the same option')
 
     args = parser.parse_args()
 
@@ -1360,9 +1476,14 @@ if __name__ == '__main__':
         datasets = [e[0] for e in datasets_backbones_paths]
         backbones = [e[1] for e in datasets_backbones_paths]
         paths = [e[2] for e in datasets_backbones_paths]
+        if args.include_full_gsm8ktest:
+            datasets.append(list(jsl.open(Path('../dataset/gsm8K_test.jsonl'))))
+            backbones.append(backbones[-1]) # add the same backbone
+            paths.append(Path('../dataset/gsm8K_test.jsonl'))
         print(conflict_jsls)
         print(paths)
         print(backbones)
+        print()
     else: # only one dataset
         datasets = [dataset]
 
@@ -1375,20 +1496,22 @@ if __name__ == '__main__':
             
             tasks = dataset 
             if args.dbg:
-                tasks = dataset[:10]
+                print("--dbg: dataset = dataset[:10]")
+                tasks = dataset[:3]
             task_num = len(tasks)
             print('Current total tasks: ', task_num)
 
             assert args.cohprompt or args.rimsprompt, f'when --tgt_conflict, need --cohprompt or --rimsprompt'
+            promptf = args.cohprompt if args.cohprompt else args.rimsprompt
+
             # adjust the following arguments for `tgt_conflict==True` setting 
             datasetpath = paths[ii]
             args.when_only_conflict = 3 if datasetpath.parent=='coh' else 2 # 3 for 3model-coh 2 for 2model-coh
             backbone = backbones[ii]
-            output_path = paths[ii].parent/Path(args.cohprompt).stem
+            output_path = paths[ii].parent/(Path(promptf).stem + backbone)
             
             turn_based = False
 
-            promptf = args.cohprompt if args.cohprompt else args.rimsprompt
             if promptf.endswith('.yaml'):
                 turn_based = True
             if not os.path.exists(output_path):
@@ -1439,40 +1562,30 @@ if __name__ == '__main__':
             start_time = time.time()
             count = 0
             
-            if dataset_name == 'dbg' or args.dbg:
+
+            if args.dbg or dataset_name == 'dbg':
                 ans = query_math(
-                        task, key=key, cot_temperature=cot_temperature,
-                        pal_temperature=pal_temperature, sc_num=sc_num,backbone=backbone,
-                        plan_temperature=args.plan_temperature,
-                        code_temperature=args.code_temperature,
-                        k_fewshot=args.k_fewshot,
-                        use_plancode=args.use_plancode, # for model selection experiment
-                        ablation=args.ablation, # for onlyone method ablation study
-                        actor_selection_prompt=args.actor_selection_prompt, # for actor selection prompt test
-                        prog_hint_prompting=args.prog_hint_prompting, # whether to inject hint to query solution
-                        cohprompt=args.cohprompt, # for cohprompt exps,
-                        rimsprompt=args.rimsprompt, # for cohprompt exps,
-                        when_only_conflict=args.when_only_conflict, 
-                        tgt_conflict = args.tgt_conflict,
-                        turn_based = turn_based,
-                        dbg = args.dbg
-                        )
-                                
-
-                progress_bar.update(1)
-                if ans is not None:
-                    with open(save_path, "a+") as fout:
-                        fout.write(json.dumps(ans)+'\n')
-
+                            task, key=key, cot_temperature=cot_temperature,
+                            pal_temperature=pal_temperature, sc_num=sc_num,backbone=backbone,
+                            plan_temperature=args.plan_temperature,
+                            code_temperature=args.code_temperature,
+                            k_fewshot=args.k_fewshot,
+                            use_plancode=args.use_plancode, # for model selection experiment
+                            ablation=args.ablation, # for onlyone method ablation study
+                            actor_selection_prompt=args.actor_selection_prompt, # for actor selection prompt test
+                            prog_hint_prompting=args.prog_hint_prompting, # whether to inject hint to query solution
+                            cohprompt=args.cohprompt, # for custom prompt experiment,
+                            rimsprompt=args.rimsprompt, # for custom prompt experiment,
+                            when_only_conflict=args.when_only_conflict, 
+                            tgt_conflict = args.tgt_conflict,
+                            turn_based = turn_based,
+                            dbg= args.dbg,
+                            )
+                
             else:
                 while True:
                     try:
                         count += 1
-
-                        # if args.cohprompt.endswith('prompts/prep_reflexion/5_cohlike_prompt.txt') and args.k_fewshot>6: # oct19 exp
-                        #     args.k_fewshot = 6
-                        #     print('for 5_cohlike_prompt.txt, k_fewshot is maximum at 6')
-                            
 
                         ans = query_math(
                             task, key=key, cot_temperature=cot_temperature,
@@ -1511,8 +1624,12 @@ if __name__ == '__main__':
                         else:
                             print("retrying (main)")
                             time.sleep(random.uniform(1,3))
+        
+            progress_bar.update(1)
+            if ans is not None:
+                with open(save_path, "a+") as fout:
+                    fout.write(json.dumps(ans)+'\n')
             
-                
 
         end_time_0 = time.time()
         print('Finish at time: ', time.strftime(
