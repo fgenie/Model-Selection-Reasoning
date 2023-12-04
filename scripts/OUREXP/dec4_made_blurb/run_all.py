@@ -6,7 +6,7 @@ pfiles = [
 ]
 
 for f in pfiles:
-    cmd = f'bash run_a_prompt.sh {f}'
+    cmd = f'bash run_a_prompt.sh {f} > {f}.out'
     print(cmd)
     sb.call(cmd, shell=True)
 
