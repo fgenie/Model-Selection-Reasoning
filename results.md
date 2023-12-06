@@ -1,3 +1,27 @@
+## Dec 6:
+- result of dec4 experiments
+    - 7_prompt (simple description for eval format), 9_prompt (detailed desc. for eval format--if evals wrong do reflect or just end)
+    - 7_prompt results seems buggy
+        - [ ] why no result?
+    - 9_prompt results
+        - [x] on conflict only gpt-4 (44/75): (nonconflict=1215/1244 correct)
+            - model selection baseline of 2model selection (47/75, on different conflict set tho...)
+        - [x] full_run with 777 seed with gpt4 -- run stopped on 1030 examples: 
+            - 970 nonconflict (949 corrects)
+            - 60 conflict (31 corrects)
+                - did_reflect: true = 28
+                    - correct = 9 (32.14%)
+                - did_reflect: false = 32
+                    - correct = 22 (68.75%)
+
+            - Should I guide the llm to solve things at a shot rather than reflecting? 
+                - [ ] (nov4 coh conflict only cot pal p2c result: 1262)
+                - [ ] 7_prompt seems more biased toward one-shot-one-kill scenario
+                - [ ] no-reflection blurb included setting (similar to standard fewshot)
+                - [ ] reflect but with the same method (contrastive cot)
+
+
+
 ## Dec 4: 
 - [x] run cot pal (2 models) experiment first: only blurbs with swtiching.
     - conflict only runs: **prompt need to contain `cotpal` when 2 model running required** (`--tgt_conflict` implies this. internally controlls other flags)
