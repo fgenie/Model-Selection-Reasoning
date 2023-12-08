@@ -703,7 +703,7 @@ def query_math(
         cohprompt:str='', # 10/19 coh exp
         rimsprompt:str='',
         when_only_conflict:int=-1, # oct26~ exp
-        tgt_conflict:bool=False, # nov11 exp
+        tgt_conflict:bool=False, # nov11 exp / dec 8 exp 
         turn_based:bool=False, # nov11 exp 
 
         dbg:bool =False,  # dbgmode
@@ -1494,13 +1494,20 @@ if __name__ == '__main__':
         backbones = [e[1] for e in datasets_backbones_paths]
         paths = [e[2] for e in datasets_backbones_paths]
         if args.include_full_gsm8ktest:
-            datasets.append(list(jsl.open(Path('../dataset/gsm8K_test.jsonl'))))
-            backbones.append(backbones[-1]) # add the same backbone
-            paths.append(Path('../dataset/gsm8K_test.jsonl'))
-        elif args.leftovers:
-            datasets = [ list(jsl.open(Path('../dataset/gsm8K_test_leftover.jsonl'))) ]
-            backbones = ['gpt4']
-            paths = [Path('../dataset/gsm8K_test_leftover.jsonl')]
+            newconflictroot = Path('../dataset/conflict_only')
+            confl_f = list(newconflictroot.glob(f"conflictonly*gpt4.jsonl")) + list(newconflictroot.glob("conflictonly*chatgpt.jsonl"))
+            if confl_f:
+                datasets += [list(jsl.open(f)) for f in confl_f]
+                paths += confl_f
+                backbones += [f.stem.split("_")[-1] for f in confl_f]
+            else:
+                datasets.append(list(jsl.open(Path('../dataset/gsm8K_test.jsonl'))))
+                backbones.append(backbones[-1]) # add the same backbone
+                paths.append(Path('../dataset/gsm8K_test.jsonl'))
+                if args.leftovers:
+                    datasets = [ list(jsl.open(Path('../dataset/gsm8K_test_leftover.jsonl'))) ]
+                    backbones = ['gpt4']
+                    paths = [Path('../dataset/gsm8K_test_leftover.jsonl')]
         print(conflict_jsls)
         print(paths)
         print(backbones)

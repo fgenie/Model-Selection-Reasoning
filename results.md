@@ -1,24 +1,40 @@
 ## Dec 6:
 - result of dec4 experiments
-    - 7_prompt (simple description for eval format), 9_prompt (detailed desc. for eval format--if evals wrong do reflect or just end)
+    - 7_prompt (detailed desc. for eval format--if evals wrong do reflect or just end), 9_prompt (simple description for eval format)
     - 7_prompt results seems buggy
-        - [ ] why no result?
+        - [ ] getting results... 
     - 9_prompt results
         - [x] on conflict only gpt-4 (44/75): (nonconflict=1215/1244 correct)
-            - model selection baseline of 2model selection (47/75, on different conflict set tho...)
-        - [x] full_run with 777 seed with gpt4 -- run stopped on 1030 examples: 
-            - 970 nonconflict (949 corrects)
-            - 60 conflict (31 corrects)
-                - did_reflect: true = 28
-                    - correct = 9 (32.14%)
-                - did_reflect: false = 32
-                    - correct = 22 (68.75%)
+            - model selection baseline of 2 model selection (47/75, on different conflict set tho...)
+        - [x] full_run with 777 seed with gpt4  --> 1259 / 1319 (**-1 question to baseline**)
+            - 970 + 276 nonconflict (949 + 269 corrects)
+            - 60 + 13 conflict (31 + 10 corrects)
+                - did_reflect: true = 28 + 3
+                    - correct = 9 + 2 (35.48%)
+                - did_reflect: false = 32 + 10
+                    - correct = 22 + 8 (72.43%)
 
-            - Should I guide the llm to solve things at a shot rather than reflecting? 
-                - [ ] (nov4 coh conflict only cot pal p2c result: 1262)
-                - [ ] 7_prompt seems more biased toward one-shot-one-kill scenario
-                - [ ] no-reflection blurb included setting (similar to standard fewshot)
-                - [ ] reflect but with the same method (contrastive cot)
+    - Interpretations
+        - LLM cannot self-reflect yet...이 생각나는 결과. reflection 정답률이 1/3 에 근접하다. 
+        - 그러나 contrastive cot 는 효과가 있었을지도 모른다. did not reflect가 72.43% 라는걸 감안하면 말이다.
+        - 어쩌면 이것은 contrastive cot를 하는데 있어 pal/cot를 선택가능하게 해준 부분이 + alpha를 만든 것인가?
+            - contrastive cot는 딱히 gpt4결과가 없어서 chatgpt로 해서 success rate을 비교해볼 수 있다.
+            - 거기다 pal / cot 비중이 non-reflection-inference에서 어떻게 되어있는지 보지 않아서 알기 어렵다. --> 정확히 둘이 적중률이 같다. 세상에...
+                - pal: 20/28
+                - cot: 10/14
+                이것들이 비록 2-shot prompting에 의한 결과이기는 하나, standard fewshot prompting (k=8) 보다는 그 값이 낮다. majority vote에 의해서 답을 찾을 수 없는 경우에 대해서 뭔가를 해낸다는 점이 강점이라 이런 비교가 무의미할 수도 있지만 
+
+
+    - What next?
+        - Should I guide the llm to solve things at a shot rather than reflecting (apparently I should, but the result is unclear. what if 31 examples above did not reflect when inferencing?) 
+        - [ ] chatgptexps
+        
+        - [ ] (nov4 coh conflict only cot pal p2c result: 1262)
+        - [ ] 7_prompt seems more biased toward one-shot-one-kill scenario
+        - [ ] no-reflection blurb included setting (similar to standard fewshot)
+        - [ ] reflect but with the same method (contrastive cot)
+        - 세 개의 방법을 앙상블 해야만하는 이유가 있는가?, Fair comparison 이라는 명목하에 baseline을 3 model로 할 필요가 있을 수 있는가? (네)
+            - 2-model 케이스에서 비슷하고 3-model case에서 이기는 경우, 근데 그 성능이 올라가는 경우에 이것이 정당화될 수 있다. 
 
 
 

@@ -6,12 +6,10 @@ EXEHOME=/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src
 # EXEHOME=/home/sison/Model-Selection-Reasoning/src # otherserver
 cd ${EXEHOME}
 
-promptf=$1
-
 python selection_math.py \
     --tgt_conflict \
-    --rimsprompt $promptf \
-    --include_full_gsm8ktest
+    --rimsprompt /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/src/RIMS/99_9_rims_cotpal_inference_prompt_k2_long_DEC4.txt \
+    --leftovers
     # --sc_num 1 \
     # --dataset 'gsm8k' \
 
