@@ -766,7 +766,7 @@ def query_math(
                         p2c_ans = data['p2c_executed'][0]
                         p2c_solution = data['p2c_generated']
                         p2c_plan = data['plan']
-                else: # "--include_full_gsm8ktest", # same logic as else of tgt_conflict (query cot / pal /p2c)
+                else: # "--recent_gsm8k_fullrun", # same logic as else of tgt_conflict (query cot / pal /p2c)
                     cot_solution, query_msg = query_cot(
                         data, key, cot_temperature, backbone=backbone)
                     # do cot
@@ -1439,7 +1439,7 @@ if __name__ == '__main__':
 
     # DEC4 experiments 
     parser.add_argument('--rimsprompt', type=str, default='', help='path to customprompt (dec start exps) file')
-    parser.add_argument('--include_full_gsm8ktest', action='store_true', help='this flag will include full gsm8k test set in the experiment with the same option')
+    parser.add_argument('--recent_gsm8k_fullrun', action='store_true', help='Works only when tgt_conflict==True: this will point to the most recent run of gsm8k run (dec4)')
     parser.add_argument('--leftovers', action='store_true', help='run gsm8k leftover from the last exp. (dec 4)')
     # parser.add_argument('--leftovers_chatgpt', action='store_true', help='run gsm8k leftover from the last exp. (dec 4)')
 
@@ -1493,14 +1493,15 @@ if __name__ == '__main__':
         datasets = [e[0] for e in datasets_backbones_paths]
         backbones = [e[1] for e in datasets_backbones_paths]
         paths = [e[2] for e in datasets_backbones_paths]
-        if args.include_full_gsm8ktest:
+        if args.recent_gsm8k_fullrun:
             newconflictroot = Path('../dataset/conflict_only')
             confl_f = list(newconflictroot.glob(f"conflictonly*gpt4.jsonl")) + list(newconflictroot.glob("conflictonly*chatgpt.jsonl"))
             if confl_f:
-                datasets += [list(jsl.open(f)) for f in confl_f]
-                paths += confl_f
-                backbones += [f.stem.split("_")[-1] for f in confl_f]
-            else:
+                datasets = [list(jsl.open(f)) for f in confl_f]
+                paths = confl_f
+                backbones = [f.stem.split("_")[-1] for f in confl_f]
+            else: 
+                # temporary use for dec6
                 datasets.append(list(jsl.open(Path('../dataset/gsm8K_test.jsonl'))))
                 backbones.append(backbones[-1]) # add the same backbone
                 paths.append(Path('../dataset/gsm8K_test.jsonl'))
@@ -1508,7 +1509,7 @@ if __name__ == '__main__':
                     datasets = [ list(jsl.open(Path('../dataset/gsm8K_test_leftover.jsonl'))) ]
                     backbones = ['gpt4']
                     paths = [Path('../dataset/gsm8K_test_leftover.jsonl')]
-        print(conflict_jsls)
+        # print(conflict_jsls)
         print(paths)
         print(backbones)
         print()

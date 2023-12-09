@@ -1,6 +1,8 @@
 #config for
 # rim_train_failure_gather.py
 # rim_train_reflect.py 
+retrying_same_method_only: true
+do_p2c: false
 
 dbg: false # dbg option
 to_reflect_jsl: rims_train_out/nov25/failed_METHOD_n3_numtrain1000_gpt4turbo_vT1.0_cT1.0_seed777.jsonl

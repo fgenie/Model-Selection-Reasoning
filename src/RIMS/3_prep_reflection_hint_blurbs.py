@@ -83,17 +83,24 @@ def replace_w_gen(userprompt:str, generation:str)->str:
     return completed
 
 
+def remove_p2c_resolution_rows(retries:list):
+    return [r for r in retries if r['method']!='p2c']
+def remove_empty_solution_rows(retries:list):
+    return [r for r in retries if r['correct_solution']]
 
-def main(each_n=-1, not_from_p2c:bool=True):
+
+def main(each_n=-1, nop2c:bool=True):
     yamld = yaml.full_load(open('3_prompt_generate_reflection_forceformat.yaml'))
     tmp = Template(yamld['user'])
 
     jslf_lst= list(Path('rims_train_out/nov25/').glob("resolved_*gpt4turbo*.jsonl")) # resolved output contained 
     blurbd = defaultdict(list) # will store blurbd[failmethod2successmethod] = [blurb1, blurb2, ...]
 
+    outf = f'3_blurb_{each_n}.json'
+
 
     for jslf in jslf_lst:
-        if not_from_p2c: 
+        if nop2c: 
             if 'p2c' in jslf.name:
                 continue
         print(f"processing {jslf}")
@@ -101,6 +108,13 @@ def main(each_n=-1, not_from_p2c:bool=True):
         df = pd.DataFrame(jsl.open(jslf))
         df.fail_preds = df.fail_preds.apply(lambda x: [e for e in x if e is not None])
         df = df.query('fail_preds != []')
+        print(df.shape)
+        df.retries = df.retries.apply(remove_empty_solution_rows)
+        if nop2c:
+            df.retries = df.retries.apply(remove_p2c_resolution_rows)
+        df = df [ df.retries.apply(len) > 0 ]
+        print(df.shape)
+
         if each_n!=-1:
             indices = list(range(0, len(df), len(df)//each_n))[:each_n]
             df = df.iloc[indices]
@@ -159,8 +173,8 @@ def main(each_n=-1, not_from_p2c:bool=True):
                     blurbd[save_k].append(completed)
                     blurbd[f"{save_k}_genonly"].append(generation)
         
-    json.dump(blurbd, open('3_blurb_1.json', 'w'), indent=4)
-    print(f"blurbs are written to 3_blurb_1.json")
+    json.dump(blurbd, open(outf, 'w'), indent=4)
+    print(f"blurbs are written to {outf}")
 
 
 

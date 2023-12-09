@@ -1,10 +1,18 @@
 ## Dec 6:
-- result of dec4 experiments
-    - 7_prompt (detailed desc. for eval format--if evals wrong do reflect or just end), 9_prompt (simple description for eval format)
-    - 7_prompt results seems buggy
-        - [ ] getting results... 
-    - 9_prompt results
-        - [x] on conflict only gpt-4 (44/75): (nonconflict=1215/1244 correct)
+- result of dec4 experiments ( from `3_blrub-1__.json` (hint, mistakes are generated with temp=1.0) )
+    - 7_prompt_short: worse than long examples, but still beats the baseline
+        - ~~[ ] on nov cotpal_1 conflict runt ()~~
+        - [x] on recent run (**43/73 + 1218/1246 = 1261/1319 (95.6\%) **)
+            - did_reflect: true  11/23 (47.82\%)
+            - did_reflect: false  32/50 (64.00\%)
+    - 7_prompt_long
+        - [x] ~~on nov cotpal_1 conflict only gpt-4 (45/75 + 1215/1244 = 1260/1319) (95.53\% = model selection baseline)~~
+        - [x] on recent run (46/73 + 1218/1246) -> 1264/1319 (95.83\%)
+            - on 73 conflicts
+                - 33 did_reflect true, 17 corrects (17/33 = 51.5\%)
+                - 40 did_reflect false, 29 corrects (29/40 = 72.5\%)
+    - ~~9_prompt results~~
+        - [x] on nov cotpal_1 conflict only gpt-4 (44/75): (nonconflict=1215/1244 correct)
             - model selection baseline of 2 model selection (47/75, on different conflict set tho...)
         - [x] full_run with 777 seed with gpt4  --> 1259 / 1319 (**-1 question to baseline**)
             - 970 + 276 nonconflict (949 + 269 corrects)
@@ -14,35 +22,42 @@
                 - did_reflect: false = 32 + 10
                     - correct = 22 + 8 (72.43%)
 
-    - Interpretations
-        - LLM cannot self-reflect yet...이 생각나는 결과. reflection 정답률이 1/3 에 근접하다. 
-        - 그러나 contrastive cot 는 효과가 있었을지도 모른다. did not reflect가 72.43% 라는걸 감안하면 말이다.
-        - 어쩌면 이것은 contrastive cot를 하는데 있어 pal/cot를 선택가능하게 해준 부분이 + alpha를 만든 것인가?
-            - contrastive cot는 딱히 gpt4결과가 없어서 chatgpt로 해서 success rate을 비교해볼 수 있다.
-            - 거기다 pal / cot 비중이 non-reflection-inference에서 어떻게 되어있는지 보지 않아서 알기 어렵다. --> 정확히 둘이 적중률이 같다. 세상에...
+    - Interpretations: 
+        - LLM cannot self-reflect yet...이 생각나는 결과. reflection 정답률이 random 에 근접.
+            - 9_prompt_long: 35.48\% (11/31)
+            - 7_prompt_long: 51.5\% (17/33) 
+            - 7_prompt_short: 11/23 (47.82\%)
+        - nonreflection but contrastive solving: constantly higher result
+            - 9_prompt_long: 72.43\% (30/42)
                 - pal: 20/28
                 - cot: 10/14
-                이것들이 비록 2-shot prompting에 의한 결과이기는 하나, standard fewshot prompting (k=8) 보다는 그 값이 낮다. majority vote에 의해서 답을 찾을 수 없는 경우에 대해서 뭔가를 해낸다는 점이 강점이라 이런 비교가 무의미할 수도 있지만 
+            - 7_prompt_long: 72.50\% (29/40)
+            - 7_prompt_short: 32/50 (64.00\%)
+        - (discussion point) 
+            - **contrastive cot를 하는데 있어 pal/cot를 선택가능하게 해준 부분이 + alpha를 만든 부분이 있을까?**
+        - (to defense?)
+            - cot 구현에서 Answer 이후 부분을 파싱하도록 한 것이 도움이 된 것은 아닌가?... 
 
 
     - What next?
-        - Should I guide the llm to solve things at a shot rather than reflecting (apparently I should, but the result is unclear. what if 31 examples above did not reflect when inferencing?) 
-        - [ ] chatgptexps
-        
-        - [ ] (nov4 coh conflict only cot pal p2c result: 1262)
-        - [ ] 7_prompt seems more biased toward one-shot-one-kill scenario
-        - [ ] no-reflection blurb included setting (similar to standard fewshot)
-        - [ ] reflect but with the same method (contrastive cot)
-        - 세 개의 방법을 앙상블 해야만하는 이유가 있는가?, Fair comparison 이라는 명목하에 baseline을 3 model로 할 필요가 있을 수 있는가? (네)
-            - 2-model 케이스에서 비슷하고 3-model case에서 이기는 경우, 근데 그 성능이 올라가는 경우에 이것이 정당화될 수 있다. 
-
+        - 2 models experiments: 
+            - [ ] no-reflection blurb included setting (similar to standard fewshot)
+            - [ ] reflect but with the same method (contrastive cot)
+        - [ ] 3 models experiments:
+            - 의의: 
+                - Reason to do 3 model exps: ensemble to cover more edge cases (= last mile 성능을 위함) 
+                - Fair comparison 이라는 명목하에 baseline을 3 model로 할 필요가 있을 수 있는가? 그럴 순 있다.
+            - 종합: 3 모델 실험은 성능이 2 모델보다 올라가야만 좋다는 것을 주장할 수 있다. 
+            - [ ] model selection over 3 models implementation
+            - [ ] p2c blurb re-prep (bug before: plan not recorded)
+        - [ ] experiment with chatgpt's   
 
 
 ## Dec 4: 
 - [x] run cot pal (2 models) experiment first: only blurbs with swtiching.
     - conflict only runs: **prompt need to contain `cotpal` when 2 model running required** (`--tgt_conflict` implies this. internally controlls other flags)
 - [ ] do others
-    - [ ] blurb classifier to automate useful/useless blurb distinction (useless example: `src/RIMS/3_blurb_1.json:L47`: caused by limitation of automated result parsing of cot output)
+    - ~~[ ] blurb classifier to automate useful/useless blurb distinction (useless example: `src/RIMS/3_blurb_1.json:L47`: caused by limitation of automated result parsing of cot output)~~
         - [ ] prepare the blurb that the first attempt is actually correct [openaiplayground](https://platform.openai.com/playground/p/6YujhXQUB1pfCuGHHK6k7hWY?model=gpt-4-1106-preview&mode=chat)
         - [ ] prepare the blurb that the workaround method is still the same method as the first choice (but answer corrects.) [openaiplayground](https://platform.openai.com/playground/p/2abad5yzZQquHD7XLtMzMPAE?model=gpt-4-1106-preview&mode=chat)
     - [ ] (debug) p2c -> * blurbs re-prep
