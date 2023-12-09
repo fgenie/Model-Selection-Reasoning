@@ -6,49 +6,101 @@ You are now solving math word problems. You brilliantly detects the errors in th
 Followings are the examples of correcting the wrong solutions with a `Workaround Method` based on diagnosis (`Mistakes`) and `Hint for a better Method choice`.
 
 
-`Question`: You can lower the price by 20% if you buy more than fifteen units of iPhone cases. If you pay $500 to buy 18 units, what is the original price?
+`Question`: Two white socks cost 25 cents more than a single brown sock. If two white socks cost 45 cents, how much would you pay for 15 brown socks?
 `Method`: Chain-of-Thought (cot)
 `Attempt`: Answer:
-First, let's determine the discounted price per unit by dividing the total amount paid by the number of units.
+Two white socks cost 45 cents.
+One brown sock costs 25 cents less than two white socks.
+Therefore, the cost of one brown sock is 45 cents - 25 cents = 20 cents.
 
-Jason paid $500 for 18 units.
-So, the discounted price per unit is $500 / 18 = $27.78 (rounded to two decimal places).
+If one brown sock costs 20 cents, then 15 brown socks would cost:
+15 * 20 cents = 300 cents.
 
-This discounted price represents an 80% of the original price because it is 20% off.
-So, $27.78 = 80% of the original price.
+Since 100 cents is equal to 1 dollar:
+300 cents is equal to 300 / 100 = $3.
 
-To find the original price per unit, we can set up a proportion where the original price (100%) is to the discounted price (80%) as the full original price is to $27.78.
-Let's denote the original price as P.
+So, you would pay $3 for 15 brown socks.
+`Answer`: 3.0
+`Evaluation`: Correct
 
-P (100%) / $27.78 (80%) = 1 / 0.8
-P = $27.78 / 0.8
-P = $34.725 (rounded to three decimal places)
 
-Therefore, the original price per unit of iPhone case before the discount is approximately $34.725.
-`Answer`: 34.725
-`Evaluation`: Wrong (correct answer: 625.0)
-`Mistakes`: The calculations were correct in determining the original price per unit after the discount. However, the error occurred in not recognizing that the question was asking for the original total price of 18 units, not the price per unit.
-`Hint for a better Method choice`: Using program-aided language model would help in accurately performing the calculations without misunderstanding the question's requirement (whether it is asking for the price per unit or the total price).
+`Question`: James buys pistachios for $10 per can.  Each can is 5 ounces.  He eats 30 ounces of pistachios every 5 days.  How much does he spend on pistachios per week?
+`Method`: Program-aided Language Modeling (pal)
+`Attempt`: 
+def solution():
+    pistachio_price_per_can = 10  # in dollars
+    can_size = 5  # in ounces
+    consumption_rate = 30 / 5  # ounces per day (30 ounces every 5 days)
+    days_in_a_week = 7  # one week
+
+    # Calculate how many ounces James eats in a week
+    weekly_consumption = consumption_rate * days_in_a_week
+
+    # Calculate how many cans James needs for a week
+    cans_needed = weekly_consumption / can_size
+
+    # Calculate the total cost of the pistachios for the week
+    weekly_cost = cans_needed * pistachio_price_per_can
+
+    return weekly_cost
+
+# Call the function to get the result
+print(solution())
+
+`Answer`: 84.0
+`Evaluation`: Correct
+
+
+`Question`: In eight years, Mr. Bernard will be 3 times as old as Luke is now. If Luke is 20, what is 10 years less than their average age?
+`Method`: Chain-of-Thought (cot)
+`Attempt`: First, let's determine how old Mr. Bernard will be in eight years.
+
+Luke is currently 20 years old, and in eight years, Mr. Bernard will be 3 times Luke's current age:
+3 times Luke's age = 3 * 20 = 60.
+
+So, in eight years, Mr. Bernard will be 60 years old.
+
+Now, let's find out Mr. Bernard's current age:
+If he will be 60 in eight years, we must subtract 8 from 60 to find his current age:
+Mr. Bernard's current age = 60 - 8 = 52.
+
+Now we have:
+- Luke's current age: 20 years old.
+- Mr. Bernard's current age: 52 years old.
+
+To find their average age now:
+(Average age) = (Luke's age + Mr. Bernard's age) / 2
+(Average age) = (20 + 52) / 2
+(Average age) = 72 / 2
+(Average age) = 36.
+
+Now, to find 10 years less than their average age:
+(Average age) - 10 = 36 - 10 = 26.
+
+So, 10 years less than their average age is 26 years old.
+`Answer`: 10.0
+`Evaluation`: Wrong (correct answer: 26.0)
+`Mistakes`: The calculation and reasoning in the first attempt are correct, but the final written answer was mistakenly put as 10.0 instead of 26.0.
+`Hint for a better Method choice`: Using Program-aided Language Model (pal) can ensure that the final answer is correctly computed and written without human transcription errors.
 `Workaround Method`: Program-aided Language Modeling (pal)
 `Corrected Attempt`: 
 def solution():
-    units_purchased = 18  # units of iPhone cases bought
-    discount_price_paid = 500  # total price paid after discount
-    discount_rate = 0.20  # 20% discount
-    percentage_paid = 1 - discount_rate  # 80% of the original price paid
-
-    original_price_total = discount_price_paid / percentage_paid  # total original price for 18 units
-    original_price_per_unit = original_price_total / units_purchased  # original price per unit
-
-    # If the question is asking for the total original price for 18 units
-    result = original_price_total
-
-    # If the question is asking for the original price per unit
-    #result = original_price_per_unit
-
+    luke_current_age = 20
+    years_ahead = 8
+    # Mr. Bernard will be 3 times Luke's current age in 8 years
+    mr_bernard_age_in_eight_years = 3 * luke_current_age
+    # Mr. Bernard's current age
+    mr_bernard_current_age = mr_bernard_age_in_eight_years - years_ahead
+    # Their average age
+    their_average_age = (luke_current_age + mr_bernard_current_age) / 2
+    # Their average age 10 years less
+    result = their_average_age - 10
     return result
 
-`Answer`: 625.0
+# Call the function to solve the problem
+solution()
+
+`Answer`: 26.0
 `Evaluation`: Correct
 
 
@@ -124,6 +176,53 @@ So the cost of 1 apple is $2.50.
 
 
 
+`Question`: You can lower the price by 20% if you buy more than fifteen units of iPhone cases. If you pay $500 to buy 18 units, what is the original price?
+`Method`: Chain-of-Thought (cot)
+`Attempt`: Answer:
+First, let's determine the discounted price per unit by dividing the total amount paid by the number of units.
+
+Jason paid $500 for 18 units.
+So, the discounted price per unit is $500 / 18 = $27.78 (rounded to two decimal places).
+
+This discounted price represents an 80% of the original price because it is 20% off.
+So, $27.78 = 80% of the original price.
+
+To find the original price per unit, we can set up a proportion where the original price (100%) is to the discounted price (80%) as the full original price is to $27.78.
+Let's denote the original price as P.
+
+P (100%) / $27.78 (80%) = 1 / 0.8
+P = $27.78 / 0.8
+P = $34.725 (rounded to three decimal places)
+
+Therefore, the original price per unit of iPhone case before the discount is approximately $34.725.
+`Answer`: 34.725
+`Evaluation`: Wrong (correct answer: 625.0)
+`Mistakes`: The calculations were correct in determining the original price per unit after the discount. However, the error occurred in not recognizing that the question was asking for the original total price of 18 units, not the price per unit.
+`Hint for a better Method choice`: Using program-aided language model would help in accurately performing the calculations without misunderstanding the question's requirement (whether it is asking for the price per unit or the total price).
+`Workaround Method`: Program-aided Language Modeling (pal)
+`Corrected Attempt`: 
+def solution():
+    units_purchased = 18  # units of iPhone cases bought
+    discount_price_paid = 500  # total price paid after discount
+    discount_rate = 0.20  # 20% discount
+    percentage_paid = 1 - discount_rate  # 80% of the original price paid
+
+    original_price_total = discount_price_paid / percentage_paid  # total original price for 18 units
+    original_price_per_unit = original_price_total / units_purchased  # original price per unit
+
+    # If the question is asking for the total original price for 18 units
+    result = original_price_total
+
+    # If the question is asking for the original price per unit
+    #result = original_price_per_unit
+
+    return result
+
+`Answer`: 625.0
+`Evaluation`: Correct
+
+
+
 `Question`: Kristin can run three times faster than Sarith. If Kristin runs 12 times around the adult football field and Sarith runs at the same time around the children's football field that is half the distance as the other field, how many laps did Sarith go around the children's football field?
 `Method`: Program-aided Language Modeling (pal)
 `Attempt`: 
@@ -190,64 +289,6 @@ Sarith ran 8 laps around the children's football field.
 
 
 
-`Question`: In eight years, Mr. Bernard will be 3 times as old as Luke is now. If Luke is 20, what is 10 years less than their average age?
-`Method`: Chain-of-Thought (cot)
-`Attempt`: First, let's determine how old Mr. Bernard will be in eight years.
-
-Luke is currently 20 years old, and in eight years, Mr. Bernard will be 3 times Luke's current age:
-3 times Luke's age = 3 * 20 = 60.
-
-So, in eight years, Mr. Bernard will be 60 years old.
-
-Now, let's find out Mr. Bernard's current age:
-If he will be 60 in eight years, we must subtract 8 from 60 to find his current age:
-Mr. Bernard's current age = 60 - 8 = 52.
-
-Now we have:
-- Luke's current age: 20 years old.
-- Mr. Bernard's current age: 52 years old.
-
-To find their average age now:
-(Average age) = (Luke's age + Mr. Bernard's age) / 2
-(Average age) = (20 + 52) / 2
-(Average age) = 72 / 2
-(Average age) = 36.
-
-Now, to find 10 years less than their average age:
-(Average age) - 10 = 36 - 10 = 26.
-
-So, 10 years less than their average age is 26 years old.
-`Answer`: 10.0
-`Evaluation`: Wrong (correct answer: 26.0)
-`Mistakes`: The calculation and reasoning in the first attempt are correct, but the final written answer was mistakenly put as 10.0 instead of 26.0.
-`Hint for a better Method choice`: Using Program-aided Language Model (pal) can ensure that the final answer is correctly computed and written without human transcription errors.
-`Workaround Method`: Program-aided Language Modeling (pal)
-`Corrected Attempt`: 
-def solution():
-    luke_current_age = 20
-    years_ahead = 8
-    # Mr. Bernard will be 3 times Luke's current age in 8 years
-    mr_bernard_age_in_eight_years = 3 * luke_current_age
-    # Mr. Bernard's current age
-    mr_bernard_current_age = mr_bernard_age_in_eight_years - years_ahead
-    # Their average age
-    their_average_age = (luke_current_age + mr_bernard_current_age) / 2
-    # Their average age 10 years less
-    result = their_average_age - 10
-    return result
-
-# Call the function to solve the problem
-solution()
-
-`Answer`: 26.0
-`Evaluation`: Correct
-
-
-
 Now, try the `Question` below following the same procedure as above. Try the question with the choice of your `Method`, and evaluate the `Answer`. If your `Attempt` is considered wrong, identify the `Mistakes` and reason to take `Workaround Method` by writing `Hint for a better Method choice`. Based on it, reattempt correctly on `Corrected Attempt`.
 
 `Question`: [QUESTION]
-`Method`: <your first choice how to approach>
-`Attempt`: <your first attempt to solve> 
-`Answer`: <answer from the attempt>
-`Evaluation`: <evaluate your answer. If your answer evaluates wrong, start re-attempting with identifying `Mistakes`. Otherwise, stop solving and finish>

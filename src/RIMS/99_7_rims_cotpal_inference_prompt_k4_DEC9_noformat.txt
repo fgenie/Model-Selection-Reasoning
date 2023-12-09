@@ -247,7 +247,3 @@ solution()
 Now, try the `Question` below following the same procedure as above. Try the question with the choice of your `Method`, and evaluate the `Answer`. If your `Attempt` is considered wrong, identify the `Mistakes` and reason to take `Workaround Method` by writing `Hint for a better Method choice`. Based on it, reattempt correctly on `Corrected Attempt`.
 
 `Question`: [QUESTION]
-`Method`: <your first choice how to approach>
-`Attempt`: <your first attempt to solve> 
-`Answer`: <answer from the attempt>
-`Evaluation`: <evaluate your answer. If your answer evaluates wrong, start re-attempting with identifying `Mistakes`. Otherwise, stop solving and finish>

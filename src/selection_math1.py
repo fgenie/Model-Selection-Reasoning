@@ -556,8 +556,8 @@ def query_enhanced_coh(data: dict,
             {'role':'user', 'content': prompt}
         ]
 
-    print('T=0 for query_enhanced_coh() (manually set)')
-    print('seed=777 for query_enhanced_coh() (manually set) from nov 11')
+    # print('T=0 for query_enhanced_coh() (manually set)')
+    # print('seed=777 for query_enhanced_coh() (manually set) from nov 11')
     
     if 'solvetwice' in prompt_f:
         stop_tok = "\n\n\n"
@@ -648,6 +648,7 @@ def query_rims_inference(data: dict,
         # strip the keys
         parse_dd_ = {k:v.replace(k, "").strip() for k,v in parse_dd.items()}
 
+        pass
         return parse_dd_
 
     # prep prompt
@@ -663,8 +664,8 @@ def query_rims_inference(data: dict,
         messages = [
             {'role':'user', 'content': prompt}
         ]
-    print('T=0 for query_enhanced_coh() (manually set)')
-    print('seed=777 for query_enhanced_coh() (manually set) from nov 11')
+    # print('T=0 for query_enhanced_coh() (manually set)')
+    # print('seed=777 for query_enhanced_coh() (manually set) from nov 11')
     
     stop_tok = ["\n`Evaluation`: Correct", "Evaluation: Correct"] # could be a list or a single string object. Defaults: None
     raw_query_out = completion_with_backoff(
@@ -866,6 +867,7 @@ def query_math(
                                                                 backbone=backbone,
                                                                 n_fewshot=k_fewshot,
                                                                 turn_based=turn_based)
+                    print(rawout)
                     
                     
                     # if dbg:
@@ -875,7 +877,6 @@ def query_math(
                         good_solution = parse_dd['`Corrected Attempt`:']
                         good_method = parse_method2(parse_dd['`Workaround Method`:'])
                         try:
-                            
                             mistakes = '`Mistakes`: ' + parse_dd['`Mistakes`:']
                         except Exception as e:
                             mistakes = e.__str__()
@@ -1526,7 +1527,7 @@ if __name__ == '__main__':
             tasks = dataset 
             if args.dbg:
                 print("--dbg: dataset = dataset[:1]")
-                tasks = dataset[:1]
+                tasks = dataset[10:12]
             task_num = len(tasks)
             print('Current total tasks: ', task_num)
 
@@ -1584,6 +1585,8 @@ if __name__ == '__main__':
                                     f'{dataset_name}_k{args.k_fewshot}_sc{sc_num}_s{start_index}_e{end_index}_{dt_string}.jsonl')
             print(save_path)
 
+        print('seed=777 for every llm queries in this script from nov 11')
+        print('T=0 manually set for rimsprompt, cohprompt query method')
         # === run experiments ===
         progress_bar = tqdm(range(task_num))
         for i in range(task_num):
@@ -1635,9 +1638,7 @@ if __name__ == '__main__':
                         if ans is not None:
                             with open(save_path, "a+") as fout:
                                 fout.write(json.dumps(ans)+'\n')
-                                break # success so break while loop
-
-                                    
+                                break # success so break while loop                                                
                     except Exception as e:
                         print(e)
                         ans = None
@@ -1652,8 +1653,8 @@ if __name__ == '__main__':
                         print("retrying (main)")
                         time.sleep(1)
                         count+=1
-        
             
+                
             
 
         end_time_0 = time.time()

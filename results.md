@@ -1,3 +1,21 @@
+## Dec 9-10:
+    - What next?
+        - 2 models experiments: 
+            - [x] no-reflection blurb included setting (similar to standard fewshot)
+                - [x] w/o format guide
+            - [ ] turn-based
+            - [ ] re-use conflicting solutions for inference (randomly pick one amongst the conflicting solutions...since our prompt will generate over till it's correct)
+            - [ ] reflect but with the same method (contrastive cot)
+        - [ ] 3 models experiments:
+            - 의의: 
+                - Reason to do 3 model exps: ensemble to cover more edge cases (= last mile 성능을 위함) 
+                - Fair comparison 이라는 명목하에 baseline을 3 model로 할 필요가 있을 수 있는가? 그럴 순 있다.
+            - 종합: 3 모델 실험은 성능이 2 모델보다 올라가야만 좋다는 것을 주장할 수 있다. 
+            - [ ] model selection over 3 models implementation
+            - [ ] p2c blurb re-prep (bug before: plan not recorded)
+        - [ ] experiment with chatgpt's   
+        - [ ] script for reparsing `Hint for a better Method choice` (parsing function is not working properly)
+
 ## Dec 6:
 - result of dec4 experiments ( from `3_blrub-1__.json` (hint, mistakes are generated with temp=1.0) )
     - 7_prompt_short: worse than long examples, but still beats the baseline
@@ -37,20 +55,6 @@
             - **contrastive cot를 하는데 있어 pal/cot를 선택가능하게 해준 부분이 + alpha를 만든 부분이 있을까?**
         - (to defense?)
             - cot 구현에서 Answer 이후 부분을 파싱하도록 한 것이 도움이 된 것은 아닌가?... 
-
-
-    - What next?
-        - 2 models experiments: 
-            - [ ] no-reflection blurb included setting (similar to standard fewshot)
-            - [ ] reflect but with the same method (contrastive cot)
-        - [ ] 3 models experiments:
-            - 의의: 
-                - Reason to do 3 model exps: ensemble to cover more edge cases (= last mile 성능을 위함) 
-                - Fair comparison 이라는 명목하에 baseline을 3 model로 할 필요가 있을 수 있는가? 그럴 순 있다.
-            - 종합: 3 모델 실험은 성능이 2 모델보다 올라가야만 좋다는 것을 주장할 수 있다. 
-            - [ ] model selection over 3 models implementation
-            - [ ] p2c blurb re-prep (bug before: plan not recorded)
-        - [ ] experiment with chatgpt's   
 
 
 ## Dec 4: 
