@@ -1,11 +1,28 @@
 ## Dec 9-10:
+    - blurb types
+            ```
+            ${SYSTEM PROMPT}
+
+            ${BLURBS}
+                - no-reflection (cot, pal each 1, total 2):
+                    1st attempt -> eval (success)
+                - reflection (if k=2 --> cot2pal + pal2cot):
+                    1st attempt -> eval -> mistake (diagnosis) -> hint (for a new method) -> 2nd attempt -> eval
+            
+            ${INSTRUCTION}
+            ${QUESTION}
+                - format guide removed
+            ```
+
     - What next?
         - 2 models experiments: 
             - [x] no-reflection blurb included setting (similar to standard fewshot)
                 - [x] w/o format guide
+                - [x] more than 1 pair of examples (k=2 --> k=2,4,6)
             - [ ] turn-based
             - [ ] re-use conflicting solutions for inference (randomly pick one amongst the conflicting solutions...since our prompt will generate over till it's correct)
             - [ ] reflect but with the same method (contrastive cot)
+            - [ ] contemporary result for the baseline
         - [ ] 3 models experiments:
             - 의의: 
                 - Reason to do 3 model exps: ensemble to cover more edge cases (= last mile 성능을 위함) 
