@@ -1,5 +1,5 @@
 ## Dec 9-10:
-    - blurb types
+    - prompt structure: Evaluation and reflection at once.
             ```
             ${SYSTEM PROMPT}
 
@@ -13,6 +13,37 @@
             ${QUESTION}
                 - format guide removed
             ```
+    - blurb preparation
+        1. gather questions (length evenly, 30 questions)
+        2. find failing questions (try 3 times with pal or cot T=1.0 -- standard k=5 fewshot prompting, pick it when >= 0.5 times wrong)
+        3. try gather correct solution with alternative method. try 5 times with standard fewshot prompting until it gets correct solution
+        4. with the correct and wrong solution, generate `mistakes` (what was wrong) and `hint` (in what aspect altering the method will help) 
+        ```
+            # 0. how blurbs look like 
+            Attempt: <generated solution from standard-fewshot cot/pal -- tried three times, when wrong >= 0.5 frequency>
+            Answer: <parsing / execution >
+            Evaluation: Wrong (answer --)
+            Mistakes: <generated from wrong2correct solutions>
+            Corrected Attempt: <generated solution from standard-fewshot cot/pal -- reattempting with T=1.0>
+            Answer: <continued from above>
+            Evaluation: Correct
+        ```
+    - llm response: generated at once 
+        ```
+        # 1. reflection
+        Attempt: 
+        Answer: 
+        Evaluation: Wrong (answer --)
+        Mistakes: 
+        Corrected Attempt: 
+        Answer: 
+        # Evaluation: Correct  # this is the `stop token`
+
+        # 2. no-reflection 
+        Attempt: 
+        Answer: 
+        # Evaluation: Correct 
+        ```
 
     - What next?
         - 2 models experiments: 
