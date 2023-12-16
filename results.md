@@ -1,41 +1,39 @@
-# Algorithm in pseudo-code 
+## Last Trial: Expanding blurbs to have multiple reflections (same on slack)
+- using the prompt last week to expand the training blurbs
+- try the same for 3 method experiments
+### last week training blurb prep.
 ```
-# training
-# 1. gather questions to learn reflection process on. sample several tens of them evenly according to wordcount.
+# current learning loop: only-1-reflection blurbs prep
 
-
-METHODS = cot pal p2c
-Q_CANDIDS = sample_trainset_length_evenly(30)
-Q_HARD = defaultdict(list)
-for method in METHODS:
-    for q in Q_CANDIDS:
-        ANS_SAMPLES = attempt_3_times(q, method)
-        EVALUATIONS = [eval(ans, ans_GT) for a in ans_samples]
-        if EVALUATIONS.count(False) > len(EVALUATIONS) // 2:
-            is_q_handy = True
-        
-        if is_q_handy:
-            Q_HARD[method].append( q, wrong_solution )
-
-# 2. get correct answers
-Q_REFLECTIONS = defaultdict(list)
-for method_failed, q in Q_HARD.items():
-    for method in (METHOD - method_failed):
-        for i in range(5):
-            ans = attempt(q, method)
-            eval= eval(ans, ans_GT)
-            if eval:
-                Q_REFLECTIONS[method_failed].append( (q, method, correct_sln, wrong_sln) )
-
-# 3. review what was wrong and what was good about correct solution
-for 
-        
-            
-        
-
-    
-
+1. collect hard questions 
+    - (`wrong solutions` are collected at the same time)
+2. (with naive retries with T=1.0), sample correct solution
+3. sample reflection and hint that bridges `q`, `wrong solution`, and `correct solution`
+4. finalize 
+    - `blurb` = q + wrong solution + reflection + hint + correct solution
+    - `prompt-0` = sysmsg + blurb + instruction (end)
 ```
+### try this week
+```python
+# expand blurbs on hard questions (blurb: only 1 reflection --> more than 1 reflection) 
+
+response = llm(prompt_0, q)
+if not eval( parse_final_ans(response), ans_GT) and did_reflect(response):
+    blurb_1_refl = strip_last_eval_str(response)
+    solved = False
+    while not solved:
+        response_new = llm(prompt_0, q)
+        solved = eval( parse_final_ans(response_new), ans_GT)
+    blurb_2_refl = (blurb_1_refl + response_new)
+elif:
+    ...
+else: 
+    ...
+
+newprompt = promptify(blurb_2_refl) # newprompt contains the blurb that has more than 1 reflection.         
+```       
+
+
 ## Dec 9-10:
     - prompt structure: Evaluation and reflection at once.
             ```
