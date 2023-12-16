@@ -1,3 +1,41 @@
+# Algorithm in pseudo-code 
+```
+# training
+# 1. gather questions to learn reflection process on. sample several tens of them evenly according to wordcount.
+
+
+METHODS = cot pal p2c
+Q_CANDIDS = sample_trainset_length_evenly(30)
+Q_HARD = defaultdict(list)
+for method in METHODS:
+    for q in Q_CANDIDS:
+        ANS_SAMPLES = attempt_3_times(q, method)
+        EVALUATIONS = [eval(ans, ans_GT) for a in ans_samples]
+        if EVALUATIONS.count(False) > len(EVALUATIONS) // 2:
+            is_q_handy = True
+        
+        if is_q_handy:
+            Q_HARD[method].append( q, wrong_solution )
+
+# 2. get correct answers
+Q_REFLECTIONS = defaultdict(list)
+for method_failed, q in Q_HARD.items():
+    for method in (METHOD - method_failed):
+        for i in range(5):
+            ans = attempt(q, method)
+            eval= eval(ans, ans_GT)
+            if eval:
+                Q_REFLECTIONS[method_failed].append( (q, method, correct_sln, wrong_sln) )
+
+# 3. review what was wrong and what was good about correct solution
+for 
+        
+            
+        
+
+    
+
+```
 ## Dec 9-10:
     - prompt structure: Evaluation and reflection at once.
             ```
