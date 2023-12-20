@@ -25,6 +25,12 @@ def count_corrects(record):
     
     return c_refl, c_nonrefl
 
+def count_corrects_bs(record):
+    df = pd.DataFrame(record)
+    corrects = (df.answer - df.majority_ans).abs() < 1e-3
+    ncorrects = corrects.sum(), len(corrects)
+    return np.array(ncorrects)
+
 def array2readable(array):
     correct, total = array 
     return f"{int(correct)}/{int(total)} ({100*(correct/total):.2f}\%)"
@@ -33,17 +39,28 @@ def array2readable(array):
 
 conf2records = {dir.parent.name: list(jsl.open(dir)) for dir in dirs}
 to_table = []
+baseline_table = []
 for prompt, record in conf2records.items():
-    reflect, nonreflect= count_corrects(record)
-    # reflect, nonreflect = np.array([correct:int, total:int])
-    # justfailure = int 
-    to_table.append( {'name': prompt, 'total': NONCONF+reflect+nonreflect, 'conflict_only': reflect + nonreflect, 'reflect': reflect, 'nonreflect': nonreflect, 'justfailed': 73-nonreflect[1]-reflect[1]} )
+    if 'baseline' not in prompt:
+        reflect, nonreflect= count_corrects(record)
+        # reflect, nonreflect = np.array([correct:int, total:int])
+        # justfailure = int 
+        to_table.append( {'name': prompt, 'total': NONCONF+reflect+nonreflect, 'conflict_only': reflect + nonreflect, 'reflect': reflect, 'nonreflect': nonreflect, 'justfailed': 73-nonreflect[1]-reflect[1]} )
+    else: # baseline 
+        corrects = count_corrects_bs(record)
+        baseline_table.append( {'name': prompt, 'total': NONCONF+corrects, 'conflict_only': corrects} )
+        
 
 table = pd.DataFrame(to_table)
+bstable = pd.DataFrame(baseline_table)
 for col in ['total', 'conflict_only', 'reflect', 'nonreflect']:
-    table[col] = table[col].apply(array2readable)
-
+    if col in table:
+        table[col] = table[col].apply(array2readable)
+    if col in bstable:
+        bstable[col] = bstable[col].apply(array2readable)
 
 with open('dec9_results_table.md', 'w') as f:
     print(table.to_markdown(), file=f)
+    print('\n==========\n', file=f)
+    print(bstable.to_markdown(), file=f)
 print('wrote to \n\tdec9_results_table.md')

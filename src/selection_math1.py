@@ -290,7 +290,11 @@ def query_pal(data: dict, key: str, pal_temperature: float, backbone: str, hint:
         completions = [pal_solution['choices'][i]['message']['content'] for i in range(n)]
     return completions, query_message
 
-def query_selection(data: dict, key: str, cot_solution: list, pal_solution: list, backbone: str):
+def query_selection(data: dict, key: str, cot_solution: list, pal_solution: list, backbone: str, 
+                    select_amongst:str = 'cotpal',
+                    p2c_plan:str='',
+                    p2c_solution:str='',
+                    ):
     '''
     This function is used to query OpenAI for selection solutions.
 
@@ -304,8 +308,13 @@ def query_selection(data: dict, key: str, cot_solution: list, pal_solution: list
     Returns:
         completions: a list containing the selection solution
     '''
-    selection_message = get_select_prompt(
-        data, cot_solution, pal_solution, backbone=backbone)
+    if select_amongst == 'cotpal':
+        selection_message = get_select_prompt(
+            data, cot_solution, pal_solution, backbone=backbone)
+    elif select_amongst == 'cotpalp2c':
+        assert p2c_plan and p2c_solution, f'need {p2c_plan=} and {p2c_solution=}'
+        selection_message = get_select_prompt(
+            data, cot_solution, pal_solution, backbone=backbone, p2c_plan=p2c_plan, p2c_solution=p2c_solution)
     if backbone == 'gpt4':
         model_name = 'gpt-4'
     elif backbone == 'gpt4turbo':
@@ -317,6 +326,7 @@ def query_selection(data: dict, key: str, cot_solution: list, pal_solution: list
         api_key=key,
         model=model_name,
         max_tokens=200,
+        seed=777, # added on dec 21
         stop='\n\n',
         messages=selection_message,
         temperature=0.,
@@ -696,6 +706,7 @@ def query_math(
         
         plan_temperature: float=.0, # when use_plancode == True
         code_temperature: float=.0,
+
         k_fewshot:int=0,
         use_plancode:bool=False,
         ablation:str='',
@@ -706,6 +717,8 @@ def query_math(
         when_only_conflict:int=-1, # oct26~ exp
         tgt_conflict:bool=False, # nov11 exp / dec 8 exp 
         turn_based:bool=False, # nov11 exp 
+        
+        tgt_conflict_baseline:bool=False, # dec 21 exp, model selection on conflict only option
 
         dbg:bool =False,  # dbgmode
 
@@ -757,16 +770,26 @@ def query_math(
             # selection_ans = None # this for model-selection
             final_ans = None
             if tgt_conflict:
-                if 'cot_executed' in data.keys():
-
+                if 'cot_executed' in data.keys(): # 실행된 cot 결과가 적혀있는지 확인 
+                    # very usually, if cot results exist, then pal result also exists
                     cot_ans = data['cot_executed'][0]
                     pal_ans = data['pal_executed'][0]
                     cot_solution = data['cot_generated']
                     pal_solution = data['pal_generated']
                     if when_only_conflict==3:
-                        p2c_ans = data['p2c_executed'][0]
-                        p2c_solution = data['p2c_generated']
-                        p2c_plan = data['plan']
+                        try:
+                            p2c_ans = data['p2c_executed'][0]
+                            p2c_solution = data['p2c_generated']
+                            p2c_plan = data['plan']
+                        except:
+                            p2c_solution, plans, query_msg = query_plancode(data, key=key, plan_temperature=plan_temperature, code_temperature=code_temperature, backbone=backbone, k_fewshot=k_fewshot)
+                            if p2c_solution is None:
+                                return None
+                            else:
+                                p2c_ans = safe_execute_turbo(p2c_solution[0]) # testing p2c-generated code and getting answer from it
+                                p2c_answers.append(p2c_ans)
+                                p2c_solutions.append(p2c_solution[0])
+
                 else: # "--recent_gsm8k_fullrun", # same logic as else of tgt_conflict (query cot / pal /p2c)
                     cot_solution, query_msg = query_cot(
                         data, key, cot_temperature, backbone=backbone)
@@ -854,11 +877,35 @@ def query_math(
                 solmap['p2c'] = (p2c_plan, p2c_solution)
             
 
-            if rimsprompt:
+            if tgt_conflict_baseline: # call query_selection == baseline model selection 
+                if when_only_conflict==2:
+                    selection_ans = query_selection(
+                            data, key, cot_solution=cot_solution, pal_solution=pal_solution, backbone=backbone, select_amongst=tgt_conflict_baseline)
+                elif when_only_conflict==3:
+                    selection_ans = query_selection(
+                            data, key, cot_solution=cot_solution, pal_solution=pal_solution, backbone=backbone, select_amongst=tgt_conflict_baseline, p2c_plan=p2c_plan, p2c_solution=p2c_solution)
+                else:
+                    raise ValueError(f'{when_only_conflict=}, {tgt_conflict_baseline=}')
+                
+                if selection_ans is None:
+                    return None
+                else:
+                    selection_choice = extract_choice_turbo(selection_ans[0])
+                    selection_solutions.append(selection_ans[0])
+                    if selection_choice == '(A)':
+                        final_ans = cot_ans
+                    elif selection_choice == '(B)':
+                        final_ans = pal_ans
+                    if tgt_conflict_baseline=='cotpalp2c':
+                        if selection_choice == '(C)':
+                            final_ans = p2c_ans
+
+
+            elif rimsprompt: # reflection only once case 
                 # Does not matter when_only_conflict==2 or 3. Below works for both.
                 reattempt = dict() # init
                 final_ans = get_concordant_answer(answers_above)
-                did_reflect = False
+                did_reflect = 0
                 if final_ans is None: # (answers_above are all None) OR (not concordant) 
                     parse_dd, rawout, query_msg = query_rims_inference(
                                                                 data, 
@@ -867,13 +914,12 @@ def query_math(
                                                                 backbone=backbone,
                                                                 n_fewshot=k_fewshot,
                                                                 turn_based=turn_based)
-                    print(rawout)
+                    # print(rawout)
                     
                     
-                    # if dbg:
                     if "`Corrected Attempt`:" in parse_dd.keys(): 
                         # solved after hint
-                        did_reflect = True
+                        did_reflect += 1
                         good_solution = parse_dd['`Corrected Attempt`:']
                         good_method = parse_method2(parse_dd['`Workaround Method`:'])
                         try:
@@ -921,71 +967,8 @@ def query_math(
                             'rawout': rawout,
                             'gptmessage': query_msg,
                             } 
-                    print()
-                        
-                    # else:
-                    #     try:
-                    #         if "`Corrected Attempt`:" in parse_dd.keys(): 
-                    #             # solved after hint
-                    #             good_solution = parse_dd['`Corrected Attempt`:']
-                    #             good_method = parse_method2(parse_dd['`Workaround Method`:'])
-                    #             mistakes = '`Mistakes`: ' + parse_dd['`Mistakes`:']
-                    #             hint = '`Hint for a better Method`: ' + parse_dd['`Hint for a better Method`:']
-                    #             bad_solution = parse_dd['`Attempt`:']
-                    #             bad_method = parse_method2(parse_dd['`Method`:'])
-                                
-                    #         else:
-                    #             # solved at once
-                    #             good_solution = parse_dd['`Attempt`:']
-                    #             good_method = parse_method(parse_dd['`Method`:'])
-                    #             mistakes = '1shot 1kill'
-                    #             hint = "1shot 1kill"
-                    #             bad_method = "1shot 1kill"
-                    #             bad_solution ="1shot 1kill"
-                            
-                    #         # final_ans
-                    #         if good_method == 'cot':
-                    #             final_ans = float(parse_num_from_answer(parse_dd["`Answer`:"])) # in case of cot, parses `Answer`: field and return it.
-                    #         elif good_method == 'pal':
-                    #             final_ans = safe_execute_turbo(good_solution)
-                    #         else: # p2c
-                    #             plan, code = separate_plan_code(good_solution)
-                    #             final_ans = safe_execute_turbo(code)
-                    #             raise NotImplementedError('need to check the debug logics here')
-                    #         reattempt = {'good_method': good_method, 
-                    #                 'good_solution': good_solution,
-                    #                 'good_answer': final_ans,
-                    #                 'mistakes': mistakes,
-                    #                 'hint': hint,
-                    #                 'bad_method': bad_method,
-                    #                 'bad_solution': bad_solution,
-                    #                 'rawout': rawout,
-                    #                 'gptmessage': query_msg,
-                    #                 } 
-                            
-                    #     except Exception as e:
-                    #         print(rawout)
-                    #         print("="*20)
-                    #         print("Exception message:", e)
-                    #         final_ans = None
                         
                         
-                    #         reattempt = {'good_method': e.__str__(), 
-                    #                 'good_solution': e.__str__(),
-                    #                 'good_answer': final_ans,
-                    #                 'mistakes': e.__str__(),
-                    #                 'hint': e.__str__(),
-                    #                 'bad_method': e.__str__(),
-                    #                 'bad_solution': e.__str__(),
-                    #                 'rawout': rawout,
-                    #                 'gptmessage': query_msg,
-                    #                 } 
-                        
-                        
-                    
-                                   
-
-
             elif cohprompt: 
                 # Does not matter when_only_conflict==2 or 3. Below works for both.
                 final_ans = get_concordant_answer(answers_above)
@@ -1123,6 +1106,8 @@ def query_math(
                         final_ans = None
                 elif when_only_conflict==3:
                     raise NotImplementedError('select from three --> need real-time flexible blurb building for actor selection')
+            
+
             else:
                 raise ValueError('when_only_conflict==2|3 but no --actor_selection_prompt or --cohprompt')
 
@@ -1351,8 +1336,13 @@ def query_math(
             to_dump_data['ans==majority_ans'] = abs(float(data['answer'])-majority_ans) < 1e-3
         else:
             to_dump_data['ans==majority_ans'] = False
+    elif tgt_conflict_baseline:
+        if when_only_conflict ==3:
+            to_dump_data['p2c_generated'] = p2c_solutions
+            to_dump_data['p2c_executed'] = p2c_answers
+            to_dump_data['p2c_plan'] = p2c_plan
     elif when_only_conflict in [2,3]:
-        raise NotImplemented('reimplement the if elif logic here to avoid buggy behavior later by accident!')
+        raise NotImplementedError('reimplement the if elif logic here to avoid buggy behavior later by accident!')
         to_dump_data['p2c_generated'] = p2c_solutions
         to_dump_data['p2c_executed'] = p2c_answers
         to_dump_data['when_only_conflict'] = when_only_conflict
@@ -1444,6 +1434,8 @@ if __name__ == '__main__':
     parser.add_argument('--leftovers', action='store_true', help='run gsm8k leftover from the last exp. (dec 4)')
     # parser.add_argument('--leftovers_chatgpt', action='store_true', help='run gsm8k leftover from the last exp. (dec 4)')
 
+    parser.add_argument('--tgt_conflict_baseline', type=str, default='cotpal', help='model selection algorithm on tgt_conflict (dec9 - dataset/conflict_only/*.jsonl).', choices= ['cotpal', 'cotpalp2c'])
+
     args = parser.parse_args()
 
     key = open('../openai_key.txt').read().strip()
@@ -1488,19 +1480,23 @@ if __name__ == '__main__':
         else:
             # conflict_jsls = list(Path('../output/nov11_tgt_conflict').glob(f'**/conflict*.jsonl')) # dec 4
             # conflict_jsls = list(Path('../output/nov12_later_or_donot/baseline/').glob(f'**/conflict*.jsonl'))
-            print(f"{conflict_jsls=}")
-            conflict_jsls = [p for p in conflict_jsls if p not in cotpal_conflict_jsls]
+            conflict_jsls = []#[p for p in conflict_jsls if p not in cotpal_conflict_jsls]
         datasets_backbones_paths = [(jsonlines_load(jslf), jslf.parent.parent.name, jslf) for jslf in conflict_jsls]
         datasets = [e[0] for e in datasets_backbones_paths]
         backbones = [e[1] for e in datasets_backbones_paths]
         paths = [e[2] for e in datasets_backbones_paths]
-        if args.recent_gsm8k_fullrun:
+        if args.recent_gsm8k_fullrun: # this makes run on most recent conflict only run. # use with --tgt_conflict
             newconflictroot = Path('../dataset/conflict_only')
             confl_f = list(newconflictroot.glob(f"conflictonly*gpt4.jsonl")) + list(newconflictroot.glob("conflictonly*chatgpt.jsonl"))
             if confl_f:
                 datasets = [list(jsl.open(f)) for f in confl_f]
                 paths = confl_f
                 backbones = [f.stem.split("_")[-1] for f in confl_f]
+                if args.tgt_conflict_baseline == 'cotpal':
+                    args.when_only_conflict=2
+                elif args.tgt_conflict_baseline == 'cotpalp2c':
+                    args.when_only_conflict=3
+                    # need to fix the conflict checking logic to make p2c solutions if they does not exist.
             else: 
                 # temporary use for dec6
                 datasets.append(list(jsl.open(Path('../dataset/gsm8K_test.jsonl'))))
@@ -1513,7 +1509,6 @@ if __name__ == '__main__':
         # print(conflict_jsls)
         print(paths)
         print(backbones)
-        print()
     else: # only one dataset
         datasets = [dataset]
 
@@ -1531,16 +1526,21 @@ if __name__ == '__main__':
             task_num = len(tasks)
             print('Current total tasks: ', task_num)
 
-            assert args.cohprompt or args.rimsprompt, f'when --tgt_conflict, need --cohprompt or --rimsprompt'
+            assert (args.cohprompt or args.rimsprompt) or args.tgt_conflict_baseline, f'when --tgt_conflict, need --cohprompt or --rimsprompt or --tgt_conflict_baseline'
             promptf = args.cohprompt if args.cohprompt else args.rimsprompt
+            if args.tgt_conflict_baseline:
+                promptf = ''
 
+            # nov 4
             # adjust the following arguments for `tgt_conflict==True` setting 
             datasetpath = paths[ii]
-            args.when_only_conflict = 3 if datasetpath.parent=='coh' else 2 # 3 for 3model-coh 2 for 2model-coh
+            args.when_only_conflict = 3 if datasetpath.parent=='coh' else 2 
             backbone = backbones[ii]
             output_path = paths[ii].parent/(Path(promptf).stem + "_" + backbone)
+            if args.tgt_conflict_baseline:
+                output_path = paths[ii].parent/("baseline_" + args.tgt_conflict_baseline + "_" + backbone)
             
-            turn_based = False
+            turn_based = False 
 
             if promptf.endswith('.yaml'):
                 turn_based = True
@@ -1612,9 +1612,13 @@ if __name__ == '__main__':
                             when_only_conflict=args.when_only_conflict, 
                             tgt_conflict = args.tgt_conflict,
                             turn_based = turn_based,
+                            tgt_conflict_baseline= args.tgt_conflict_baseline,
                             dbg= args.dbg,
                             )
-                
+                if ans is not None:
+                    with open(save_path, "a+") as fout:
+                        fout.write(json.dumps(ans)+'\n')
+                        
             else:
                 while True:
                     try:
@@ -1633,6 +1637,7 @@ if __name__ == '__main__':
                             when_only_conflict=args.when_only_conflict, 
                             tgt_conflict = args.tgt_conflict,
                             turn_based = turn_based,
+                            tgt_conflict_baseline= args.tgt_conflict_baseline,
                             dbg= args.dbg,
                             )
                         if ans is not None:
@@ -1672,7 +1677,4 @@ if __name__ == '__main__':
             with open(f'{unfinished_path}.args', 'w') as f:
                 print(args, file=f)
             print(f'Unfinished args at: \n\t{unfinished_path}.args')
-
-            
-
         print('Done')

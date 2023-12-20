@@ -1,6 +1,11 @@
 ## Last Trial: Expanding blurbs to have multiple reflections (same on slack)
-- using the prompt last week to expand the training blurbs
-- try the same for 3 method experiments
+- [ ] using the prompt last week to expand the training blurbs
+    - [ ] try the same for 3 method experiments
+- [x] I mean... I need to run baseline 2 models with seed=777...?
+    - [ ] now for 3 models! (3 model prompt needed)
+- [ ] I need to implement self consistency with `n` kwargs. will just put this at the last part of the each llm-query-methods for ease.
+- [ ] toss the code 
+
 ### last week training blurb prep.
 ```
 # current learning loop: only-1-reflection blurbs prep
@@ -35,84 +40,85 @@ newprompt = promptify(blurb_2_refl) # newprompt contains the blurb that has more
 
 
 ## Dec 9-10:
-    - prompt structure: Evaluation and reflection at once.
-            ```
-            ${SYSTEM PROMPT}
+- prompt structure: Evaluation and reflection at once.
+    ```
+    ${SYSTEM PROMPT}
 
-            ${BLURBS}
-                - no-reflection (cot, pal each 1, total 2):
-                    1st attempt -> eval (success)
-                - reflection (if k=2 --> cot2pal + pal2cot):
-                    1st attempt -> eval -> mistake (diagnosis) -> hint (for a new method) -> 2nd attempt -> eval
-            
-            ${INSTRUCTION}
-            ${QUESTION}
-                - format guide removed
-            ```
-    - blurb preparation
-        1. gather questions (length evenly, 30 questions)
-        2. find failing questions (try 3 times with pal or cot T=1.0 -- standard k=5 fewshot prompting, pick it when >= 0.5 times wrong)
-        3. try gather correct solution with alternative method. try 5 times with standard fewshot prompting until it gets correct solution
-        4. with the correct and wrong solution, generate `mistakes` (what was wrong) and `hint` (in what aspect altering the method will help) 
-        ```
-            # 0. how blurbs look like 
-            Attempt: <generated solution from standard-fewshot cot/pal -- tried three times, when wrong >= 0.5 frequency>
-            Answer: <parsing / execution >
-            Evaluation: Wrong (answer --)
-            Mistakes: <generated from wrong2correct solutions>
-            Corrected Attempt: <generated solution from standard-fewshot cot/pal -- reattempting with T=1.0>
-            Answer: <continued from above>
-            Evaluation: Correct
-        ```
-    - llm response: generated at once 
-        ```
-        # 1. reflection
-        Attempt: 
-        Answer: 
+    ${BLURBS}
+        - no-reflection (cot, pal each 1, total 2):
+            1st attempt -> eval (success)
+        - reflection (if k=2 --> cot2pal + pal2cot):
+            1st attempt -> eval -> mistake (diagnosis) -> hint (for a new method) -> 2nd attempt -> eval
+
+    ${INSTRUCTION}
+    ${QUESTION}
+        - format guide removed
+    ```
+    
+- blurb preparation
+    1. gather questions (length evenly, 30 questions)
+    2. find failing questions (try 3 times with pal or cot T=1.0 -- standard k=5 fewshot prompting, pick it when >= 0.5 times wrong)
+    3. try gather correct solution with alternative method. try 5 times with standard fewshot prompting until it gets correct solution
+    4. with the correct and wrong solution, generate `mistakes` (what was wrong) and `hint` (in what aspect altering the method will help) 
+    ```
+        # 0. how blurbs look like 
+        Attempt: <generated solution from standard-fewshot cot/pal -- tried three times, when wrong >= 0.5 frequency>
+        Answer: <parsing / execution >
         Evaluation: Wrong (answer --)
-        Mistakes: 
-        Corrected Attempt: 
-        Answer: 
-        # Evaluation: Correct  # this is the `stop token`
+        Mistakes: <generated from wrong2correct solutions>
+        Corrected Attempt: <generated solution from standard-fewshot cot/pal -- reattempting with T=1.0>
+        Answer: <continued from above>
+        Evaluation: Correct
+    ```
+- llm response: generated at once 
+    ```
+    # 1. reflection
+    Attempt: 
+    Answer: 
+    Evaluation: Wrong (answer --)
+    Mistakes: 
+    Corrected Attempt: 
+    Answer: 
+    # Evaluation: Correct  # this is the `stop token`
 
-        # 2. no-reflection 
-        Attempt: 
-        Answer: 
-        # Evaluation: Correct 
-        ```
+    # 2. no-reflection 
+    Attempt: 
+    Answer: 
+    # Evaluation: Correct 
+    ```
 
-    - What next?
-        - 2 models experiments: 
-            - [x] no-reflection blurb included setting (similar to standard fewshot)
-                - [x] w/o format guide
-                - [x] more than 1 pair of examples (k=2 --> k=2,4,6)
-            - [ ] turn-based
-            - [ ] re-use conflicting solutions for inference (randomly pick one amongst the conflicting solutions...since our prompt will generate over till it's correct)
-            - [ ] reflect but with the same method (contrastive cot)
-            - [ ] contemporary result for the baseline
-        - [ ] 3 models experiments:
-            - 의의: 
-                - Reason to do 3 model exps: ensemble to cover more edge cases (= last mile 성능을 위함) 
-                - Fair comparison 이라는 명목하에 baseline을 3 model로 할 필요가 있을 수 있는가? 그럴 순 있다.
-            - 종합: 3 모델 실험은 성능이 2 모델보다 올라가야만 좋다는 것을 주장할 수 있다. 
-            - [ ] model selection over 3 models implementation
-            - [ ] p2c blurb re-prep (bug before: plan not recorded)
-        - [ ] experiment with chatgpt's   
-        - [ ] script for reparsing `Hint for a better Method choice` (parsing function is not working properly)
+- What next?
+    - 2 models experiments: 
+        - [x] no-reflection blurb included setting (similar to standard fewshot)
+            - [x] w/o format guide
+            - [x] more than 1 pair of examples (k=2 --> k=2,4,6)
+        - [ ] turn-based
+        - [ ] re-use conflicting solutions for inference (randomly pick one amongst the conflicting solutions...since our prompt will generate over till it's correct)
+        - [ ] reflect but with the same method (contrastive cot)
+        - [ ] contemporary result for the baseline
+    - [ ] 3 models experiments:
+        - 의의: 
+            - Reason to do 3 model exps: ensemble to cover more edge cases (= last mile 성능을 위함) 
+            - Fair comparison 이라는 명목하에 baseline을 3 model로 할 필요가 있을 수 있는가? 그럴 순 있다.
+        - 종합: 3 모델 실험은 성능이 2 모델보다 올라가야만 좋다는 것을 주장할 수 있다. 
+        - [ ] model selection over 3 models implementation
+        - [ ] p2c blurb re-prep (bug before: plan not recorded)
+    - [ ] experiment with chatgpt's   
+    - [ ] script for reparsing `Hint for a better Method choice` (parsing function is not working properly)
 
 ## Dec 6:
 - result of dec4 experiments ( from `3_blrub-1__.json` (hint, mistakes are generated with temp=1.0) )
     - 7_prompt_short: worse than long examples, but still beats the baseline
         - ~~[ ] on nov cotpal_1 conflict runt ()~~
         - [x] on recent run (**43/73 + 1218/1246 = 1261/1319 (95.6\%) **)
-            - did_reflect: true  11/23 (47.82\%)
-            - did_reflect: false  32/50 (64.00\%)
+            - reflected  11/23 (47.82\%)
+            - did not reflect  32/50 (64.00\%)
     - 7_prompt_long
         - [x] ~~on nov cotpal_1 conflict only gpt-4 (45/75 + 1215/1244 = 1260/1319) (95.53\% = model selection baseline)~~
         - [x] on recent run (46/73 + 1218/1246) -> 1264/1319 (95.83\%)
             - on 73 conflicts
-                - 33 did_reflect true, 17 corrects (17/33 = 51.5\%)
-                - 40 did_reflect false, 29 corrects (29/40 = 72.5\%)
+                - 33 reflected. amongst those, 17 are correct (17/33 = 51.5\%)
+                - 40 did not. amongst those, 29 are correct (29/40 = 72.5\%)
     - ~~9_prompt results~~
         - [x] on nov cotpal_1 conflict only gpt-4 (44/75): (nonconflict=1215/1244 correct)
             - model selection baseline of 2 model selection (47/75, on different conflict set tho...)
@@ -146,7 +152,7 @@ newprompt = promptify(blurb_2_refl) # newprompt contains the blurb that has more
     - conflict only runs: **prompt need to contain `cotpal` when 2 model running required** (`--tgt_conflict` implies this. internally controlls other flags)
 - [ ] do others
     - ~~[ ] blurb classifier to automate useful/useless blurb distinction (useless example: `src/RIMS/3_blurb_1.json:L47`: caused by limitation of automated result parsing of cot output)~~
-        - [ ] prepare the blurb that the first attempt is actually correct [openaiplayground](https://platform.openai.com/playground/p/6YujhXQUB1pfCuGHHK6k7hWY?model=gpt-4-1106-preview&mode=chat)
+        - [x] prepare the blurb that the first attempt is actually correct [openaiplayground](https://platform.openai.com/playground/p/6YujhXQUB1pfCuGHHK6k7hWY?model=gpt-4-1106-preview&mode=chat)
         - [ ] prepare the blurb that the workaround method is still the same method as the first choice (but answer corrects.) [openaiplayground](https://platform.openai.com/playground/p/2abad5yzZQquHD7XLtMzMPAE?model=gpt-4-1106-preview&mode=chat)
     - [ ] (debug) p2c -> * blurbs re-prep
 
