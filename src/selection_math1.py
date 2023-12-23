@@ -597,7 +597,8 @@ def query_rims_inference(data: dict,
                           key: str, 
                           backbone: str,
                           n_fewshot:int=8,
-                          turn_based:bool=False) -> OrderedDict[str,str]:
+                          turn_based:bool=False,
+                          modif_prompt:bool=False) -> dict:
     # 5_cohlike_prompt.txt
     # 6-shot default maximum is used
 
@@ -617,6 +618,31 @@ def query_rims_inference(data: dict,
 
         
     
+    def parse_raw_modif(rawqueryout:str)->dict:
+        '''
+        helper for Attempt 1,2,3... variants
+        
+        1/ read prompt to detect what to parse (`Some string here` <-- to be parsed)
+        2/ and then parse those into a dict
+        '''
+        # read the output and get what to parse 
+        pattern = r"`(.*?)`:"
+        to_parse = re.findall(pattern, rawqueryout)
+        to_parse = list(set(to_parse))
+
+        # read the output again to parse the designated fields
+        parse_dd = dict() 
+        for fld in to_parse:
+            # pattern = rf"`{fld}`:\s*(.*?)(?=`|$)"
+            pattern = rf"`{fld}`:\s*(?:```)?(.*?)(?:```)?(?=`|$)"
+            matches = re.findall(pattern, rawqueryout, re.DOTALL)
+            if fld in {'Mistakes', "Hint for a better Method choice", "Workaround Method"}:
+                parse_dd[fld] = matches
+            else:    
+                parse_dd[fld] = matches[0].strip()
+        return parse_dd 
+    
+
     def parse_raw(rawqueryout:str)->dict:
         '''
         helper function for output (universal for both turn_based=True|False)
@@ -658,7 +684,6 @@ def query_rims_inference(data: dict,
         # strip the keys
         parse_dd_ = {k:v.replace(k, "").strip() for k,v in parse_dd.items()}
 
-        pass
         return parse_dd_
 
     # prep prompt
@@ -682,14 +707,17 @@ def query_rims_inference(data: dict,
             api_key=key,
             seed=777,
             model=model_name,
-            max_tokens=1024, 
+            max_tokens=2048, 
             stop=stop_tok, 
             messages=messages,
             temperature=0.,
             top_p=1.0,
             n=1)['choices'][0]['message']['content'] # str
     # toparse = ['`Attempt', '`Answer', '`Evaluation', '`Mistakes', '`Hint', '`Corrected Attempt', '`Answer',]
-    parsed_dict = parse_raw(raw_query_out)
+    if modif_prompt:
+        parsed_dict = parse_raw_modif(raw_query_out)
+    else:
+        parsed_dict = parse_raw(raw_query_out)
         
 
     return parsed_dict, raw_query_out, messages
@@ -719,6 +747,7 @@ def query_math(
         turn_based:bool=False, # nov11 exp 
         
         tgt_conflict_baseline:bool=False, # dec 21 exp, model selection on conflict only option
+        modif_prompt:bool = False, # dec22 (modif_*.txt prompts, attempt 1,2,3...)
 
         dbg:bool =False,  # dbgmode
 
@@ -913,46 +942,82 @@ def query_math(
                                                                 key=key, 
                                                                 backbone=backbone,
                                                                 n_fewshot=k_fewshot,
-                                                                turn_based=turn_based)
-                    # print(rawout)
+                                                                turn_based=turn_based,
+                                                                modif_prompt=modif_prompt,
+                                                                )
                     
-                    
-                    if "`Corrected Attempt`:" in parse_dd.keys(): 
-                        # solved after hint
-                        did_reflect += 1
-                        good_solution = parse_dd['`Corrected Attempt`:']
-                        good_method = parse_method2(parse_dd['`Workaround Method`:'])
-                        try:
-                            mistakes = '`Mistakes`: ' + parse_dd['`Mistakes`:']
-                        except Exception as e:
-                            mistakes = e.__str__()
-                        try:
-                            hint = '`Hint for a better Method`: ' + parse_dd['`Hint for a better Method`:']
-                        except Exception as e:
-                            hint = e.__str__()
-                        bad_solution = parse_dd['`Attempt`:']
-                        bad_method = parse_method2(parse_dd['`Method`:'])
+                    if modif_prompt:
+                        attempts_keys = sorted([k for k in parse_dd.keys() if 'Attempt' in k])
+                        ans_keys = sorted([k for k in parse_dd.keys() if 'Answer' in k])
+                        # method_keys = sorted([k for k in parse_dd.keys() if 'Method' in k])
+                        good_solution = parse_dd[attempts_keys[-1]]
+                        if 'Workaround Method' in parse_dd.keys():
+                            did_reflect += len(parse_dd['Workaround Method'])
+                            good_method = parse_method2(parse_dd['Workaround Method'][-1])
+                            bad_method = [parse_method2(parse_dd['Method'])]
+                            if len(parse_dd['Workaround Method']) > 1:
+                                bad_method += [parse_method2(mstr) for mstr in parse_dd['Workaround Method'][:-1]]
+                            
+                            
+                            # ans and solutions
+                            good_ans = parse_dd[ans_keys[-1]]
+                            bad_ans = [parse_dd[ak] for ak in ans_keys[:-1]]
+                            good_solution = parse_dd[attempts_keys[-1]]
+                            bad_solution = [parse_dd[atk] for atk in attempts_keys[:-1]] 
+                            
+                        else: # solved at once
+                            good_method = parse_method2(parse_dd['Method'])
+                            bad_method = ''
+                            
+                            good_ans = parse_dd[ans_keys[-1]]
+                            bad_ans = ''
+
+                            good_solution = parse_dd[attempts_keys[-1]]
+                            bad_solution = [] 
+
+                        mistakes = []
+                        hint = []
+                        if 'Mistakes' in parse_dd.keys():
+                            mistakes = parse_dd['Mistakes']
+                        if 'Hint for a better Method choice' in parse_dd.keys():
+                            hint = parse_dd['Hint for a better Method choice']
                         
                     else:
-                        # solved at once
-                        did_reflect = False
-                        good_solution = parse_dd['`Attempt`:']
-                        good_method = parse_method2(parse_dd['`Method`:'])
-                        mistakes = '1shot 1kill'
-                        hint = "1shot 1kill"
-                        bad_method = "1shot 1kill"
-                        bad_solution ="1shot 1kill"
+                        if "`Corrected Attempt`:" in parse_dd.keys(): 
+                            # solved after hint
+                            did_reflect += 1
+                            good_solution = parse_dd['`Corrected Attempt`:']
+                            good_method = parse_method2(parse_dd['`Workaround Method`:'])
+                            try:
+                                mistakes = '`Mistakes`: ' + parse_dd['`Mistakes`:']
+                            except Exception as e:
+                                mistakes = e.__str__()
+                            try:
+                                hint = '`Hint for a better Method`: ' + parse_dd['`Hint for a better Method`:']
+                            except Exception as e:
+                                hint = e.__str__()
+                            bad_solution = parse_dd['`Attempt`:']
+                            bad_method = parse_method2(parse_dd['`Method`:'])
+                        else:
+                            # solved at once
+                            good_solution = parse_dd['`Attempt`:']
+                            good_method = parse_method2(parse_dd['`Method`:'])
+                            mistakes = '1shot 1kill'
+                            hint = "1shot 1kill"
+                            bad_method = "1shot 1kill"
+                            bad_solution ="1shot 1kill"
                     
                     # final_ans
                     if good_method == 'cot':
-                        final_ans = float(parse_num_from_answer(parse_dd["`Answer`:"])) # in case of cot, parses `Answer`: field and return it.
-                        print()
+                        if modif_prompt:
+                            final_ans = float(parse_num_from_answer(good_ans))
+                        else:
+                            final_ans = float(parse_num_from_answer(parse_dd["`Answer`:"])) # in case of cot, parses `Answer`: field and return it.
                     elif good_method == 'pal':
                         final_ans = safe_execute_turbo(good_solution)
                     elif good_method == 'p2c': # p2c
                         plan, code = separate_plan_code(good_solution)
-                        final_ans = safe_execute_turbo(code)
-                        raise NotImplementedError('need to check the debug logics here')
+                        final_ans = safe_execute_turbo(code) 
                     else:
                         ValueError(f'failed to parse good_method ({good_method=})')
                     reattempt = {
@@ -966,7 +1031,9 @@ def query_math(
                             'bad_solution': bad_solution,
                             'rawout': rawout,
                             'gptmessage': query_msg,
-                            } 
+                            }
+                    if 'bad_ans' in dir():
+                        reattempt['bad_answer'] = bad_ans
                         
                         
             elif cohprompt: 
@@ -1084,9 +1151,9 @@ def query_math(
                         # ==== Only select when CoT and PAL are different ====
                         if abs(cot_ans - pal_ans) >= 1e-3:
                             hint, reasoning_method, query_msg_actor = query_actor_selection(data,
-                                                                                            prompt_f = actor_selection_prompt,
-                                                                                            key= key,
-                                                                                            backbone=backbone)
+                                                prompt_f = actor_selection_prompt,
+                                                key= key,
+                                                backbone=backbone)
                             if reasoning_method == 'cot':
                                 final_ans = cot_ans
                             elif reasoning_method == 'pal':
@@ -1434,7 +1501,9 @@ if __name__ == '__main__':
     parser.add_argument('--leftovers', action='store_true', help='run gsm8k leftover from the last exp. (dec 4)')
     # parser.add_argument('--leftovers_chatgpt', action='store_true', help='run gsm8k leftover from the last exp. (dec 4)')
 
-    parser.add_argument('--tgt_conflict_baseline', type=str, default='cotpal', help='model selection algorithm on tgt_conflict (dec9 - dataset/conflict_only/*.jsonl).', choices= ['cotpal', 'cotpalp2c'])
+    parser.add_argument('--tgt_conflict_baseline', type=str, default='', help='model selection algorithm on tgt_conflict (dec9 - dataset/conflict_only/*.jsonl).', choices= ['cotpal', 'cotpalp2c'])
+    
+    parser.add_argument('--modif_prompt', action='store_true', help='this flag will help for `Attempt {i}` prompt\'s postprocessing')
 
     args = parser.parse_args()
 
@@ -1521,8 +1590,9 @@ if __name__ == '__main__':
             
             tasks = dataset 
             if args.dbg:
-                print("--dbg: dataset = dataset[:1]")
-                tasks = dataset[10:12]
+                # print("--dbg: dataset = dataset[:1]")
+                # tasks = dataset[10:12]
+                pass
             task_num = len(tasks)
             print('Current total tasks: ', task_num)
 
@@ -1613,6 +1683,7 @@ if __name__ == '__main__':
                             tgt_conflict = args.tgt_conflict,
                             turn_based = turn_based,
                             tgt_conflict_baseline= args.tgt_conflict_baseline,
+                            modif_prompt= args.modif_prompt, # dec 22 
                             dbg= args.dbg,
                             )
                 if ans is not None:
@@ -1638,6 +1709,7 @@ if __name__ == '__main__':
                             tgt_conflict = args.tgt_conflict,
                             turn_based = turn_based,
                             tgt_conflict_baseline= args.tgt_conflict_baseline,
+                            modif_prompt= args.modif_prompt, # dec 22 
                             dbg= args.dbg,
                             )
                         if ans is not None:

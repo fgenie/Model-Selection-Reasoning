@@ -1,11 +1,3 @@
-## Last Trial: Expanding blurbs to have multiple reflections (same on slack)
-- [ ] using the prompt last week to expand the training blurbs
-    - [ ] try the same for 3 method experiments
-- [x] I mean... I need to run baseline 2 models with seed=777...?
-    - [ ] now for 3 models! (3 model prompt needed)
-- [ ] I need to implement self consistency with `n` kwargs. will just put this at the last part of the each llm-query-methods for ease.
-- [ ] toss the code 
-
 ### last week training blurb prep.
 ```
 # current learning loop: only-1-reflection blurbs prep

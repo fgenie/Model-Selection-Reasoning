@@ -4,18 +4,17 @@ import jsonlines as jsl
 import pandas as pd 
 
 ROOT='../../../dataset/conflict_only'
+PTN='modif_*/tgt_conflict_*.jsonl'
 NONCONF = np.array((1218, 1246)) # num corrects, num total 
 
-# CONF = np.array( [n_correct, 73])
-
 # directories to score the num_corrects over conflict only examples
-dirs = list(Path(ROOT).glob("*/tgt_conflict_*.jsonl"))
+dirs = list(Path(ROOT).glob(PTN))
 
 def count_corrects(record):
     df = pd.DataFrame(record)
     # reflect / nonreflect
-    df_reflect = df [ df.reattempt.apply(lambda x: x['did_reflect'] ) ] 
-    df_nonreflect = df[ df.reattempt.apply(lambda x: not x['did_reflect'] ) ]
+    df_reflect = df [ df.reattempt.apply(lambda x: x['did_reflect']>0 ) ] 
+    df_nonreflect = df[ df.reattempt.apply(lambda x: x['did_reflect']==0 ) ]
     
     # count_corrects
     correct_refl = df_reflect['ans==majority_ans'].sum(), len(df_reflect)

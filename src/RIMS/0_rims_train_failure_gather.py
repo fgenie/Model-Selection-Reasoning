@@ -9,9 +9,13 @@ from pprint import pprint
 from collections import defaultdict
 from typing import Union, Tuple
 
-from ..selection_math import *
-# query_cot, query_pal, query_p2c
-# jsl, pd, math, re... etc will already been loaded 
+from prompt_build_utils import *
+
+import jsonlines as jsl
+import pandas as pd 
+
+
+
 
 
 # @retry(wait=wait_chain(*[wait_fixed(3) for i in range(5)])) #defining backoff for retrying.
@@ -77,7 +81,7 @@ def main(
     }
     method2failed_questions = defaultdict(list)
 
-    for method in ['cot', 'pal', 'p2c']:
+    for method in ['p2c']: #['cot', 'pal', 'p2c']:
         f = method2query_f[method]
         if method == 'cot':
             kwargs = dict(cot_temperature=verbal_T, backbone=backbone, n=n_llmquery, seed=seed)
@@ -99,6 +103,7 @@ def main(
                 out = do_with_tenacity(query_f, row)
                 if method == 'p2c':
                     slnlst, planlst, querymsg_d = out
+                    print()
                     # row['query_msgs'] = querymsg_d # this makes the output unreadable
                 else: # pal, cot
                     slnlst, querymsg_lst = out
@@ -107,7 +112,11 @@ def main(
                 if eval_lst.count(True) < eval_lst.count(False): # majority
                     row['fail_freq'] = f"{backbone}: {eval_lst.count(False)}/{n_llmquery}"
                     row['fail_preds'] = [eval_pred[-1] for eval_pred, eval in zip(eval_pred_lst, eval_lst) if not eval]
-                    row['fail_solutions'] = [sln for sln, e  in zip(slnlst, eval_lst) if (not e) and (sln is not None)] # only failed solutio gathered
+                    # only failed solutio gathered
+                    if method == 'p2c':
+                        row['fail_solutions'] = [(sln, planlst) for sln, e in zip(slnlst, eval_lst) if (not e) and (sln is not None)]
+                    else:
+                        row['fail_solutions'] = [sln for sln, e  in zip(slnlst, eval_lst) if (not e) and (sln is not None)] 
                     row['fail_method'] = method
                     row['llmquery_kwargs'] = kwargs
                     method2failed_questions[method].append(row)
@@ -124,7 +133,7 @@ def main(
         outdir_ = Path(outdir)
         if not outdir_.exists():
             outdir_.mkdir(parents=True, exist_ok=True)
-        fname = f"failed_{method}_n{n_llmquery}_numtrain{num_train_sample}_{backbone}_vT{verbal_T}_cT{code_T}_seed{seed}.jsonl"
+        fname = f"p2crerun_failed_{method}_n{n_llmquery}_numtrain{num_train_sample}_{backbone}_vT{verbal_T}_cT{code_T}_seed{seed}.jsonl"
         if dbg:
             fname = f"dbg_{fname}"
         outpath = outdir_/fname
