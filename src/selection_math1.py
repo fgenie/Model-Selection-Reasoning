@@ -291,9 +291,7 @@ def query_pal(data: dict, key: str, pal_temperature: float, backbone: str, hint:
     return completions, query_message
 
 def query_selection(data: dict, key: str, cot_solution: list, pal_solution: list, backbone: str, 
-                    select_amongst:str = 'cotpal',
-                    p2c_plan:str='',
-                    p2c_solution:str='',
+                    p2c_plan_code_solution: list=None, 
                     ):
     '''
     This function is used to query OpenAI for selection solutions.
@@ -707,7 +705,7 @@ def query_rims_inference(data: dict,
             api_key=key,
             seed=777,
             model=model_name,
-            max_tokens=2048, 
+            max_tokens=3072, 
             stop=stop_tok, 
             messages=messages,
             temperature=0.,
@@ -798,64 +796,23 @@ def query_math(
             p2c_ans = None
             # selection_ans = None # this for model-selection
             final_ans = None
-            if tgt_conflict:
-                if 'cot_executed' in data.keys(): # 실행된 cot 결과가 적혀있는지 확인 
-                    # very usually, if cot results exist, then pal result also exists
-                    cot_ans = data['cot_executed'][0]
-                    pal_ans = data['pal_executed'][0]
-                    cot_solution = data['cot_generated']
-                    pal_solution = data['pal_generated']
-                    if when_only_conflict==3:
-                        try:
-                            p2c_ans = data['p2c_executed'][0]
-                            p2c_solution = data['p2c_generated']
-                            p2c_plan = data['plan']
-                        except:
-                            p2c_solution, plans, query_msg = query_plancode(data, key=key, plan_temperature=plan_temperature, code_temperature=code_temperature, backbone=backbone, k_fewshot=k_fewshot)
-                            if p2c_solution is None:
-                                return None
-                            else:
-                                p2c_ans = safe_execute_turbo(p2c_solution[0]) # testing p2c-generated code and getting answer from it
-                                p2c_answers.append(p2c_ans)
-                                p2c_solutions.append(p2c_solution[0])
-
-                else: # "--recent_gsm8k_fullrun", # same logic as else of tgt_conflict (query cot / pal /p2c)
-                    cot_solution, query_msg = query_cot(
-                        data, key, cot_temperature, backbone=backbone)
-                    # do cot
-                    if cot_solution is None:
-                        print('Time out') 
-                        return None
-                    else:
-                        cot_ans = extract_num_turbo(cot_solution[0])
-                        cot_answers.append(cot_ans)
-                        cot_solutions.append(cot_solution[0])
-                    # do pal
-                    pal_solution, query_msg = query_pal(
-                        data, key, pal_temperature, backbone=backbone)
-                    if pal_solution is None:
-                        print('Time out')
-                        return None
-                    else:
-                        pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
-                        pal_answers.append(pal_ans)
-                        pal_solutions.append(pal_solution[0])
-                    if when_only_conflict==3:
-                        # do p2c 
-                        p2c_solution, plans, query_msg = query_plancode(data, key=key, plan_temperature=plan_temperature, code_temperature=code_temperature, backbone=backbone, k_fewshot=k_fewshot)
-                        if p2c_solution is None:
-                            print('Time out')
-                            return None
-                        else:
-                            p2c_ans = safe_execute_turbo(p2c_solution[0]) # testing p2c-generated code and getting answer from it
-                            p2c_answers.append(p2c_ans)
-                            p2c_solutions.append(p2c_solution[0])
-                    
-                        
-            else:
+            
+            # if tgt_conflict: # why did I put if here?
+            # check cot
+            if 'cot_executed' in data.keys() and data['cot_executed']: # 실행된 cot 결과가 적혀있는지 확인 
+                # very usually, if cot results exist, then pal result also exists
+                cot_ans = data['cot_executed'][0]
+                cot_solution = data['cot_generated']
+            elif 'ansmap' in data.keys():
+                if data['ansmap']['cot']:
+                    cot_ans = data['ansmap']['cot']
+                if 'solmap' in data: 
+                    if data['solmap']['cot']:
+                        cot_solution = data['solmap']['cot']
+            else: # "--recent_gsm8k_fullrun", # same logic as else of tgt_conflict (query cot / pal /p2c)
+                # do cot
                 cot_solution, query_msg = query_cot(
                     data, key, cot_temperature, backbone=backbone)
-                # do cot
                 if cot_solution is None:
                     print('Time out') 
                     return None
@@ -863,6 +820,18 @@ def query_math(
                     cot_ans = extract_num_turbo(cot_solution[0])
                     cot_answers.append(cot_ans)
                     cot_solutions.append(cot_solution[0])
+
+            # check pal
+            if 'pal_executed' in data.keys() and data['pal_executed']: # 실행된 pal 결과가 적혀있는지 확인
+                pal_ans = data['pal_executed'][0]
+                pal_solution = data['pal_generated']
+            elif 'ansmap' in data.keys():
+                if data['ansmap']['pal']:
+                    pal_ans = data['ansmap']['pal']
+                if 'solmap' in data:
+                    if data['solmap']['pal']:
+                        pal_solution = data['solmap']['pal']
+            else:    
                 # do pal
                 pal_solution, query_msg = query_pal(
                     data, key, pal_temperature, backbone=backbone)
@@ -873,26 +842,47 @@ def query_math(
                     pal_ans = safe_execute_turbo(pal_solution[0]) # testing pal-generated code and getting answer from it
                     pal_answers.append(pal_ans)
                     pal_solutions.append(pal_solution[0])
-                if when_only_conflict==3:
-                    # do p2c 
-                    p2c_solution, plans, query_msg = query_plancode(data, key=key, plan_temperature=plan_temperature, code_temperature=code_temperature, backbone=backbone, k_fewshot=k_fewshot)
+            
+            # check p2c when only conflict ==3
+            if when_only_conflict==3:
+                if 'p2c_executed' in data:
+                    if data['p2c_executed']:
+                        p2c_ans = data['p2c_executed']
+                        if isinstance(p2c_ans, list):
+                            p2c_ans = p2c_ans[0]
+                    if 'p2c_generated' in data:
+                        if data['p2c_generated']:                     
+                            p2c_solution = data['p2c_generated']
+                    if 'plan' in data:
+                        if data['plan']:
+                            p2c_plan = data['plan']
+                elif 'ansmap' in data.keys():
+                    if 'p2c' in data['ansmap']:
+                        if data['ansmap']['p2c']:
+                            p2c_ans = data['ansmap']['p2c']
+                    if 'solmap' in data:
+                        if 'p2c' in data['solmap']:
+                            if data['solmap']['p2c']:
+                                p2c_solution = data['solmap']['p2c'] 
+                                if isinstance(p2c_solution,list):
+                                    p2c_solution = p2c_solution[0]
+                                p2c_plan, p2c_code = separate_plan_code(p2c_solution)
+                else:
+                    p2c_solution, p2c_plan, query_msg = query_plancode(data, key=key, plan_temperature=plan_temperature, code_temperature=code_temperature, backbone=backbone, k_fewshot=k_fewshot)
                     if p2c_solution is None:
-                        print('Time out')
                         return None
                     else:
                         p2c_ans = safe_execute_turbo(p2c_solution[0]) # testing p2c-generated code and getting answer from it
                         p2c_answers.append(p2c_ans)
                         p2c_solutions.append(p2c_solution[0])
+        
+                        
+            # to check conflict
             answers_above = [cot_ans, pal_ans]
             if when_only_conflict==3:
                 answers_above.append(p2c_ans)
-            
-            ##########
-            ## I guess this part could be hugely improvable (readability, conciseness). 
-            ## `args.when_only_conflict` option should dangle just before the baseline routine or should be merged into it. but let us avoid unnecessary confusion for now...
-            ##########
 
-
+            # record above
             ansmap = {
                 'cot': cot_ans,
                 'pal': pal_ans,
@@ -900,10 +890,10 @@ def query_math(
             solmap = {
                 'cot': cot_solution,
                 'pal': pal_solution,
-            }
+            } 
             if when_only_conflict == 3:
                 ansmap['p2c'] = p2c_ans
-                solmap['p2c'] = (p2c_plan, p2c_solution)
+                solmap['p2c'] = p2c_solution
             
 
             if tgt_conflict_baseline: # call query_selection == baseline model selection 
@@ -1657,8 +1647,10 @@ if __name__ == '__main__':
 
         print('seed=777 for every llm queries in this script from nov 11')
         print('T=0 manually set for rimsprompt, cohprompt query method')
+        assert args.sc_num == 1, f"self_consistency (user input now: --{sc_num=}) option does not work properly for this version. Need to modify alot"
         # === run experiments ===
         progress_bar = tqdm(range(task_num))
+
         for i in range(task_num):
             progress_bar.update(1)
             task = tasks[i]

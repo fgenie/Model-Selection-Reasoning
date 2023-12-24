@@ -1,6 +1,5 @@
 import pandas as pd 
 from fire import Fire
-from tenacity import retry, wait_chain, wait_fixed
 import datasets
 
 import copy
@@ -9,7 +8,7 @@ from pprint import pprint
 from collections import defaultdict
 from typing import Union, Tuple
 
-from prompt_build_utils import *
+from RIMS.portable.prompt_build_utils import *
 
 import jsonlines as jsl
 import pandas as pd 
@@ -18,10 +17,7 @@ import pandas as pd
 
 
 
-# @retry(wait=wait_chain(*[wait_fixed(3) for i in range(5)])) #defining backoff for retrying.
-def do_with_tenacity(func, *args, **kwargs):
-    # print(f'running with {args=}, {kwargs=}')
-    return func(*args, **kwargs)
+
 
 def sln_eval(sln:str='', ans:Union[float, int]=-9999., method:str='')->Tuple[bool, Union[float, int]]:
     # eval logic same as model-selection paper original code

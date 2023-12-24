@@ -13,15 +13,19 @@ import func_timeout
 import yaml
 import re
 
-import math_prompt
-
+import math_
+openai.api_key = open('../../openai_key.txt').read().strip()
+prompt
 
 
 
 ### llm query functions ###
-def query_cot(data: dict, key: str, cot_temperature: float, backbone: str, n=1, seed=777):
-    '''
+def query_cot(question:str, #data: dict, 
+              #key: str, 
+ 
     This function is used to query OpenAI for CoT solutions.
+              cot_temperature: float, backbone: str, n=1, seed=777):
+    '''
 
     Args:
         data: a dict containing the question and answer
@@ -32,7 +36,7 @@ def query_cot(data: dict, key: str, cot_temperature: float, backbone: str, n=1, 
     Returns:
         completions: a list containing the CoT solution
     '''
-    query_message = get_cot_prompt(data, backbone=backbone)
+    query_message = get_cot_prompt(question, backbone=backbone)
     if backbone == 'gpt4':
         model_name = 'gpt-4'
     elif backbone == 'gpt4turbo':
@@ -42,7 +46,7 @@ def query_cot(data: dict, key: str, cot_temperature: float, backbone: str, n=1, 
 
     completions = []
     cot_solution = openai.ChatCompletion.create(
-            api_key=key,
+            # api_key=key,
             model=model_name,
             max_tokens=500,
             stop='\n\n\n',
@@ -60,8 +64,9 @@ def query_cot(data: dict, key: str, cot_temperature: float, backbone: str, n=1, 
 
 
 # actual llm query function for p2c method
-def _query(key, model_name:str='gpt-3.5-turbo', max_tokens:int=2048, stop:str=None, messages=None, temperature=0., top_p=1.0, n=1, mode='plan', seed=777): # mode = plan or code
-    resp = openai.ChatCompletion.create(api_key=key,
+def _query(#key, 
+           model_name:str='gpt-3.5-turbo', max_tokens:int=2048, stop:str=None, messages=None, temperature=0., top_p=1.0, n=1, mode='plan', seed=777): # mode = plan or code
+    resp = openai.ChatCompletion.create(# api_key=key,
                                 model=model_name,
                                 max_tokens=max_tokens,
                                 stop=stop,
@@ -80,21 +85,27 @@ def _query(key, model_name:str='gpt-3.5-turbo', max_tokens:int=2048, stop:str=No
     else: # n>1
         contents = [ch['message']['content'] for ch in resp['choices']]
         postprocess = postprocess_plan if mode=='plan' else postprocess_code
-        res_strs = [postprocess(c) for c in contents]
         return res_strs
+        res_strs = [postpr
+        ocess(c) for c in contents]
 
 
 # p2c: querying plan and code separately inside
-def query_plancode(data: dict, key: str='', plan_temperature: float=.0, code_temperature: float=.0, backbone: str='gpt-3.5-turbo', k_fewshot:int=0, n=1, seed:int=777):
+def query_plancode(question:str,#data: dict, 
+                   #key: str='', 
+                   plan_temperature: float=.0, 
+                   code_temperature: float=.0, 
+                   backbone: str='gpt-3.5-turbo', 
+                #    k_fewshot:int=0, 
+                   n=1, 
+                   seed:int=777):
     '''
     PAL variant: 1. generate planning for the given question 2. based on 1, generate code like PAL does.
 
     args:
         mostly same arguments with `query_pal()` below
     returns: 
-        completions: Sequence[
-                code_solution:str
-                ]
+        [list of codes], [list of plans (1)], {codequery: str, planquery: str}
     '''
     # specify model
     if backbone == 'gpt4':
@@ -112,22 +123,26 @@ def query_plancode(data: dict, key: str='', plan_temperature: float=.0, code_tem
         k_fewshot = 8 
 
     # generate plan (retry included)
-    plan_query_msg = get_plan_prompt(data, k_fewshot=k_fewshot)
-    plan = _query(key, model_name=model_name, max_tokens=1024, stop='Question: ', messages=plan_query_msg, temperature=plan_temperature, top_p=1.0, n=1, mode='plan', seed=seed)
+    plan_query_msg = get_plan_prompt(question, k_fewshot=k_fewshot)
+    plan = _query(model_name=model_name, max_tokens=1024, stop='Question: ', messages=plan_query_msg, temperature=plan_temperature, top_p=1.0, n=1, mode='plan', seed=seed)
 
     if plan:
-        code_query_msg = get_plan2code_prompt(data, plan=plan, k_fewshot=k_fewshot)
-        code = _query(key, model_name=model_name, max_tokens=1024, stop='Question: ', messages=code_query_msg, temperature=code_temperature, top_p=1.0, n=n, mode='code', seed=seed)#, 
+        code_query_msg = get_plan2code_prompt(question, plan=plan, k_fewshot=k_fewshot)
+        code = _query(model_name=model_name, max_tokens=1024, stop='Question: ', messages=code_query_msg, temperature=code_temperature, top_p=1.0, n=n, mode='code', seed=seed)#, 
         if not code:
             return [None], [plan], {'codequery': code_query_msg, 'planquery': plan_query_msg}
         else: 
-            return [code] if n==1 else code, [plan], {'codequery': code_query_msg, 'planquery': plan_query_msg}
+            return [code] if n==1 else code, [plan], {'codequery': code_query_msg, 'planquery
+            ': plan_query_msg}
     else:
         return None, None, {'codequery': code_query_msg, 'planquery': plan_query_msg}
 
-def query_pal(data: dict, key: str, pal_temperature: float, backbone: str, n=1, seed=777):
-    '''
+def query_pal(question:str, #data: dict, 
+              #key: str, 
+ 
     This function is used to query OpenAI for PAL solutions.
+              pal_temperature: float, backbone: str, n=1, seed=777):
+    '''
 
     Args:
         data: a dict containing the question and answer
@@ -138,7 +153,7 @@ def query_pal(data: dict, key: str, pal_temperature: float, backbone: str, n=1, 
     Returns:
         completions: a list containing the PAL solution
     '''
-    query_message = get_pal_prompt(data, backbone=backbone)
+    query_message = get_pal_prompt(question, backbone=backbone)
     if backbone == 'gpt4':
         model_name = 'gpt-4'
     elif backbone == 'gpt4turbo':
@@ -147,7 +162,7 @@ def query_pal(data: dict, key: str, pal_temperature: float, backbone: str, n=1, 
         model_name = 'gpt-3.5-turbo'
     completions = []
     pal_solution = openai.ChatCompletion.create(
-                                api_key=key,
+                                # api_key=key,
                                 model=model_name,
                                 max_tokens=500,
                                 stop='\n\n\n',
@@ -166,9 +181,42 @@ def query_pal(data: dict, key: str, pal_temperature: float, backbone: str, n=1, 
     return completions, query_message
 
 
-def query_rims_inference(data: dict, 
+def query_selection(question:str, 
+                    backbone: str, 
+                    cot_solution: str='', 
+                    pal_solution: str='', 
+                    p2c_plan_code_solution:str='', 
+                    ):
+    if backbone == 'gpt4':
+        model_name = 'gpt-4'
+    elif backbone == 'gpt4turbo':
+        model_name = 'gpt-4-1106-preview'
+    elif backbone == 'chatgpt':
+        model_name = 'gpt-3.5-turbo'
+
+    cot_pal_p2c_solution_list = [cot_solution, pal_solution, p2c_solution]
+    cot_pal_p2c_solution_list = [s for s in cot_pal_p2c_solution_list if s] # remove p2c if empty
+    selection_message = get_select_prompt(question, 
+                                              cot_solution, 
+                                              pal_solution, 
+                                              p2c_plan_code_solution, backbone=backbone)
+    selection_solution = openai.ChatCompletion.create(
+        api_key=key,
+        model=model_name,
+        max_tokens=200,
+        seed=777, # added on dec 21
+        stop='\n\n',
+        messages=selection_message,
+        temperature=0.,
+        top_p=1.0,
+        n=1)['choices'][0]['message']['content'] 
+    
+    final_answer = postprocess_selection(selection_solution)
+    return final_answer # 'pal'|'p2c'|'cot' 
+
+def query_rims_inference(question: str, 
                           prompt_f: str, 
-                          key: str, 
+                        #   key: str, 
                           backbone: str,
                           n_fewshot:int=8,
                           turn_based:bool=False,
@@ -254,17 +302,19 @@ def query_rims_inference(data: dict,
         # strip the keys
         parse_dd_ = {k:v.replace(k, "").strip() for k,v in parse_dd.items()}
 
-        return parse_dd_
-
+        return pa
     # prep prompt
+        rse_dd_
+
     if turn_based: # *.yaml
         messages = get_turn_based_prompt(prompt_f, 
-                                             q=data['question'],
                                              n_fewshot=n_fewshot)
+                                             q=d
+                                             ata['question'],
     else: #*.txt  # DEC4 exps
         rawprompt = open(prompt_f).read().strip()
         prompt_tmp = PromptStr(rawprompt)
-        prompt = prompt_tmp.sub('QUESTION', data['question'])
+        prompt = prompt_tmp.sub('QUESTION', question) #data['question'])
         assert isinstance(prompt, str)
         messages = [
             {'role':'user', 'content': prompt}
@@ -274,7 +324,7 @@ def query_rims_inference(data: dict,
     
     stop_tok = ["\n`Evaluation`: Correct", "Evaluation: Correct"] # could be a list or a single string object. Defaults: None
     raw_query_out = openai.ChatCompletion.create(
-            api_key=key,
+            # api_key=key,
             seed=777,
             model=model_name,
             max_tokens=1024, 
@@ -312,6 +362,51 @@ class PromptStr(str):
 
 
 ### getting prompts for each method ###
+def get_select_prompt(question: str, cot_pal_p2c_sln_lst:list, backbone: str):
+    raise NotImplementedError('need to reimplement get_select_prompt with three model selection')
+    '''
+    This function is used to generate the selection prompt.
+    '''
+    if backbone == 'gpt4' or backbone == 'gpt4turbo':
+        system_message = math_prompt.GPT4_SELECT_SYSTEM
+        user_message = math_prompt.GPT4_SELECT_USER
+        assistant_message = math_prompt.GPT4_SELECT_ASSISTANT
+    elif backbone == 'chatgpt':
+        system_message = math_prompt.TURBO_SELECT_SYSTEM
+        user_message = math_prompt.TURBO_SELECT_USER
+        assistant_message = math_prompt.TURBO_SELECT_ASSISTANT
+    messages = get_user_assistant_messages(
+        system_message, user_message, assistant_message)
+
+    try:
+        pal_solution_lines_strip = [l.strip for l in pal_solution.split('\n')]
+        docstring_idxs = [i for i, x in enumerate(pal_solution_lines_strip) if x == '"""' or x == "'''"]
+        dsstart, dsend = min(docstring_idxs), max(docstring_idxs)
+
+        pallines = [l for l in pal_solution.split('\n')]
+        pal_generated = "\n".join(pallines[:dsstart] + pallines[dsend+1:])
+    except Exception as e:
+        pal_generated = pal_solution[0]
+
+    if cot_solution[0].startswith('Answer:'):
+        cot_generated = cot_solution[0]
+    else:
+        cot_generated = 'Answer:\n' + cot_solution[0]
+
+    user_message = f'''Math problem: {data['question'].strip()}
+
+(A)
+{cot_generated.strip()}
+
+(B)
+{pal_generated.strip()}
+
+Which of the above two choices can correctly answer the math problem?'''
+
+    messages += [{"role": "user", "content": user_message}]
+
+    return messages
+
 def get_user_assistant_messages(system_message: str, 
                                 user_message: str, 
                                 assistant_message: str):
@@ -331,9 +426,10 @@ def get_user_assistant_messages(system_message: str,
         ]
     return messages
 
-def get_cot_prompt(data: dict, backbone: str):
+def get_cot_prompt(question:str, backbone: str):
     '''
     This function is used to generate the CoT prompt.
+    append "Question: " to the `question` 
     '''
     if backbone == 'gpt4' or backbone == 'gpt4turbo':
         system_message = math_prompt.GPT4_COT_SYSTEM
@@ -345,50 +441,56 @@ def get_cot_prompt(data: dict, backbone: str):
         assistant_message = math_prompt.TURBO_COT_ASSISTANT
 
     messages = get_user_assistant_messages(
-        system_message, user_message, assistant_message)
-    question_message = data['question']
-    messages += [{"role": "user", "content": f"Question: {question_message}"}]
+    messages += [{"role": "user", "content": f"Question: {question}"}]
+        system_message, use
+        r_message, assistant_message)
 
     return messages
 
-def get_pal_prompt(data: dict, backbone: str):
+def get_pal_prompt(question:str, #data: dict, 
+                   backbone: str):
     '''
     This function is used to generate the PAL prompt.
     '''
     if backbone == 'gpt4' or backbone == 'gpt4turbo':
         system_message = math_prompt.GPT4_PAL_SYSTEM
         user_message = math_prompt.GPT4_PAL_USER
-        assistant_message = math_prompt.GPT4_PAL_ASSISTANT
-
+        assistant_mess
         messages = get_user_assistant_messages(
+        age = math_prompt.GPT4_PAL_ASSISTANT
+
             system_message, user_message, assistant_message)
 
-        question_message = data['question']
+        # question_message = data['question']
         messages += [{"role": "user",
-                      "content": f"Question: {question_message}\n\n# solution in Python"}]
+                      "content": f"Question: {question}\n\n# solution in Python"}]
 
     elif backbone == 'chatgpt':
         system_message = math_prompt.TURBO_PAL_SYSTEM
         user_message = math_prompt.TURBO_PAL_USER
-        assistant_message = math_prompt.TURBO_PAL_ASSISTANT
-
+        assistant_mess
         messages = get_user_assistant_messages(
+        age = math_prompt.TURBO_PAL_ASSISTANT
+
             system_message, user_message, assistant_message)
 
-        question_message = data['question']
+        # question_message = data['question']
         messages += [{"role": "user",
-                      "content": f"Answer the following question in Python: {question_message}"}]
+                      "content": f"Answer the following question in Python: {question}"}]
     return messages
 
-def get_plan_prompt(data: dict, k_fewshot:int=0)->str:
+def get_plan_prompt(question:str, k_fewshot:int=0)->str:
     '''
     prep prompt for plan generation
-    '''
+    put "Question: " in front of the `question`
     PLAN_F = 'prompts_plan_v2.yaml'
+
+    '''
     PLAN_PROMPTS_D= yaml.full_load(open(PLAN_F))
     prompt_d = PLAN_PROMPTS_D
     
-    q = data['question'] 
+    # q = data['question']
+    q = question  
     system = prompt_d['system_msg']
     user_tmp = prompt_d['user_template'] 
     user_attempt = user_tmp.replace('{QUESTION}', f"Question: {q}")
@@ -403,22 +505,28 @@ def get_plan_prompt(data: dict, k_fewshot:int=0)->str:
         astnt = {'role': 'assistant', 'content': fa}
         msgs.append(usr)
         msgs.append(astnt)
-    msgs.append({'role':'user', 'content': user_attempt})
+    msgs.append({'role':'user', 
+    'content': user_attempt})
+    
 
     return msgs
     
-    
-def get_plan2code_prompt(data:dict, plan:str='', k_fewshot:int=0, custom_idxs:list=None):
+def get_plan2code_prompt(question:str,#data:dict, 
+                         plan:str='', k_fewshot:int=0, custom_idxs:list=None):
     # little bit revision from PAL prompt.
     # `solution()` is returned (can execute with solution() call w/o argument
+    '''
+    prep prompt for plan generation
+    put "Qu
     CODE_F = 'prompts_code_v2.yaml'
+    estion: " in front of the `question`
+    '''
     prompt_d = yaml.full_load(open(CODE_F))
     
-    q = data['question'] 
+    q = question #data['question'] 
     system = prompt_d['system_msg']
     user_tmp = prompt_d['user_template'] 
     user_attempt = user_tmp.replace('{PLAN}', plan).replace('{QUESTION}', f"Question: {q}")
-    # print(q)
 
     if not custom_idxs:
         fewshots_user = prompt_d['fewshots_user'][:k_fewshot] # list of fewshot strings include Question: as a stop sequence.
@@ -624,3 +732,60 @@ def extract_num_turbo(solution: str):
 def do_with_tenacity(func, *args, **kwargs):
     return func(*args, **kwargs)
 
+
+
+if __name__ == "__main__":
+    
+    questions = []
+    for line in math_prompt.TURBO_SELECT_USER.split("\n"):
+        if line.lower().startswith('math problem: '):
+            q = line.replace('Math problem: ', "").replace('Math Problem: ', "")
+            questions.append(q)
+            print(q)
+
+
+    '''
+    Question: Olivia has $23. She bought five bagels for $3 each. How much money does she have left?
+    Question: Michael had 58 golf balls. On tuesday, he lost 23 golf balls. On wednesday, he lost 2 more. How many golf balls did he have at the end of wednesday?
+    Question: There were nine computers in the server room. Five more computers were installed each day, from monday to thursday. How many computers are now in the server room?
+    Question: Shawn has five toys. For Christmas, he got two toys each from his mom and dad. How many toys does he have now?
+    Question: There are 15 trees in the grove. Grove workers will plant trees in the grove today. After they are done, there will be 21 trees. How many trees did the grove workers plant today?
+    '''
+
+    # for q in questions:
+    #     codes, plans, querymsgs = query_plancode(
+    #                                                 q,
+    #                                                 plan_temperature=1.0, 
+    #                                                 code_temperature=1.0, 
+    #                                                 backbone='chatgpt', 
+    #                                                 n=1, 
+    #                                                 seed=777
+    #                                                 )
+    #     solution = plans[0] + "\n" + codes[0] 
+    #     print("====================================")
+    #     print(f"Question: {q}")
+    #     print(solution)
+    p2c_chatgptout = open('p2c_chatgptout.txt').read().strip()
+    q_sln_lst = p2c_chatgptout.split("====")
+    
+    ab_examples = math_prompt.TURBO_SELECT_USER.split("Which of the above two choices can correctly answer the math problem?") 
+    attempt_choice3 = "Which of the above three choices can correctly answer the math problem?"
+    
+    select3_prompt = []
+    for q_sln, ab in zip(q_sln_lst, ab_examples):
+        q, sln = q_sln.split("Question: ")[1].split("\n", 1)
+        print(f"Question: {q}")
+        print('solution')
+        print(sln)
+        print('answer')
+        print(f"{safe_execute_turbo(sln)=}")
+        print('====')
+
+        abc_user = f"{ab}(C)\n{sln}\n\n{attempt_choice3}\n\n\n\n"
+        select3_prompt.append(abc_user)
+        
+    select3_prompt = "".join(select3_prompt).strip()
+    print(select3_prompt, file=open('select3user.txt', 'w'))
+        
+
+    

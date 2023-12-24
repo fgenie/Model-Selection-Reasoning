@@ -1,5 +1,5 @@
 # todo
-- [x] 0 changing corrected attempt --> attempt 1,2,3...
+- [x] 0 changing `Corrected Attempt`: --> `Attempt 1,2,3`:...
     - effect
         - no reflection blurb (improves)
         - only one reflection blurbs (slightly degrades)
@@ -24,6 +24,8 @@
 |  5 | modif_no_refl_rims_cotpal_inference_prompt_k4_DEC9_gpt4  | 1268/1319 (96.13\%) | 50/73 (68.49\%) | 13/19 (68.42\%) | 37/54 (68.52\%) |            0 |
 |  1 | modif_no_refl_rims_cotpal_inference_prompt_k6_DEC9_gpt4  | 1265/1319 (95.91\%) | 47/73 (64.38\%) | 15/26 (57.69\%) | 32/47 (68.09\%) |            0 |
 
+*k4 has two truncated generations(if both correct-->96.29)  
+*others have no truncation issues
 
 ----
 
