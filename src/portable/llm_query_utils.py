@@ -1,9 +1,5 @@
 '''
-- gathered helper functions for gsm8k prompts building  
-- supports rims prompt building (for gsm)
-
 - NEED: rims prompt post processing (for gsm)
-- NEED: unifying the structure of each for ease of other task prompting (current: p2c != cot, pal)
 '''
 from tenacity import retry, wait_chain, wait_fixed
 import openai
@@ -13,19 +9,20 @@ import func_timeout
 import yaml
 import re
 
-import math_
+import math_prompt
 openai.api_key = open('../../openai_key.txt').read().strip()
-prompt
+
 
 
 
 ### llm query functions ###
-def query_cot(question:str, #data: dict, 
-              #key: str, 
- 
-    This function is used to query OpenAI for CoT solutions.
-              cot_temperature: float, backbone: str, n=1, seed=777):
+def query_cot(question:str, 
+              cot_temperature: float, 
+              backbone: str, 
+              n=1, 
+              seed=777):
     '''
+    This function is used to query OpenAI for CoT solutions.
 
     Args:
         data: a dict containing the question and answer
@@ -62,7 +59,6 @@ def query_cot(question:str, #data: dict,
     return completions, query_message
 
 
-
 # actual llm query function for p2c method
 def _query(#key, 
            model_name:str='gpt-3.5-turbo', max_tokens:int=2048, stop:str=None, messages=None, temperature=0., top_p=1.0, n=1, mode='plan', seed=777): # mode = plan or code
@@ -85,18 +81,15 @@ def _query(#key,
     else: # n>1
         contents = [ch['message']['content'] for ch in resp['choices']]
         postprocess = postprocess_plan if mode=='plan' else postprocess_code
+        res_strs = [postprocess(c) for c in contents]
         return res_strs
-        res_strs = [postpr
-        ocess(c) for c in contents]
 
 
 # p2c: querying plan and code separately inside
 def query_plancode(question:str,#data: dict, 
-                   #key: str='', 
                    plan_temperature: float=.0, 
                    code_temperature: float=.0, 
                    backbone: str='gpt-3.5-turbo', 
-                #    k_fewshot:int=0, 
                    n=1, 
                    seed:int=777):
     '''
@@ -132,17 +125,15 @@ def query_plancode(question:str,#data: dict,
         if not code:
             return [None], [plan], {'codequery': code_query_msg, 'planquery': plan_query_msg}
         else: 
-            return [code] if n==1 else code, [plan], {'codequery': code_query_msg, 'planquery
-            ': plan_query_msg}
+            return [code] if n==1 else code, [plan], {'codequery': code_query_msg, 'planquery': plan_query_msg}
     else:
         return None, None, {'codequery': code_query_msg, 'planquery': plan_query_msg}
 
-def query_pal(question:str, #data: dict, 
-              #key: str, 
- 
-    This function is used to query OpenAI for PAL solutions.
+
+def query_pal(question:str,
               pal_temperature: float, backbone: str, n=1, seed=777):
     '''
+    This function is used to query OpenAI for PAL solutions.
 
     Args:
         data: a dict containing the question and answer
@@ -162,7 +153,6 @@ def query_pal(question:str, #data: dict,
         model_name = 'gpt-3.5-turbo'
     completions = []
     pal_solution = openai.ChatCompletion.create(
-                                # api_key=key,
                                 model=model_name,
                                 max_tokens=500,
                                 stop='\n\n\n',
@@ -214,9 +204,9 @@ def query_selection(question:str,
     final_answer = postprocess_selection(selection_solution)
     return final_answer # 'pal'|'p2c'|'cot' 
 
+
 def query_rims_inference(question: str, 
                           prompt_f: str, 
-                        #   key: str, 
                           backbone: str,
                           n_fewshot:int=8,
                           turn_based:bool=False,
@@ -307,10 +297,11 @@ def query_rims_inference(question: str,
         rse_dd_
 
     if turn_based: # *.yaml
-        messages = get_turn_based_prompt(prompt_f, 
-                                             n_fewshot=n_fewshot)
-                                             q=d
-                                             ata['question'],
+        messages = get_turn_based_prompt(
+                                        prompt_f, 
+                                        q=question,
+                                        n_fewshot=n_fewshot
+                                        )
     else: #*.txt  # DEC4 exps
         rawprompt = open(prompt_f).read().strip()
         prompt_tmp = PromptStr(rawprompt)
@@ -319,8 +310,6 @@ def query_rims_inference(question: str,
         messages = [
             {'role':'user', 'content': prompt}
         ]
-    # print('T=0 for query_enhanced_coh() (manually set)')
-    # print('seed=777 for query_enhanced_coh() (manually set) from nov 11')
     
     stop_tok = ["\n`Evaluation`: Correct", "Evaluation: Correct"] # could be a list or a single string object. Defaults: None
     raw_query_out = openai.ChatCompletion.create(
@@ -345,7 +334,6 @@ def query_rims_inference(question: str,
 
 
 
-
 ### almost same to string.Template, but with custom delimiter ( [QUESTION] == ${QUESTION}, to avoid `$` used frequently in price-related questions )
 class PromptStr(str): 
     def __init__(self, template_str):
@@ -362,23 +350,35 @@ class PromptStr(str):
 
 
 ### getting prompts for each method ###
-def get_select_prompt(question: str, cot_pal_p2c_sln_lst:list, backbone: str):
-    raise NotImplementedError('need to reimplement get_select_prompt with three model selection')
+def get_select_prompt(question: str, cot_pal_p2c_sln_d:dict, backbone: str):
     '''
     This function is used to generate the selection prompt.
     '''
-    if backbone == 'gpt4' or backbone == 'gpt4turbo':
-        system_message = math_prompt.GPT4_SELECT_SYSTEM
-        user_message = math_prompt.GPT4_SELECT_USER
-        assistant_message = math_prompt.GPT4_SELECT_ASSISTANT
-    elif backbone == 'chatgpt':
-        system_message = math_prompt.TURBO_SELECT_SYSTEM
-        user_message = math_prompt.TURBO_SELECT_USER
-        assistant_message = math_prompt.TURBO_SELECT_ASSISTANT
+    if len(cot_pal_p2c_sln_d)==3:
+        if backbone == 'gpt4' or backbone == 'gpt4turbo':
+            system_message = math_prompt.GPT4_SELECT_SYSTEM3
+            user_message = math_prompt.GPT4_SELECT_USER3
+            assistant_message = math_prompt.GPT4_SELECT_ASSISTANT3
+        elif backbone == 'chatgpt':
+            system_message = math_prompt.TURBO_SELECT_SYSTEM3
+            user_message = math_prompt.TURBO_SELECT_USER3
+            assistant_message = math_prompt.TURBO_SELECT_ASSISTANT3      
+    elif len(cot_pal_p2c_sln_d)==2:
+        if backbone == 'gpt4' or backbone == 'gpt4turbo':
+            system_message = math_prompt.GPT4_SELECT_SYSTEM
+            user_message = math_prompt.GPT4_SELECT_USER
+            assistant_message = math_prompt.GPT4_SELECT_ASSISTANT
+        elif backbone == 'chatgpt':
+            system_message = math_prompt.TURBO_SELECT_SYSTEM
+            user_message = math_prompt.TURBO_SELECT_USER
+            assistant_message = math_prompt.TURBO_SELECT_ASSISTANT
+    else:
+        assert False, f"len(cot_pal_p2c_sln_d) needs to be 2 or 3 (current = {len(cot_pal_p2c_sln_d)})"
+    
     messages = get_user_assistant_messages(
         system_message, user_message, assistant_message)
 
-    try:
+    try: # try to remove docstring from pal solution generated... looks unhappy but kind of needed..
         pal_solution_lines_strip = [l.strip for l in pal_solution.split('\n')]
         docstring_idxs = [i for i, x in enumerate(pal_solution_lines_strip) if x == '"""' or x == "'''"]
         dsstart, dsend = min(docstring_idxs), max(docstring_idxs)
@@ -388,12 +388,13 @@ def get_select_prompt(question: str, cot_pal_p2c_sln_lst:list, backbone: str):
     except Exception as e:
         pal_generated = pal_solution[0]
 
-    if cot_solution[0].startswith('Answer:'):
+    if cot_solution[0].startswith('Answer:'): # put 'Answer:' at the start of CoT answer generation. Original code does this but not sure what they really wanted to do with this... biasing toward CoT?
         cot_generated = cot_solution[0]
     else:
         cot_generated = 'Answer:\n' + cot_solution[0]
 
-    user_message = f'''Math problem: {data['question'].strip()}
+    if len(cot_pal_p2c_sln_d) == 2:
+        user_message = f'''Math problem: {question.strip()}
 
 (A)
 {cot_generated.strip()}
@@ -402,10 +403,15 @@ def get_select_prompt(question: str, cot_pal_p2c_sln_lst:list, backbone: str):
 {pal_generated.strip()}
 
 Which of the above two choices can correctly answer the math problem?'''
+        
+    else: # len(cot_pal_p2c_sln_d)==3:
+        p2c_choice_str = f"(C)\n{p2c_solution[0].strip()}\n\nWhich of the above three choices can correctly answer the math problem?"
+        user_message = user_message.replace('Which of the above two choices can correctly answer the math problem?', p2c_choice_str)
 
     messages += [{"role": "user", "content": user_message}]
 
     return messages
+
 
 def get_user_assistant_messages(system_message: str, 
                                 user_message: str, 
@@ -441,13 +447,12 @@ def get_cot_prompt(question:str, backbone: str):
         assistant_message = math_prompt.TURBO_COT_ASSISTANT
 
     messages = get_user_assistant_messages(
+        system_message, user_message, assistant_message)
     messages += [{"role": "user", "content": f"Question: {question}"}]
-        system_message, use
-        r_message, assistant_message)
 
     return messages
 
-def get_pal_prompt(question:str, #data: dict, 
+def get_pal_prompt(question:str,
                    backbone: str):
     '''
     This function is used to generate the PAL prompt.
@@ -455,26 +460,20 @@ def get_pal_prompt(question:str, #data: dict,
     if backbone == 'gpt4' or backbone == 'gpt4turbo':
         system_message = math_prompt.GPT4_PAL_SYSTEM
         user_message = math_prompt.GPT4_PAL_USER
-        assistant_mess
+        assistant_message = math_prompt.GPT4_PAL_ASSISTANT
         messages = get_user_assistant_messages(
-        age = math_prompt.GPT4_PAL_ASSISTANT
-
             system_message, user_message, assistant_message)
 
-        # question_message = data['question']
         messages += [{"role": "user",
                       "content": f"Question: {question}\n\n# solution in Python"}]
 
     elif backbone == 'chatgpt':
         system_message = math_prompt.TURBO_PAL_SYSTEM
         user_message = math_prompt.TURBO_PAL_USER
-        assistant_mess
+        assistant_message = math_prompt.TURBO_PAL_ASSISTANT
         messages = get_user_assistant_messages(
-        age = math_prompt.TURBO_PAL_ASSISTANT
-
             system_message, user_message, assistant_message)
 
-        # question_message = data['question']
         messages += [{"role": "user",
                       "content": f"Answer the following question in Python: {question}"}]
     return messages
@@ -483,9 +482,9 @@ def get_plan_prompt(question:str, k_fewshot:int=0)->str:
     '''
     prep prompt for plan generation
     put "Question: " in front of the `question`
-    PLAN_F = 'prompts_plan_v2.yaml'
 
     '''
+    PLAN_F = './prompts_plan_v2.yaml'
     PLAN_PROMPTS_D= yaml.full_load(open(PLAN_F))
     prompt_d = PLAN_PROMPTS_D
     
@@ -518,9 +517,9 @@ def get_plan2code_prompt(question:str,#data:dict,
     '''
     prep prompt for plan generation
     put "Qu
-    CODE_F = 'prompts_code_v2.yaml'
     estion: " in front of the `question`
     '''
+    CODE_F = './prompts_code_v2.yaml'
     prompt_d = yaml.full_load(open(CODE_F))
     
     q = question #data['question'] 
@@ -585,6 +584,7 @@ def postprocess_code(rawanswer:str, k_fewshot:int=0):
         code = ''
     return code
 
+# p2c response postprocessing utility
 def separate_plan_code(rawstr:str)->tuple:
     # used for 5_cohlike_prompt
     # p2c results in plan\ncode so split it.
@@ -621,7 +621,7 @@ def parse_method2(methodstr:str)->str:
     else:
         return methodstr
     
-# cot answer extracting from rims response
+# rims prompt: cot answer extracting postprocessing 
 def parse_num_from_answer(rawstr)->float:
     '''
     used for parsing number out from Answer (dec 4 exp)
@@ -731,6 +731,9 @@ def extract_num_turbo(solution: str):
 @retry(wait=wait_chain(*[wait_fixed(3) for i in range(5)])) #defining backoff for retrying.
 def do_with_tenacity(func, *args, **kwargs):
     return func(*args, **kwargs)
+
+
+
 
 
 

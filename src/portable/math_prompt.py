@@ -749,7 +749,7 @@ Which of the above three choices can correctly answer the math problem?
 
 (A) can correctly answer the math problem. Because (B) adds the number of bagels to the cost of each bagel instead of multiplying them, and (C) also fails with the same mistake.
 
-Now it's your turn. Here is another math problem and two choices.
+Now it's your turn. Here is another math problem and three choices.
 Math Problem: Michael had 58 golf balls. On tuesday, he lost 23 golf balls. On wednesday, he lost 2 more. How many golf balls did he have at the end of wednesday?
 
 (A)
@@ -828,7 +828,7 @@ TURBO_SELECT_ASSISTANT3 = """(C) can correctly answer the math problem. Because 
 
 
 
-(B) can correctly answer the math problem. Because (A) fails to add up computers added each day, and (C) wrongly figured the number of days which computers to be added as 3 days.
+(B) can correctly answer the math problem. Because (A) fails to add up computers added each day, and (C) wrongly figured the number of days for computers to be added as 3 days.
 """.strip()
 
 
@@ -836,9 +836,3 @@ GPT4_SELECT_SYSTEM3 = GPT4_SELECT_SYSTEM
 GPT4_SELECT_USER3 = TURBO_SELECT_USER3 
 GPT4_SELECT_ASSISTANT3 = TURBO_SELECT_ASSISTANT3 
 
-
-
-
-'''
-
-'''
