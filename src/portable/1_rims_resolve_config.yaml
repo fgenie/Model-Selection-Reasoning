@@ -1,6 +1,4 @@
-#config for
-# rim_train_failure_gather.py
-# rim_train_reflect.py 
+# only_modif_p2c: true # for overwriting p2c solution with dropped plan
 do_p2c: true
 
 dbg: true # dbg option
@@ -13,6 +11,6 @@ code_T: 1. # temperature querying LLM for code outputs (e.g. plan2code or pal)
 n_llmquery: 5 # number of choices to be checked for failure 
 seed: 777 # if I query with seed, it is deterministic but still random.
 
-
+reattempt_same_method: false # in case you might want contrastive example with same method reattempting to fix, turn this to `true`
 
 backbone: gpt4turbo # chatgpt, gpt4, gpt4turbo

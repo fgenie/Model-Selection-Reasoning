@@ -1,19 +1,15 @@
-import pandas as pd 
 from fire import Fire
-from tenacity import retry, wait_chain, wait_fixed
-import datasets
 
 import copy
 from functools import partial
 from pprint import pprint
-from collections import defaultdict
 from typing import Union, Tuple
 
 from llm_query_utils import *
 
 
 
-METHODS = 'p2c pal cot'.split()
+
 
 
 
@@ -55,7 +51,11 @@ def main(
         # now kwargs[k] is accessible as a global variable `k` in this script    
     
 
-
+    # methods of interest
+    METHODS = 'p2c pal cot'.split()
+    if not do_p2c:
+        METHODS.remove('p2c')
+    
     # query_functions
     method2query_f = {
         'cot': query_cot,
@@ -63,23 +63,39 @@ def main(
         'p2c': query_plancode, 
     }
 
-    # load failed
     for f_method in METHODS:
         jslf = to_reflect_jsl.replace('METHOD', f_method)
         outjslf = jslf.replace('failed', 'resolved')
+
+        # # quick fixing for p2c buggy files
+        # if only_modif_p2c:
+        #     jslf = outjslf # buggy files of p2c solutions w/o plan (only codes)
+        #     outjslf = jslf.replace(".jsonl", "_fixed_p2c.jsonl") 
+
         records = list(jsl.open(jslf))
 
         # re-solve the failed questions with different method
         results = list()
-        
-        if not do_p2c:
-            METHODS.remove('p2c')
-            print('not running over p2c')
 
         for row in tqdm(records, desc=f're-solving for failed {f_method}'):
             row = copy.deepcopy(row)
-            
-            if retrying_same_method_only:
+            for method in METHODS:
+                # try:
+                
+                # only attempt p2c for resolution (dec27 modifying bugs in p2c files)
+                # if only_modif_p2c:
+                #     if method != 'p2c': # only p2c attempt will pass
+                #         continue
+                
+                # reattempting with same method as original?
+                if reattempt_same_method:
+                    pass
+                else:
+                    if method == f_method:
+                        continue
+
+                # define query function 
+                f = method2query_f[method]
                 if method == 'cot':
                     kwargs = dict(cot_temperature=verbal_T, backbone=backbone, n=n_llmquery, seed=seed)
                     query_f = partial(f, **kwargs)
@@ -91,12 +107,13 @@ def main(
                     query_f = partial(f, **kwargs)
                 else:
                     raise ValueError(f'unknown method {method}')  
-                out = do_with_tenacity(query_f, row['question']) if not dbg else query_f(row)
+                out = do_with_tenacity(query_f, row['question']) if not dbg else query_f(row['question'])
                 if method == 'p2c':
                     slnlst, planlst, querymsg_d = out
                 else: # pal, cot
                     slnlst, querymsg_lst = out
                 # print(f"{len(set(slnlst))=}") # confirmed seed does not make the choices degenerate to one deterministic output
+                    
                 eval_pred_lst = [sln_eval(sln, row['ans'], method) for sln in slnlst]
                 correct_sln_lst = [sln for (eval, pred), sln in zip(eval_pred_lst, slnlst) if eval]
                 correct_pred_lst = [pred for (eval, pred), sln in zip(eval_pred_lst, slnlst) if eval]
@@ -111,62 +128,16 @@ def main(
                 )   
                 if method == 'p2c': # for p2c, don't forget to cap the plan string to the code
                     # plan = planlst[0] if planlst else None
-                    correct_plan_lst = [plan for (eval, pred), plan in zip(eval_pred_lst, planlst) if eval]
-                    correct_sln_lst = [f"'''{plan}'''\n\n{sln}" for plan, sln in zip(correct_plan_lst, correct_sln_lst)]
+                    plan = planlst.pop()
+                    correct_sln_lst = [f"{plan}\n{sln}".strip() for sln in correct_sln_lst]
                     retries['correct_solution'] = correct_sln_lst
                 # embed the retries into the row 
                 if 'retries' in row.keys():
                     row['retries'].append(retries)
                 else:
                     row['retries'] = [retries]
-            else:
-                for method in METHODS:
-                    try:
-                        if method == f_method:
-                            continue
-                        # define query function 
-                        f = method2query_f[method]
-                        if method == 'cot':
-                            kwargs = dict(cot_temperature=verbal_T, backbone=backbone, n=n_llmquery, seed=seed)
-                            query_f = partial(f, **kwargs)
-                        elif method == 'pal':
-                            kwargs = dict(pal_temperature=verbal_T, backbone=backbone, n=n_llmquery, seed=seed)
-                            query_f = partial(f, **kwargs)
-                        elif method == 'p2c':
-                            kwargs = dict(plan_temperature=verbal_T, code_temperature=code_T, backbone=backbone, n=n_llmquery, seed=seed)
-                            query_f = partial(f, **kwargs)
-                        else:
-                            raise ValueError(f'unknown method {method}')  
-                        out = do_with_tenacity(query_f, row['question']) if not dbg else query_f(row['question'])
-                        if method == 'p2c':
-                            slnlst, planlst, querymsg_d = out
-                        else: # pal, cot
-                            slnlst, querymsg_lst = out
-                        # print(f"{len(set(slnlst))=}") # confirmed seed does not make the choices degenerate to one deterministic output
-                        eval_pred_lst = [sln_eval(sln, row['ans'], method) for sln in slnlst]
-                        correct_sln_lst = [sln for (eval, pred), sln in zip(eval_pred_lst, slnlst) if eval]
-                        correct_pred_lst = [pred for (eval, pred), sln in zip(eval_pred_lst, slnlst) if eval]
-                        if not correct_sln_lst:
-                            print("no correct solution found!")
-                        retries = dict(
-                            method = method,
-                            correct_solution = list(set(correct_sln_lst)),
-                            correct_prediction = set(correct_pred_lst).pop() if correct_pred_lst else None,
-                            backbone = backbone,
-                            llm_kwargs = kwargs,
-                        )   
-                        if method == 'p2c': # for p2c, don't forget to cap the plan string to the code
-                            # plan = planlst[0] if planlst else None
-                            correct_plan_lst = [plan for (eval, pred), plan in zip(eval_pred_lst, planlst) if eval]
-                            correct_sln_lst = [f"'''{plan}'''\n\n{sln}" for plan, sln in zip(correct_plan_lst, correct_sln_lst)]
-                            retries['correct_solution'] = correct_sln_lst
-                        # embed the retries into the row 
-                        if 'retries' in row.keys():
-                            row['retries'].append(retries)
-                        else:
-                            row['retries'] = [retries]
-                except Exception as e:
-                    print(e)
+                # except Exception as e:
+                #     print(e)
             results.append(row)
         # save the results
         with jsl.open(outjslf, 'w') as writer:

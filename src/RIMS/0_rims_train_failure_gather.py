@@ -1,18 +1,20 @@
-import pandas as pd 
-from fire import Fire
-import datasets
 
 import copy
 from functools import partial
 from pprint import pprint
 from collections import defaultdict
 from typing import Union, Tuple
+from pathlib import Path 
 
-from RIMS.portable.prompt_build_utils import *
 
+
+import datasets
+from fire import Fire
+from tqdm import tqdm
 import jsonlines as jsl
 import pandas as pd 
 
+from llm_query_utils import *
 
 
 
@@ -47,7 +49,7 @@ def sln_eval(sln:str='', ans:Union[float, int]=-9999., method:str='')->Tuple[boo
 
 
 def main(
-    config_f:str = 'rims_gather_config.yaml',
+    config_f:str = '0_rims_gather_config_gpt4turbo.yaml',
 ):
     print(f'loaded config from:\n\t{config_f}')
     kwargs = yaml.full_load(open(config_f))
@@ -81,13 +83,13 @@ def main(
         f = method2query_f[method]
         if method == 'cot':
             kwargs = dict(cot_temperature=verbal_T, backbone=backbone, n=n_llmquery, seed=seed)
-            query_f = partial(f, key = openai.api_key, **kwargs)
+            query_f = partial(f, **kwargs)
         elif method == 'pal':
             kwargs = dict(pal_temperature=verbal_T, backbone=backbone, n=n_llmquery, seed=seed)
-            query_f = partial(f, key = openai.api_key, **kwargs)
+            query_f = partial(f, **kwargs)
         elif method == 'p2c':
             kwargs = dict(plan_temperature=verbal_T, code_temperature=code_T, backbone=backbone, n=n_llmquery, seed=seed)
-            query_f = partial(f, key = openai.api_key, **kwargs)
+            query_f = partial(f, **kwargs)
         else:
             raise ValueError(f'unknown method {method}')    
 
@@ -96,7 +98,7 @@ def main(
             try:
                 ans = row['ans']
                 row = copy.deepcopy(row) # row.copy()
-                out = do_with_tenacity(query_f, row)
+                out = query_f(row['question']) # do_with_tenacity(query_f, row)
                 if method == 'p2c':
                     slnlst, planlst, querymsg_d = out
                     print()
