@@ -4,10 +4,15 @@
         - no reflection blurb (improves)
         - only one reflection blurbs (slightly degrades)
     - checked more-than-once reflections occurring in response ~5/73 times in all settings
-    - [ ] including reflection twice blurb
+    - [ ] including reflection-twice blurb
     - [ongoing] 3 method prompt
+        - [x] baseline prompt (3-choices selection prompt)
+        - [ ] only one reflection prompt
+        - [ ] reflection-twice prompt (1-3-2, all method evenly exposed)
 - [ongoing] 1 one-pot RIMS prompt building script
-- [ ] 2 run p2c on conflictset to prepare 3 model conflict set
+- [ ] run p2c only to current conflict set
+    - new conflict set (3 method)
+    - baseline for 3 methods
 - [ongoing] 3 gathering and cleansing codes for prompt helper functions  
 
 ## (DEC9) No reflection blurbs added at the top of the prompt
