@@ -13,8 +13,22 @@
 - [x] run p2c only to current conflict set
     - new conflict set (3 method)
     - baseline for 3 methods
-- [x] 3 gathering and cleansing codes for prompt helper functions  
-    - [ ] structurize more and minimalize
+- [ongoing] minimal codes for RIMS algorithm   
+    - [x] llm_query_utils.py
+    - [ ] rims_inference.py
+    - [ ] prompt_build.sh 
+
+## (DEC29) Model Selection (selection-amongst-3 prompt)
+
+## (DEC29) RIMS prompt (3-method, at least once each method has to be correct and wrong...)
+(1, 2, 3)
+(1, 3, 2)
+(2, 1, 3)
+(2, 3, 1)
+(3, 1, 2)
+(3, 2, 1)
+(2, 2, 2)
+
 ## (DEC9) No reflection blurbs added at the top of the prompt
 |    | name                                                    | total               | conflict_only   | reflect         | nonreflect      |   justfailed |
 |---:|:--------------------------------------------------------|:--------------------|:----------------|:----------------|:----------------|-------------:|
@@ -22,7 +36,7 @@
 |  4 | 99_7_no_refl_rims_cotpal_inference_prompt_k4_DEC9_gpt4  | 1265/1319 (95.91\%) | 47/73 (64.38\%) | 8/17 (47.06\%)  | 39/56 (69.64\%) |            0 |
 |  9 | 99_7_no_refl_rims_cotpal_inference_prompt_k6_DEC9_gpt4  | 1260/1319 (95.53\%) | 42/73 (57.53\%) | 11/25 (44.00\%) | 31/48 (64.58\%) |            0 |
 
-### modifying the prompt to have Attempt 1,2,3...
+### (DEC27) modifying the prompt to have Attempt 1,2,3...
 |    | name                                                     | total               | conflict_only   | reflect         | nonreflect      |   justfailed |
 |---:|:---------------------------------------------------------|:--------------------|:----------------|:----------------|:----------------|-------------:|
 |  4 | modif_no_refl_rims_cotpal_inference_prompt_k2_DEC9_gpt4  | 1268/1319 (96.13\%) | 50/73 (68.49\%) | 12/19 (63.16\%) | 38/54 (70.37\%) |            0 |
@@ -43,7 +57,7 @@
 |  0 | 99_7_rims_cotpal_inference_prompt_k4_DEC9_noformat_gpt4 | 1263/1319 (95.75\%) | 45/73 (61.64\%) | 6/15 (40.00\%)  | 39/58 (67.24\%) |            0 |
 | 10 | 99_7_rims_cotpal_inference_prompt_k6_DEC9_noformat_gpt4 | 1265/1319 (95.91\%) | 47/73 (64.38\%) | 18/29 (62.07\%) | 29/44 (65.91\%) |            0 |
 
-### modifying the prompt to have Attempt 1,2,3...
+### (DEC27) modifying the prompt to have Attempt 1,2,3...
 |    | name                                                     | total               | conflict_only   | reflect         | nonreflect      |   justfailed |
 |---:|:---------------------------------------------------------|:--------------------|:----------------|:----------------|:----------------|-------------:|
 |  0 | modif_rims_cotpal_inference_prompt_k2_DEC9_noformat_gpt4 | 1259/1319 (95.45\%) | 41/73 (56.16\%) | 16/36 (44.44\%) | 25/37 (67.57\%) |            0 |
