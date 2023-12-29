@@ -121,54 +121,57 @@ def main(each_n=-1, nop2c:bool=False):
         for row in tqdm(records):
             # prep prompt
             for k in row.keys():
-                if k.startswith('retry_correct_solution_') and row[k]: 
-                    save_k = f"{row['fail_method']}2{k.replace('retry_correct_solution_', '')}"
-                    wrong_method = row['fail_method']
-                    if wrong_method == 'pal':
-                        for sln, wrong_pred in zip(row['fail_solutions'], row['fail_preds']):
-                            if wrong_pred is not None:
-                                wrong_solution = parse_python_code_from_string(sln)
-                                break
-                    else: 
-                        wrong_pred = row['fail_preds'][0]
-                        wrong_solution = row['fail_solutions'][0]
-                    if wrong_pred is None or not wrong_solution:
-                        continue
-                    wrong_method = ABB2FULL[wrong_method] + f" ({wrong_method})"
-                    ans = row['ans']
-                    correct_method = k.replace('retry_correct_solution_', '')
-                    correct_pred = row[f'retry_correct_prediction_{correct_method}'] # float or str
-                    correct_solutions = row[k]
-                    if correct_method == 'pal': # this logic fails
-                        for sln in correct_solutions:
-                            correct_solution = parse_python_code_from_string(sln)
-                            if correct_solution:
-                                break
-                    else:
-                        correct_solution = correct_solutions[0]
-                    if not correct_solution:
-                        continue
-                    correct_method = ABB2FULL[correct_method] + f" ({correct_method})"
-                    question = row['question']
+                try:
+                    if k.startswith('retry_correct_solution_') and row[k]: 
+                        save_k = f"{row['fail_method']}2{k.replace('retry_correct_solution_', '')}"
+                        wrong_method = row['fail_method']
+                        if wrong_method == 'pal':
+                            for sln, wrong_pred in zip(row['fail_solutions'], row['fail_preds']):
+                                if wrong_pred is not None:
+                                    wrong_solution = parse_python_code_from_string(sln)
+                                    break
+                        else: 
+                            wrong_pred = row['fail_preds'][0]
+                            wrong_solution = row['fail_solutions'][0]
+                        if wrong_pred is None or not wrong_solution:
+                            continue
+                        wrong_method = ABB2FULL[wrong_method] + f" ({wrong_method})"
+                        ans = row['ans']
+                        correct_method = k.replace('retry_correct_solution_', '')
+                        correct_pred = row[f'retry_correct_prediction_{correct_method}'] # float or str
+                        correct_solutions = row[k]
+                                
+                        if correct_method == 'pal': # this logic fails
+                            for sln in correct_solutions:
+                                correct_solution = parse_python_code_from_string(sln)
+                                if correct_solution:
+                                    break
+                        else:
+                            correct_solution = correct_solutions[0]
+                        if not correct_solution:
+                            continue
+                        correct_method = ABB2FULL[correct_method] + f" ({correct_method})"
+                        question = row['question']
 
-                    
+                        
 
-                    cp = correct_pred
-                    wp = wrong_pred
-                    userprompt = tmp.substitute(QUESTION = question, WRONG_SOLUTION = wrong_solution, WRONG_PRED = wp, ANS = ans, CORRECT_SOLUTION = correct_solution, CORRECT_PRED = cp, WRONG_METHOD = wrong_method, CORRECT_METHOD = correct_method)
+                        cp = correct_pred
+                        wp = wrong_pred
+                        userprompt = tmp.substitute(QUESTION = question, WRONG_SOLUTION = wrong_solution, WRONG_PRED = wp, ANS = ans, CORRECT_SOLUTION = correct_solution, CORRECT_PRED = cp, WRONG_METHOD = wrong_method, CORRECT_METHOD = correct_method)
 
-                    msgs = [
-                        {'role':'system', 'content': yamld['system']},
-                        {'role':'user', 'content': userprompt}
-                    ]
-                    generation = query_llm(msgs=msgs, backbone='gpt4turbo', stop=yamld['stop'], T=1.0, seed=777, max_tokens=2048, n=1)
-                    completed = replace_w_gen(userprompt, generation)
-                    print(completed)
-                    print('=========')
-                    print(generation)
-                    blurbd[save_k].append(completed)
-                    blurbd[f"{save_k}_genonly"].append(generation)
-        
+                        msgs = [
+                            {'role':'system', 'content': yamld['system']},
+                            {'role':'user', 'content': userprompt}
+                        ]
+                        generation = query_llm(msgs=msgs, backbone='gpt4turbo', stop=yamld['stop'], T=1.0, seed=777, max_tokens=2048, n=1)
+                        completed = replace_w_gen(userprompt, generation)
+                        print(completed)
+                        print('=========')
+                        print(generation)
+                        blurbd[save_k].append(completed)
+                        blurbd[f"{save_k}_genonly"].append(generation)
+                except Exception as e:
+                    print(e)
     json.dump(blurbd, open(outf, 'w'), indent=4)
     print(f"blurbs are written to {outf}")
 

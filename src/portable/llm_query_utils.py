@@ -4,13 +4,30 @@
 from tenacity import retry, wait_chain, wait_fixed
 import openai
 import func_timeout
-
-
 import yaml
+
+from itertools import combinations 
 import re
 
+
+import sys
+from pathlib import Path
+
+# Get the absolute path of the current script
+THIS_PARENT = Path(__file__).parent.resolve()
+
+
+sys.path.append(str(THIS_PARENT))
 import math_prompt
-openai.api_key = open('../../openai_key.txt').read().strip()
+sys.path.remove(str(THIS_PARENT))
+
+# Construct the path to the openai_key.txt file
+key_file_path = THIS_PARENT/'openai_key.txt'
+
+# Read the API key from the file
+openai.api_key = open(key_file_path).read().strip()
+
+
 
 
 
@@ -484,7 +501,7 @@ def get_plan_prompt(question:str, k_fewshot:int=0)->str:
     put "Question: " in front of the `question`
 
     '''
-    PLAN_F = './prompts_plan_v2.yaml'
+    PLAN_F = THIS_PARENT/'prompts_plan_v2.yaml'
     PLAN_PROMPTS_D= yaml.full_load(open(PLAN_F))
     prompt_d = PLAN_PROMPTS_D
     
@@ -519,7 +536,7 @@ def get_plan2code_prompt(question:str,#data:dict,
     put "Qu
     estion: " in front of the `question`
     '''
-    CODE_F = './prompts_code_v2.yaml'
+    CODE_F = THIS_PARENT/'prompts_code_v2.yaml'
     prompt_d = yaml.full_load(open(CODE_F))
     
     q = question #data['question'] 
@@ -791,4 +808,27 @@ if __name__ == "__main__":
     print(select3_prompt, file=open('select3user.txt', 'w'))
         
 
-    
+def get_concordant_answer(answers:list):
+    '''
+    check if there is a pair of concordant answers.
+    input: cot_ans, pal_ans, p2c_ans, [, ...]
+    output: ans if concordant else None
+
+    *recommend to put answers in the order of cot going first (usually they are intgers)
+    '''
+    answers_no_none = [a for a in answers if a is not None]
+    if not answers_no_none:
+        return None
+    elif len(answers_no_none) == 1:
+        return answers_no_none.pop()
+    elif len(answers_no_none) == 2:
+        if abs(answers[0]-answers[1])<1e-3:
+            return answers[0]
+        else:
+            return None
+    else: # >=3
+        for a1,a2 in combinations(answers_no_none,2):
+            if abs(a1-a2)<1e-3:
+                return a1
+        return None # no concordant answers
+   
