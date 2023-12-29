@@ -7,14 +7,14 @@
     - [ ] including reflection-twice blurb
     - [ongoing] 3 method prompt
         - [x] baseline prompt (3-choices selection prompt)
-        - [ ] only one reflection prompt
-        - [ ] reflection-twice prompt (1-3-2, all method evenly exposed)
+        - [ongoing] only one reflection prompt
+        - [ongoing] reflection-twice prompt (1-3-2, all method evenly exposed)
 - [ongoing] 1 one-pot RIMS prompt building script
-- [ ] run p2c only to current conflict set
+- [x] run p2c only to current conflict set
     - new conflict set (3 method)
     - baseline for 3 methods
-- [ongoing] 3 gathering and cleansing codes for prompt helper functions  
-
+- [x] 3 gathering and cleansing codes for prompt helper functions  
+    - [ ] structurize more and minimalize
 ## (DEC9) No reflection blurbs added at the top of the prompt
 |    | name                                                    | total               | conflict_only   | reflect         | nonreflect      |   justfailed |
 |---:|:--------------------------------------------------------|:--------------------|:----------------|:----------------|:----------------|-------------:|
