@@ -9,9 +9,8 @@ Followings are the examples of correcting the wrong solutions with a `Workaround
 
 
 
-import re
-
-text = """
+`Question`: 3 cloves of garlic can repel 2 vampires, 8 vampire bats or 3 wights. How many cloves of garlic are needed to repel 30 vampires, 12 wights and 40 vampire bats?
+`Method`: Chain-of-Thought (cot)
 `Attempt 1`: To solve this problem, we first need to determine how many cloves of garlic are required to repel each group of creatures—vampires, wights, and vampire bats—based on the initial information given. Then, we can calculate the total amount of garlic needed to repel all the creatures.
 
 Step 1: Determine how many cloves of garlic are needed to repel one of each creature.
@@ -29,18 +28,29 @@ Step 3: Add the number of cloves needed for all the creatures together:
 
 Therefore, 72 cloves of garlic are needed to repel 30 vampires, 12 wights, and 40 vampire bats.
 `Answer 1`: 40.0
-`Evaluation`: Wrong (correct answer: 72.0)
+`Evaluation`: Wrong 
 `Mistakes`: The original answer should not be 40.0. The Chain-of-Thought process was correctly applied, and the final answer calculated there was 72 cloves of garlic, not 40. There seems to be a mismatch between the evaluated correct answer (72.0) and the wrong answer (40.0) provided.
 `Hint for a better Method choice`: Using Program-aided Language Modeling (pal) can eliminate the risk of manual calculation errors and ensure that the final answer is computed accurately.
 `Workaround Method`: Program-aided Language Modeling (pal)
-"""
+`Attempt 2`: 
+def solution():
+    vampires_ratio = 3 / 2
+    wights_ratio = 3 / 3
+    vampire_bats_ratio = 3 / 8
 
-pattern = r"(`Method`:[\s\S]*?)`Workaround Method`"
-result = re.search(pattern, text, re.DOTALL)
+    vampires_needed = vampires_ratio * 30
+    wights_needed = wights_ratio * 12
+    vampire_bats_needed = vampire_bats_ratio * 40
 
-if result:
-    captured_text = result.group(1)
-    print(captured_text.strip())
+    total_cloves_needed = vampires_needed + wights_needed + vampire_bats_needed
+    return total_cloves_needed
+
+result = solution()
+print(f"The number of cloves needed: {result}")
+
+`Answer 2`: 72.0
+`Evaluation`: Correct
+
 
 
 `Question`: Bill started reading a book on the first day of April. He read 8 pages every day and by the 12th of April, he had covered two-thirds of the book. How many pages does the book have?
@@ -63,7 +73,7 @@ def solution():
 
     return total_pages
 `Answer 1`: 132.0
-`Evaluation`: Wrong (correct answer: 144.0)
+`Evaluation`: Wrong 
 `Mistakes`: The computation error is in the line `total_pages = (pages_read * 3) // 2`; it should be `total_pages = (pages_read * 3) / 2`. Using `//` performs integer division in Python which can cause incorrect results for non-integer quotients. Furthermore, there's an error in understanding which day to start counting; it should start from the 1st, including that day.
 `Hint for a better Method choice`: Using Chain of Thought could help ensure understanding the sequence of days and the correct portion of the book read by Bill before translating it into a computation.
 `Workaround Method`: Chain-of-Thought (cot)
@@ -115,7 +125,7 @@ def solution():
     
     return total_apples_grace
 `Answer 1`: 756.0
-`Evaluation`: Wrong (correct answer: 504.0)
+`Evaluation`: Wrong 
 `Mistakes`: The mistake in the first attempt is the misinterpretation of the final quantity of apples. The first attempt calculates the total number of apples Grace picks, but overlooks the fact that Bella actually consumes some of these apples, so they should not all still be with Grace after 6 weeks. The calculation method did not account for the apples consumed by Bella, hence the error in the answer.
 `Hint for a better Method choice`: The Program-aided Language Modeling (pal) method allows for direct computation and straightforward adjustments to the logic in the code, which can ease the correction of conceptual mistakes.
 `Workaround Method`: Program-aided Language Modeling (pal)

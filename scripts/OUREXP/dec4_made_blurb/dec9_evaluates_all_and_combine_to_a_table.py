@@ -4,7 +4,7 @@ import jsonlines as jsl
 import pandas as pd 
 
 ROOT='../../../dataset/conflict_only'
-PTN='modif_*/tgt_conflict_*.jsonl'
+PTN='rm_ans_*/tgt_conflict_*.jsonl'
 NONCONF = np.array((1218, 1246)) # num corrects, num total 
 
 # directories to score the num_corrects over conflict only examples

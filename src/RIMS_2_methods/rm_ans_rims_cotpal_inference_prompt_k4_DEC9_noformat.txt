@@ -1,0 +1,249 @@
+You are now solving math word problems. You brilliantly detects the errors in the wrong solution and find `Workaround Method` to correct the solution. The methods you are taking are as follows. Each has its strength and weakness:
+
+- Chain of Thought (cot): Solving problem with writing steps of reasoning in a natural language. Might help correct understanding of the problem but this could be weaker in precise computation.
+- Program-aided Language Modeling (pal): Using python language to reason and obtain an accurate answer to the given question, but this could be weaker in understanding the problem. 
+
+Followings are the examples of correcting the wrong solutions with a `Workaround Method` based on diagnosis (`Mistakes`) and `Hint for a better Method choice`.
+
+
+`Question`: You can lower the price by 20% if you buy more than fifteen units of iPhone cases. If you pay $500 to buy 18 units, what is the original price?
+`Method`: Chain-of-Thought (cot)
+`Attempt 1`: Answer:
+First, let's determine the discounted price per unit by dividing the total amount paid by the number of units.
+
+Jason paid $500 for 18 units.
+So, the discounted price per unit is $500 / 18 = $27.78 (rounded to two decimal places).
+
+This discounted price represents an 80% of the original price because it is 20% off.
+So, $27.78 = 80% of the original price.
+
+To find the original price per unit, we can set up a proportion where the original price (100%) is to the discounted price (80%) as the full original price is to $27.78.
+Let's denote the original price as P.
+
+P (100%) / $27.78 (80%) = 1 / 0.8
+P = $27.78 / 0.8
+P = $34.725 (rounded to three decimal places)
+
+Therefore, the original price per unit of iPhone case before the discount is approximately $34.725.
+`Answer 1`: 34.725
+`Evaluation`: Wrong 
+`Mistakes`: The calculations were correct in determining the original price per unit after the discount. However, the error occurred in not recognizing that the question was asking for the original total price of 18 units, not the price per unit.
+`Hint for a better Method choice`: Using program-aided language model would help in accurately performing the calculations without misunderstanding the question's requirement (whether it is asking for the price per unit or the total price).
+`Workaround Method`: Program-aided Language Modeling (pal)
+`Attempt 2`: 
+def solution():
+    units_purchased = 18  # units of iPhone cases bought
+    discount_price_paid = 500  # total price paid after discount
+    discount_rate = 0.20  # 20% discount
+    percentage_paid = 1 - discount_rate  # 80% of the original price paid
+
+    original_price_total = discount_price_paid / percentage_paid  # total original price for 18 units
+    original_price_per_unit = original_price_total / units_purchased  # original price per unit
+
+    # If the question is asking for the total original price for 18 units
+    result = original_price_total
+
+    # If the question is asking for the original price per unit
+    #result = original_price_per_unit
+
+    return result
+
+`Answer 2`: 625.0
+`Evaluation`: Correct
+
+
+
+`Question`: You can buy 4 apples or 1 watermelon for the same price. You bought 36 fruits evenly split between oranges, apples and watermelons, and the price of 1 orange is $0.50. How much does 1 apple cost if your total bill was $66?
+`Method`: Program-aided Language Modeling (pal)
+`Attempt 1`: 
+def solution():
+    total_fruits = 36
+    fruits_per_type = total_fruits // 3  # because they are evenly split
+    orange_price = 0.5
+    total_bill = 66
+
+    # Calculate the total cost of all the oranges
+    oranges_cost = fruits_per_type * orange_price
+
+    # Subtract the cost of the oranges from the total bill
+    apples_and_watermelons_cost = total_bill - oranges_cost
+
+    # Since the apples and watermelons are evenly split in the total cost,
+    # we divide by the number of each fruit type to find the cost of one watermelon (or the equivalent of 4 apples)
+    watermelon_cost = apples_and_watermelons_cost / (fruits_per_type * 2)  # there are 12 apples and 12 watermelons in total
+
+    # The cost of one apple is a fourth of the cost of one watermelon
+    apple_cost = watermelon_cost / 4
+
+    return apple_cost
+
+# call the function to get the result
+print(solution())
+
+`Answer 1`: 0.625
+`Evaluation`: Wrong 
+`Mistakes`: The error in the attempt lies in the incorrect calculation and interpretation of apples and watermelons cost. It wrongly assumes that the cost of apples and watermelons is split evenly between each individual fruit which is not stated in the problem.
+`Hint for a better Method choice`: A Chain-of-Thought would guide through a logical step-by-step approach, ensuring correct interpretation of relationships between the costs of fruits and accurately distributing the total bill among different fruit types.
+`Workaround Method`: Chain-of-Thought (cot)
+`Attempt 2`: Let's break down the problem into several steps:
+
+1. There are 36 fruits evenly split between oranges, apples, and watermelons. So to find out how many of each fruit there are, we divide the total number of fruits by the number of different fruits:
+
+36 fruits / 3 types of fruits = 12 fruits of each type
+
+This means there are 12 oranges, 12 apples, and 12 watermelons.
+
+2. The cost of 1 orange is $0.50. So the total cost for all the oranges is:
+
+12 oranges * $0.50/orange = $6
+
+3. We have a total bill of $66 for all the fruits. The cost for the oranges is $6, so the remaining amount is for the apples and watermelons:
+
+Total bill - Cost of oranges = Remaining amount for apples and watermelons
+$66 - $6 = $60
+
+This $60 is the combined cost of apples and watermelons.
+
+4. Now, we know that 4 apples cost the same as 1 watermelon. This means that the 12 apples are equivalent in cost to:
+
+12 apples / 4 apples per watermelon = 3 watermelons
+
+So the cost of 12 apples is the same as the cost for 3 watermelons.
+
+5. Because there are an equal number of apples and watermelons (12 each), and their combined total cost is $60, we can split this cost equally between the apples and the watermelons:
+
+$60 / 2 = $30 for apples and $30 for watermelons
+
+As we found earlier, 12 apples are the cost equivalent of 3 watermelons, therefore the cost for 12 apples is $30. To find the cost per apple, we divide the cost for apples by the number of apples:
+
+$30 / 12 apples = $2.50 per apple
+
+So the cost of 1 apple is $2.50.
+`Answer 2`: 1.0
+`Evaluation`: Correct
+
+
+
+`Question`: Kristin can run three times faster than Sarith. If Kristin runs 12 times around the adult football field and Sarith runs at the same time around the children's football field that is half the distance as the other field, how many laps did Sarith go around the children's football field?
+`Method`: Program-aided Language Modeling (pal)
+`Attempt 1`: 
+def solution():
+    kristin_speed_ratio = 3 # Kristin can run 3 times faster than Sarith
+    kristin_laps = 12
+    children_field_ratio = 0.5 # The children's field is half the distance of the adult's field
+
+    # For each lap Kristin runs, Sarith runs 3 times slower, but the distance is half so:
+    # It means Sarith would complete 3 * 0.5 = 1.5 laps on the children's field for each of Kristin's laps
+    sarith_laps_per_kristin_lap = kristin_speed_ratio * children_field_ratio
+
+    # Calculate Sarith's total laps
+    sarith_total_laps = kristin_laps * sarith_laps_per_kristin_lap
+    return sarith_total_laps
+
+# Call the function and print the result
+print(solution())
+
+`Answer 1`: 18.0
+`Evaluation`: Wrong 
+`Mistakes`: The attempt wrongly calculated Sarith's laps by multiplying Kristin's speed ratio with the children's field ratio, which does not take into account accurately how the relative distances and speeds influence each other.
+`Hint for a better Method choice`: A chain of thought would better illustrate the relationship between speeds and distances for Kristin and Sarith, allowing for a conceptual check before calculating the final answer.
+`Workaround Method`: Chain-of-Thought (cot)
+`Attempt 2`: Answer:
+Since Kristin can run three times faster than Sarith and she runs 12 laps around the adult football field, we need to determine how many laps Sarith would run around the smaller field in the same time.
+
+Let's assume the adult football field is full-size and the children's football field is half that distance. Since Sarith's field is half the distance of Kristin's field, Sarith can run 2 laps on the children's field in the time it takes Kristin to run 1 lap on the adult field.
+
+Since Kristin runs 3 times faster than Sarith, she would run 3 laps on the adult field in the same time Sarith runs 1 lap on the children's field if they were both running around fields of the same size. However, because Sarith's field is half the distance, Sarith can run 2 laps there in the same time Kristin runs 3 laps on the adult field.
+
+To find out how many laps Sarith can run on the children's field while Kristin runs 12 laps on the adult field, we need to determine the ratio of their speeds given the different field sizes. 
+
+As Kristin's speed in terms of laps is 3 times that of Sarith's speed and her distance is 2 times as much (as Sarith's field is half), we can equate the speed-distance factor by doubling Sarith's lap count for the comparison (2 laps on children's field for Sarith is equivalent to 1 lap on adult's field due to half size). Now, the speed ratio effectively becomes 3:2 (3 laps by Kristin to 2 laps by Sarith).
+
+We can say:
+
+Kristin's laps : Sarith's laps
+12 : x (where x is the laps Sarith runs)
+
+Using the 3:2 speed ratio:
+
+3 Kristin's laps = 2 Sarith's laps
+
+Now let's find the equivalent number of laps for Sarith when Kristin runs 12 laps:
+
+(3 Kristin's laps / 2 Sarith's laps) = (12 Kristin's laps / x Sarith's laps)
+
+Cross-multiplying gives us:
+
+3 * x = 2 * 12
+
+Now we solve for x:
+
+3x = 24
+
+x = 24 / 3
+
+x = 8
+
+Sarith ran 8 laps around the children's football field.
+`Answer 2`: 8.0
+`Evaluation`: Correct
+
+
+
+`Question`: In eight years, Mr. Bernard will be 3 times as old as Luke is now. If Luke is 20, what is 10 years less than their average age?
+`Method`: Chain-of-Thought (cot)
+`Attempt 1`: First, let's determine how old Mr. Bernard will be in eight years.
+
+Luke is currently 20 years old, and in eight years, Mr. Bernard will be 3 times Luke's current age:
+3 times Luke's age = 3 * 20 = 60.
+
+So, in eight years, Mr. Bernard will be 60 years old.
+
+Now, let's find out Mr. Bernard's current age:
+If he will be 60 in eight years, we must subtract 8 from 60 to find his current age:
+Mr. Bernard's current age = 60 - 8 = 52.
+
+Now we have:
+- Luke's current age: 20 years old.
+- Mr. Bernard's current age: 52 years old.
+
+To find their average age now:
+(Average age) = (Luke's age + Mr. Bernard's age) / 2
+(Average age) = (20 + 52) / 2
+(Average age) = 72 / 2
+(Average age) = 36.
+
+Now, to find 10 years less than their average age:
+(Average age) - 10 = 36 - 10 = 26.
+
+So, 10 years less than their average age is 26 years old.
+`Answer 1`: 10.0
+`Evaluation`: Wrong 
+`Mistakes`: The calculation and reasoning in the first attempt are correct, but the final written answer was mistakenly put as 10.0 instead of 26.0.
+`Hint for a better Method choice`: Using Program-aided Language Model (pal) can ensure that the final answer is correctly computed and written without human transcription errors.
+`Workaround Method`: Program-aided Language Modeling (pal)
+`Attempt 2`: 
+def solution():
+    luke_current_age = 20
+    years_ahead = 8
+    # Mr. Bernard will be 3 times Luke's current age in 8 years
+    mr_bernard_age_in_eight_years = 3 * luke_current_age
+    # Mr. Bernard's current age
+    mr_bernard_current_age = mr_bernard_age_in_eight_years - years_ahead
+    # Their average age
+    their_average_age = (luke_current_age + mr_bernard_current_age) / 2
+    # Their average age 10 years less
+    result = their_average_age - 10
+    return result
+
+# Call the function to solve the problem
+solution()
+
+`Answer 2`: 26.0
+`Evaluation`: Correct
+
+
+
+Now, try the `Question` below following the same procedure as above. Try the question with the choice of your `Method`, and evaluate the `Answer`. If your `Attempt` is considered wrong, identify the `Mistakes` and reason to take `Workaround Method` by writing `Hint for a better Method choice`.Based on it, make a correct reattempt.
+
+`Question`: [QUESTION]

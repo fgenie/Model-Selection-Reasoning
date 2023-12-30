@@ -157,7 +157,8 @@ def main(each_n=-1, nop2c:bool=False):
 
                         cp = correct_pred
                         wp = wrong_pred
-                        userprompt = tmp.substitute(QUESTION = question, WRONG_SOLUTION = wrong_solution, WRONG_PRED = wp, ANS = ans, CORRECT_SOLUTION = correct_solution, CORRECT_PRED = cp, WRONG_METHOD = wrong_method, CORRECT_METHOD = correct_method)
+                        # userprompt = tmp.substitute(QUESTION = question, WRONG_SOLUTION = wrong_solution, WRONG_PRED = wp, ANS = ans, CORRECT_SOLUTION = correct_solution, CORRECT_PRED = cp, WRONG_METHOD = wrong_method, CORRECT_METHOD = correct_method)
+                        userprompt = tmp.substitute(QUESTION = question, WRONG_SOLUTION = wrong_solution, WRONG_PRED = wp, CORRECT_SOLUTION = correct_solution, CORRECT_PRED = cp, WRONG_METHOD = wrong_method, CORRECT_METHOD = correct_method) # do not include gt ans to the evaluating prompt it may make the model depend on it and cause problems in extending the blurbs
 
                         msgs = [
                             {'role':'system', 'content': yamld['system']},

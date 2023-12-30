@@ -245,9 +245,12 @@ def query_selection(question:str,
 def query_rims_inference(question: str, 
                           prompt_f: str, 
                           backbone: str,
-                          n_fewshot:int=8,
+                          temperature: float=0.,
+                          n: int=1, 
                           turn_based:bool=False,
-                          modif_prompt:bool=False) -> dict:
+                          continue_writing_gpt_messages:list=None, # list of messages to invoke continue writing down the rims prompt format.
+                          )-> tuple: 
+                        #   modif_prompt:bool=True) -> tuple:
     if backbone == 'chatgpt':
         model_name = 'gpt-3.5-turbo-16k'
     elif backbone == 'gpt4':
@@ -256,9 +259,12 @@ def query_rims_inference(question: str,
         model_name = 'gpt-4-1106-preview'
 
     def get_turn_based_prompt(
-                                prompt_f,
-                                q:str='',
-                                n_fewshot:int=8)->list:
+                                prompt_f:str,
+                                q:str='')->list:
+                                # n_fewshot:int=8)->list:
+        prompt_f
+        q
+
         raise NotImplementedError('see 99_*yaml to implement here + query_enhanced_coh:get_turn_based_prompt()')
 
         
@@ -286,52 +292,96 @@ def query_rims_inference(question: str,
             else:    
                 parse_dd[fld] = matches[0].strip()
         return parse_dd 
+
     
+    def process_rims_out_dict(parse_dd:dict)->dict:
 
-    def parse_raw(rawqueryout:str)->dict:
         '''
-        helper function for output (universal for both turn_based=True|False)
-        '''
-        eval_starts = rawqueryout.find("`Evaluation`")
-
-        cannotfind = []
-        parse_idx_d = OrderedDict() 
-        if eval_starts ==-1: # solved at once
-            toparse = "`Method`: `Attempt`: `Answer`:".split()      
-            for k in toparse:
-                idx = rawqueryout.rfind(k)
-                if idx == -1:
-                    cannotfind.append(k)
-                else:
-                    parse_idx_d[k] = idx
-      
-        else: # parse last part
-            toparse = ["`Method`:", "`Attempt`:", "`Mistakes`:", "`Hint for a better Method`:", "`Workaround Method`:", "`Corrected Attempt`:", "`Answer`:"]
-            for k in toparse:
-                idx = rawqueryout.rfind(k)
-                if idx == -1:
-                    cannotfind.append(k)
-                else:
-                    parse_idx_d[k] = idx
-
-        # remove not-found keys
-        for c in cannotfind:
-            toparse.remove(c)
+        in:
+            parsed_dict: contains fields that is directly related to the prompt response such as...
+                Attempt 1: solution1 string
+                Answer 1: solution1 answer (raw string)
+                Mistakes: [solution 1,2,3,...'s mistake string]
+                ...
+        out:
+            eval_friendly_d (dict): contains eval-friendly parsed fields
+                good_solution: solution string at the last
+                good_ans: correct answer executed above
+                good_method: correct method abbreviation (e.g. cot)
+                bad_ans: [list of wrong answers] 
+                bad_method: [list of wrong methods before the correct one] 
+                bad_solutions: [list of wrong solutions before the correct one]
+                mistakes: [list of mistakes]
+                hint: [list of hints]
         
-        # indices to strings
-        parse_dd = dict() # actual parsed dict
-        for i, k in enumerate(toparse):
-            if i == len(toparse)-1:
-                content = rawqueryout[parse_idx_d[k]:]
-            else:
-                content = rawqueryout[parse_idx_d[k]:parse_idx_d[toparse[i+1]]]
-            parse_dd[k] = content
-        # strip the keys
-        parse_dd_ = {k:v.replace(k, "").strip() for k,v in parse_dd.items()}
+        '''
+        def get_answer_rims(solution:str, ans:str= '', method:str=''):
+            try:
+                if method == 'cot':
+                    pred = parse_num_from_answer(ans)
+                elif method == 'pal':
+                    pred = safe_execute_turbo(parse_python_code_from_string(solution))
+                elif method == 'p2c':
+                    code = separate_plan_code(solution)[1].pop() # solution of p2c already processed by `postprocess_code()`
+                    pred = safe_execute_turbo(code)     
+                else:
+                    raise ValueError('method not in {cot, pal, p2c}, failed processing rims output ans')           
+            except:
+                pred = None
+            return pred
+    
+        attempts_keys = sorted([k for k in parse_dd.keys() if 'Attempt' in k])
+        ans_keys = sorted([k for k in parse_dd.keys() if 'Answer' in k])
+        # method_keys = sorted([k for k in parse_dd.keys() if 'Method' in k])
+        good_solution = parse_dd[attempts_keys[-1]]
+        if 'Workaround Method' in parse_dd.keys():
+            did_reflect += len(parse_dd['Workaround Method'])
+            good_method = parse_method2(parse_dd['Workaround Method'][-1])
+            bad_method = [parse_method2(parse_dd['Method'])]
+            if len(parse_dd['Workaround Method']) > 1:
+                bad_method += [parse_method2(mstr) for mstr in parse_dd['Workaround Method'][:-1]]
+            
+            
+            # ans and solutions
+            good_ans = parse_dd[ans_keys[-1]]
+            bad_ans = [parse_dd[ak] for ak in ans_keys[:-1]]
+            good_solution = parse_dd[attempts_keys[-1]]
+            bad_solution = [parse_dd[atk] for atk in attempts_keys[:-1]] 
+            
+        else: # solved at once
+            good_method = parse_method2(parse_dd['Method'])
+            bad_method = []
+            
+            good_ans = parse_dd[ans_keys[-1]]
+            bad_ans = []
 
-        return pa
-    # prep prompt
-        rse_dd_
+            good_solution = parse_dd[attempts_keys[-1]]
+            bad_solution = [] 
+
+        mistakes = []
+        hint = []
+        if 'Mistakes' in parse_dd.keys():
+            mistakes = parse_dd['Mistakes']
+        if 'Hint for a better Method choice' in parse_dd.keys():
+            hint = parse_dd['Hint for a better Method choice']
+        
+        assert len(bad_solution) == len(bad_ans) == len(bad_method), f'check the length ({len(bad_solution)=}, {len(bad_ans)=}, {len(bad_method)=})'
+
+        eval_friendly_d = dict(
+                good_solution = good_solution,
+                good_ans = get_answer_rims(good_solution, 
+                                            ans=good_ans,
+                                            method=good_method),
+                good_method = good_method, 
+                bad_solutions = bad_solution,
+                bad_ans = [get_answer_rims(s, ans=a, method=m) for s,a,m in zip(bad_solution, bad_ans, bad_method)], 
+                bad_method = bad_method, 
+                mistakes = mistakes,
+                hint = hint
+        )
+        return eval_friendly_d
+
+
 
     if turn_based: # *.yaml
         messages = get_turn_based_prompt(
@@ -347,29 +397,44 @@ def query_rims_inference(question: str,
         messages = [
             {'role':'user', 'content': prompt}
         ]
-    
+        if continue_writing_gpt_messages is not None:
+            assert isinstance(continue_writing_gpt_messages, list), f"continue_writing_gpt_messages should be a list of messages to openai chat create {continue_writing_gpt_messages=}"
+            messages.extend(continue_writing_gpt_messages) 
+            
     stop_tok = ["\n`Evaluation`: Correct", "Evaluation: Correct"] # could be a list or a single string object. Defaults: None
-    raw_query_out = openai.ChatCompletion.create(
-            # api_key=key,
-            seed=777,
-            model=model_name,
-            max_tokens=1024, 
-            stop=stop_tok, 
-            messages=messages,
-            temperature=0.,
-            top_p=1.0,
-            n=1)['choices'][0]['message']['content'] # str
-    # toparse = ['`Attempt', '`Answer', '`Evaluation', '`Mistakes', '`Hint', '`Corrected Attempt', '`Answer',]
-    if modif_prompt:
+    if n == 1:
+        raw_query_out = openai.ChatCompletion.create(
+                # api_key=key,
+                seed=777,
+                model=model_name,
+                max_tokens=1024, 
+                stop=stop_tok, 
+                messages=messages,
+                temperature=temperature,
+                n=n,
+                # top_p=1.0,
+                )['choices'][0]['message']['content'] # str
         parsed_dict = parse_raw_modif(raw_query_out)
-    else:
-        parsed_dict = parse_raw(raw_query_out)
+        eval_friendly_d = process_rims_out_dict(parsed_dict)
         
-
-    return parsed_dict, raw_query_out, messages
-
-
-
+        return eval_friendly_d, parsed_dict, raw_query_out, messages
+    else: # later unify into the below format. --> Need to correct the code uses inside `src/portable/`
+        raw_query_outs = [
+                openai.ChatCompletion.create(
+                    # api_key=key,
+                    seed=777,
+                    model=model_name,
+                    max_tokens=1024, 
+                    stop=stop_tok, 
+                    messages=messages,
+                    temperature=temperature,
+                    n=n,
+                    # top_p=1.0,
+                    )['choices'][i]['message']['content'] for i in range(n) ] # str
+        parsed_dicts = [parse_raw_modif(raw_query_out) for raw_query_out in raw_query_outs]
+        eval_friendly_ds = [process_rims_out_dict(parsed_dict) for parsed_dict in parsed_dicts]
+        
+        return eval_friendly_ds, parsed_dicts, raw_query_outs, messages
 
 
 ### getting prompts for each method ###
@@ -582,6 +647,7 @@ def postprocess_plan(rawanswer:str):
         plan_ = ''
     return plan_
 
+### python code parsing for p2c... I know it's non-equivalent to the other function here. Used only for p2c
 def postprocess_code(rawanswer:str, k_fewshot:int=0):
     def remove_prints(code:str)->str:
         lines = code.split("\n")
@@ -656,6 +722,18 @@ def parse_num_from_answer(rawstr)->float:
     else: # more than one number 
         return float(nums[-1])
 
+
+
+
+### postprocess backticks for pythoncode output
+def parse_python_code_from_string(unparsed_txt: str):
+    ptn = r"```python((.|\n)*?)```"
+    match = re.search(ptn, unparsed_txt)
+    if match is not None:
+        return match.group(1)
+    else:
+        return None
+    
 
 ### executing a code
 def safe_execute_turbo(code_string: str, keys=None):
