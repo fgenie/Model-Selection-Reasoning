@@ -1,13 +1,29 @@
 from itertools import product, permutations
 from collections import Counter 
 import json
+import yaml
+from llm_query_utils import PromptStr
+import random
+random.seed(777)
 
 
-FNAME='2_blurb_-1.json'
-d = json.load(open(FNAME))
+TEMPL='3_prompt_templ.yaml'
+BLURBS='2_reflect_once_blurbs.json'
+N_PROMPTS=9 # multuple of 3
+assert N_PROMPTS%3==0, "N_PROMPTS must be a multiple of 3"
+
+# 1. from TEMPL, make a template for the actual RIMS prompt
+#   need to take system prompt only, not the others
+prompt_src = yaml.full_load(open(TEMPL))
+sys = prompt_src['system']
+sep = prompt_src['sep']
+inst = prompt_src['inst']
+prompt = f"{sys}{sep}[BLURB1]{sep}[BLURB2]{sep}[BLURB3]{sep}{inst}"
+prompt_tmp = PromptStr(prompt)
 
 
-# each method in a prompt need to be once wrong and once correct --> this constraint makes possible directions (6 -> 3) 
+# 2. prep directions to make blurbs
+#   each method in a prompt need to be once wrong and once correct  
 methods = 'cot pal p2c'.split()
 correct_candids = methods
 wrong_candids = methods
@@ -22,7 +38,6 @@ def flatten(lst_pairs)->list:
 def tuplst2strlst(lst_pairs)->list:
     return [f"{tup[0]}2{tup[1]}" for tup in lst_pairs] 
 
-# the function below will make 3-pairs-sequence possibly drawn each from correct_candids and wrong_candids, each pair cannot be a pair of two identical string. The resultant 3-pairs-sequence need to contain all the elements in correct_candids exactly twice (i.e. [(p2c, pal), (pal, cot), (cot, p2c)] is valid, where [(p2c, pal), (p2c, cot), (pal, cot)] is not valid))])
 def possible_sequences(correct_candids:list, wrong_candids:list)->list:
     # make all possible pairs
     all_directions = list(product(correct_candids, wrong_candids))
@@ -41,8 +56,27 @@ possible_comps = possible_sequences(correct_candids, wrong_candids) # 48 distinc
 starts2possibles = {
     method: [s for s in possible_comps if s[0].startswith(method)] for method in methods
 }
-picked_9 = {k: v[::len(v)//3] for k,v in starts2possibles.items()}
+picked_directions = {k: v[::len(v)//3][:N_PROMPTS//3] for k,v in starts2possibles.items()} # methods are always 3 so N_PROMPTS//3 * 3 == N_PROMPTS
 
-# make 9 prompts
+
+
+# 3. make 9 prompts (pick blurb randomly)
+d = json.load(open(BLURBS))
+for _, sequences in picked_directions.items():
+    for seq in sequences:
+        pickd = dict()
+        for i, dir in enumerate(seq,1):
+            blurbs = d[dir]
+            pick = random.sample(blurbs, 1)
+            pickd[f"BLURB{i}"] = pick.pop().strip()
+            actual_prompt = str(prompt_tmp.sub_map(**pickd)) 
+        prompt_f = f"3_reflectonce_{'.'.join(seq)}.txt"
+        with open(prompt_f, 'w') as f:
+            f.write(actual_prompt)
+            print(prompt_f)
+
+
+        
+
 
 

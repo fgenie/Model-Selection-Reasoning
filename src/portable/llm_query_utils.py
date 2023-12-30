@@ -30,6 +30,26 @@ openai.api_key = open(key_file_path).read().strip()
 
 
 
+### almost same to string.Template, but with custom delimiter ( [QUESTION] == ${QUESTION}, to avoid `$` used frequently in price-related questions )
+class PromptStr(str): 
+    def __init__(self, template_str):
+        super().__init__()
+        self += template_str  
+
+    def sub(self, 
+            placeholder_name:str, 
+            tobe:str):
+        return PromptStr(self.replace(f"[{placeholder_name}]", str(tobe)))
+    
+    def sub_map(self, **kwargs):
+        for k,v in kwargs.items():
+            if k in self.get_placeholder_names():
+                self = self.sub(k, v)
+        return self
+                
+    def get_placeholder_names(self) -> list:
+        return re.findall(r"\[(.*?)\]", self)
+
 
 
 ### llm query functions ###
@@ -350,20 +370,6 @@ def query_rims_inference(question: str,
 
 
 
-
-### almost same to string.Template, but with custom delimiter ( [QUESTION] == ${QUESTION}, to avoid `$` used frequently in price-related questions )
-class PromptStr(str): 
-    def __init__(self, template_str):
-        super().__init__()
-        self += template_str  
-
-    def sub(self, 
-            placeholder_name:str, 
-            tobe:str):
-        return PromptStr(self.replace(f"[{placeholder_name}]", str(tobe)))
-
-    def get_placeholder_names(self) -> list:
-        return re.findall(r"\[(.*?)\]", self)
 
 
 ### getting prompts for each method ###
