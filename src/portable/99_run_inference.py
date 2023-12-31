@@ -1,5 +1,12 @@
 from fire import Fire
 import jsonlines as jsl 
+from tqdm import tqdm
+
+from typing import Any
+
+from llm_query_utils import *
+
+CONTINUE_WRITING_INVOKE_PROMPT = "Continue reaching to the correct answer, carefully following the format presented above." # same as in 5_extend_*.py 
 
 '''
 unify the field of the inference records.
@@ -15,7 +22,7 @@ row:
         {cot: pal: p2c:}
     - solmap:
         {cot: pal: p2c:}
-    - majority_ans: None or majority answer
+    - majority_ans: None or majority answer (final answer to be evaluated)
     - selection_or_rims: 
         각자에 합당한 아웃풋
         rims: eval_friendly_d
@@ -32,11 +39,193 @@ row:
 
 '''
 
+def solution2blurb(   method:str='', 
+                      solution:str='', 
+                      ans:Any=''):
+    raise NotImplementedError('solution2blurb')
+    return blurb_str
+
+def indiv_inference(
+        row : dict=None,
+        num_methods : int=3,
+        
+        temperature:float=0.,
+        n:int=1,
+        backbone:str='chatgpt', # [chatgpt, gpt4] # later mixtral / llama 
+        seed:int=777,
+        ):
+    '''
+    inference each method and return indiv results
+    
+    
+    return:
+        solmap : {cot: pal: p2c:} 
+        ansmap : {cot: pal: p2c:} (solution executed)
+    '''
+    
+    if n>1:
+        raise NotImplementedError('n>1 will serve as a self-consistency parameter, not implemented yet')
+    
+    question = row['question']
+
+    # check for already-done indiv methods 
+    if 'ansmap' in row.keys() and 'solmap' in row.keys():
+        if row['ansmap'] and row['solmap']:
+            ansmap = row['ansmap']
+            solmap = row['solmap']
+            missing_methods = []
+            for method in ['cot', 'pal', 'p2c']:
+                if method not in ansmap.keys():
+                    if not ansmap[method]:
+                        missing_methods.append(method)
+    else:
+        missing_methods = 'cot pal p2c'.split()
+        ansmap = dict()
+        solmap = dict()
+
+    if 'cot' in missing_methods:
+        try:
+            cot_lst, _msgs = query_cot(question,
+                                temperature=temperature,
+                                n=n,
+                                backbone=backbone,
+                                seed=seed) 
+        except:
+            cot_lst, _msgs = [None], ['cot query failed']
+        cot_sol = cot_lst.pop()  # solution: str
+        try:
+            cot_ans = extract_num_turbo(cot_sol)
+        except:
+            cot_ans = None
+        solmap['cot'] = cot_sol
+        ansmap['cot'] = cot_ans
+
+    if 'pal' in missing_methods:
+        try:
+            pal_lst, __msgs = query_pal(question,
+                                temperature=temperature,
+                                n=n,
+                                backbone=backbone,
+                                seed=seed)
+        except:
+            pal_lst, __msgs = [None], ['pal query failed'] 
+        pal_sol = pal_lst.pop()
+        try:
+            pal_ans = safe_execute_turbo(pal_sol)
+        except:
+            pal_ans = None
+        solmap['pal'] = pal_sol
+        ansmap['pal'] = pal_ans
+
+    if num_methods==3:
+        if 'p2c' in missing_methods:
+            try:
+                code_lst, plan_lst, ___msgs = query_plancode(question,
+                                        plan_temperature=temperature,
+                                        code_temperature=temperature,
+                                        backbone=backbone,
+                                        n=n,
+                                        seed=seed
+                                        )
+            except: 
+                code_lst, plan_lst, ___msgs = [None], [None], ['p2c query failed']
+
+            plan = plan_lst.pop() 
+            code = code_lst.pop()
+            p2c_solution = plan + "\n" + code
+            try:
+                p2c_ans =  safe_execute_turbo(parse_python_code_from_string(code))
+            except:
+                p2c_ans = None
+            ansmap['p2c'] = p2c_ans
+            solmap['p2c'] = p2c_solution
+    
+
+
+    return ansmap, solmap # updated ones
+
 
 def rims_inference(
         prompt_f:str='', 
+        gsm_jslf:str='',
+        eval_indiv_method:bool=False, # yet to implement. might work for openai gpt
+
+        # llm options
+        temperature:float=0.,
+        n:int=1, # later for self-consistency
+        backbone:str='chatgpt', # [chatgpt, gpt4] # later mixtral / llama 
+        seed:int=777,
+        dbg:bool=False,
     ):
     assert prompt_f, f'need to specify {prompt_f=}'
+    assert gsm_jslf, f'need to specify {gsm_jslf=}'
+
+    if n>1:
+        raise NotImplementedError('n>1 will serve as a self-consistency parameter, not implemented yet')
+    
+    
+    # load_gsm_dataset to infer on 
+    records = list(jsl.open(gsm_jslf))
+    for row in tqdm(records):
+        question = row['question']
+
+        # individual method inference: this will check if row already has individual method inferred, and if done, keep those to use.
+        ansmap, solmap = indiv_inference(
+            row,
+            num_methods = 3,
+            temperature = temperature,
+            n = n,
+            backbone = backbone,
+            seed = seed,
+        )
+        row['ansmap'] = ansmap
+        row['solmap'] = solmap
+        
+        # is there majority answer? in ansmap? (2,2,1 --> 2 is majority, can assert hard condition such as requiring unanimous votes)
+        majority_ans = get_concordant_answer(list(ansmap.values()))
+        
+
+        # do rims
+        if majority_ans is None: 
+            if eval_indiv_method: # are we going to check the individual method's correctness?
+                for method, sol in solmap.items():
+                    to_eval_blurb = solution2blurb(method = method,
+                                                   solution = sol,
+                                                   ans = ansmap[method])
+                    gpt_msg = [
+                        {'role': 'assistant', 'content': to_eval_blurb},
+                        {'role': 'user', 'content': CONTINUE_WRITING_INVOKE_PROMPT}
+                    ]
+                    if dbg: 
+                        eval_friendly_d, parse_dd, raw_query_out, _ = query_rims_inference(
+                            question, 
+                            prompt_f, 
+                            backbone=backbone, 
+                            temperature=temperature, 
+                            continue_writing_gpt_messages=gpt_msg, 
+                            stop_tok=['`Mistakes`: ']) 
+                    else:
+                        eval_friendly_d, parse_dd, raw_query_out, _ = do_with_tenacity(query_rims_inference(
+                            question, 
+                            prompt_f, 
+                            backbone=backbone, 
+                            temperature=temperature, 
+                            continue_writing_gpt_messages=gpt_msg, 
+                            stop_tok=['`Mistakes`: '], 
+                            dbg=dbg))
+                        
+                    raise NotImplementedError('**eval_indiv_method not implemented**:\n\n1. Need to check the prompt will work as expected if we apply in this way (5_extend_*.py it worked). \n\n2. need to check `raw_query_out` ends with Evaluation: Correct or Evaluation: Wrong\n\n3. If all wrong, apply rims, else, in what order would we visit the methods?')
+                
+            else:
+                if dbg:
+                    eval_friendly_d, __, raw_query_out, _ = query_rims_inference(question, prompt_f, backbone=backbone, temperature=temperature)
+                else:
+                    eval_friendly_d, __, raw_query_out, _ = do_with_tenacity(query_rims_inference(question, prompt_f, backbone=backbone, temperature=temperature))
+                row['selection_or_rims'] = eval_friendly_d # this contains all we need depicted above
+                row['majority_ans'] = eval_friendly_d['good_ans']
+                row['prompt_file'] = str(prompt_f)
+    
+
     return
 
 def baseline_inference(

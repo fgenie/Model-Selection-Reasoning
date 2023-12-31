@@ -1,3 +1,32 @@
+## DEC30 utils for gsm8k (3 methods)
+1. prompt building (few-shot training from train set)
+    - last week training blurb prep. below
+    - src/portable/[0-4]_*.py
+2. prompt evolving (could be part of 1) -- not confirmed to improve performance
+    - try this week below
+    - src/portable/5_*.py (WIP)
+3. experiment script
+    - src/portable/4_ablation_remove_reflection.py
+    - src/portable/99_run_inference.py (WIP)
+        - rims
+        - model selection  (both 3 methods cases)
+4. utils
+    - src/portable/llm_query_utils.py
+        - contains most of the preprocess/query/parse functions
+    - ~~src/portable/plancode_util_v2.py~~
+        - merged to llm_query_utils.py
+        - prompts_[plan|code]_v2.yaml is still in use!
+    - math_prompts.py
+        - contains prompts for baseline (model selection reasoning)
+5. other model serving (plan)
+    - like mixtral, or llama
+    - machine = taeng's A100*80GiB*8 Node
+    - fast_api + vllm ?
+    - taskwise prompts and utilities needed
+        - std prompts
+        - rims prompts
+    
+
 ### last week training blurb prep.
 ```
 # current learning loop: only-1-reflection blurbs prep

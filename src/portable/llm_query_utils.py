@@ -214,6 +214,20 @@ def query_selection(question:str,
                     pal_solution: str='', 
                     p2c_plan_code_solution:str='', 
                     ):
+    def postprocess_selection(selection_str:str)->str:
+        ptn = r"\([A-C]\)"
+        matches = re.findall(ptn, selection_str)
+        choice = matches[0]
+        
+        choice2method = {
+            '(A)': 'cot',
+            '(B)': 'pal',
+            '(C)': 'p2c'
+        }
+
+        raise NotImplementedError('Need to parse (A) (B) (C) choice, before doing it, need to check it spits parsable output')
+        return choice2method[choice]
+
     if backbone == 'gpt4':
         model_name = 'gpt-4'
     elif backbone == 'gpt4turbo':
@@ -249,6 +263,7 @@ def query_rims_inference(question: str,
                           n: int=1, 
                           turn_based:bool=False,
                           continue_writing_gpt_messages:list=None, # list of messages to invoke continue writing down the rims prompt format.
+                          stop_tok = None, 
                           )-> tuple: 
                         #   modif_prompt:bool=True) -> tuple:
     if backbone == 'chatgpt':
@@ -400,8 +415,8 @@ def query_rims_inference(question: str,
         if continue_writing_gpt_messages is not None:
             assert isinstance(continue_writing_gpt_messages, list), f"continue_writing_gpt_messages should be a list of messages to openai chat create {continue_writing_gpt_messages=}"
             messages.extend(continue_writing_gpt_messages) 
-            
-    stop_tok = ["\n`Evaluation`: Correct", "Evaluation: Correct"] # could be a list or a single string object. Defaults: None
+    if stop_tok is None: # decode until it faces correct answer
+        stop_tok = ["\n`Evaluation`: Correct", "Evaluation: Correct"] # could be a list or a single string object. Defaults: None
     if n == 1:
         raw_query_out = openai.ChatCompletion.create(
                 # api_key=key,
@@ -414,6 +429,8 @@ def query_rims_inference(question: str,
                 n=n,
                 # top_p=1.0,
                 )['choices'][0]['message']['content'] # str
+        if continue_writing_gpt_messages is not None:
+            raw_query_out = continue_writing_gpt_messages[-1]['content'].strip()+"\n"+raw_query_out # for the ease of parsing functions to work correctly! 
         parsed_dict = parse_raw_modif(raw_query_out)
         eval_friendly_d = process_rims_out_dict(parsed_dict)
         
@@ -431,6 +448,8 @@ def query_rims_inference(question: str,
                     n=n,
                     # top_p=1.0,
                     )['choices'][i]['message']['content'] for i in range(n) ] # str
+        if continue_writing_gpt_messages is not None:
+            raw_query_outs = [continue_writing_gpt_messages[-1]['content'].strip()+"\n"+rqo for rqo in raw_query_outs]
         parsed_dicts = [parse_raw_modif(raw_query_out) for raw_query_out in raw_query_outs]
         eval_friendly_ds = [process_rims_out_dict(parsed_dict) for parsed_dict in parsed_dicts]
         
