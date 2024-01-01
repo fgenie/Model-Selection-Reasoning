@@ -383,7 +383,8 @@ def query_rims_inference(question: str,
         if 'Hint for a better Method choice' in parse_dd.keys():
             hint = parse_dd['Hint for a better Method choice']
         
-        assert len(bad_solution) == len(bad_ans) == len(bad_method), f'check the length ({len(bad_solution)=}, {len(bad_ans)=}, {len(bad_method)=})'
+        if not len(bad_solution) == len(bad_ans) == len(bad_method):
+            raise ValueError(f'{bad_solution=} possibly repetition generated (chatgpt, temp 0)')
 
         eval_friendly_d = dict(
                 good_solution = good_solution,
