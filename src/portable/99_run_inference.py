@@ -2,6 +2,7 @@ from fire import Fire
 import jsonlines as jsl 
 from tqdm import tqdm
 
+from datetime import datetime
 from typing import Any
 
 from llm_query_utils import *
@@ -34,6 +35,7 @@ row:
                 bad_method, 
                 bad_ans,
             }
+        majority_vote: True (if inference ends with majority vote)
     
 
 
@@ -42,8 +44,13 @@ row:
 def solution2blurb(   method:str='', 
                       solution:str='', 
                       ans:Any=''):
+    '''
+    This function is for `--eval_indiv_method` option in `rims_inference` function
+    solution into blurb string  
+    '''
     raise NotImplementedError('solution2blurb')
     return blurb_str
+
 
 def indiv_inference(
         row : dict=None,
@@ -155,6 +162,8 @@ def rims_inference(
         n:int=1, # later for self-consistency
         backbone:str='chatgpt', # [chatgpt, gpt4] # later mixtral / llama 
         seed:int=777,
+
+        # dev option
         dbg:bool=False,
     ):
     assert prompt_f, f'need to specify {prompt_f=}'
@@ -162,8 +171,7 @@ def rims_inference(
 
     if n>1:
         raise NotImplementedError('n>1 will serve as a self-consistency parameter, not implemented yet')
-    
-    
+
     # load_gsm_dataset to infer on 
     records = list(jsl.open(gsm_jslf))
     for row in tqdm(records):
@@ -187,7 +195,7 @@ def rims_inference(
 
         # do rims
         if majority_ans is None: 
-            if eval_indiv_method: # are we going to check the individual method's correctness?
+            if eval_indiv_method: # (optional) are we going to check the individual method's correctness?
                 for method, sol in solmap.items():
                     to_eval_blurb = solution2blurb(method = method,
                                                    solution = sol,
@@ -214,23 +222,115 @@ def rims_inference(
                             stop_tok=['`Mistakes`: '], 
                             dbg=dbg))
                         
-                    raise NotImplementedError('**eval_indiv_method not implemented**:\n\n1. Need to check the prompt will work as expected if we apply in this way (5_extend_*.py it worked). \n\n2. need to check `raw_query_out` ends with Evaluation: Correct or Evaluation: Wrong\n\n3. If all wrong, apply rims, else, in what order would we visit the methods?')
-                
-            else:
+                    # check if the solution is considered correct
+                    if raw_query_out.endswith('`Evaluation`: Correct'):
+                        eval_friendly_d.update({"--eval_indiv_method": (True, method)})
+                        row['selection_or_rims'] = eval_friendly_d
+                        row['majority_ans'] = ansmap[method]
+                        majority_ans = row['majority_ans']
+
+            if majority_ans is None: # problem's not done properly.
                 if dbg:
                     eval_friendly_d, __, raw_query_out, _ = query_rims_inference(question, prompt_f, backbone=backbone, temperature=temperature)
                 else:
                     eval_friendly_d, __, raw_query_out, _ = do_with_tenacity(query_rims_inference(question, prompt_f, backbone=backbone, temperature=temperature))
                 row['selection_or_rims'] = eval_friendly_d # this contains all we need depicted above
                 row['majority_ans'] = eval_friendly_d['good_ans']
-                row['prompt_file'] = str(prompt_f)
-    
+        else:
+            row['selection_or_rims'] = {'majority_vote': True}
+            row['majority_ans'] = majority_ans
+        row['prompt_file'] = str(prompt_f)
+        row['inference_mode'] = 'rims'
 
+
+    # output directory for the inference results:
+    outdir = Path(gsm_jslf).resolve().parent/Path(prompt_f).stem # same dirname as prompt file stem 
+    if not outdir.exists():
+        outdir.mkdir(parents=True)
+    dt_string = datetime.now().strftime("%m_%d_%H_%M")
+    outpath = outdir/f"{dt_string}_{Path(gsm_jslf).stem}.jsonl"
+
+    # save the results
+    with jsl.open(outpath, 'w') as writer:
+        writer.write_all(records)
+        print(f"saved to {outpath}")
+    
+    
     return
 
+
 def baseline_inference(
-        prompt_f:str='math_prompt.py' # only for recording promptfilename to the result. Actual prompt is read at `llm_query_utils.py`
+        prompt_f:str='math_prompt.py', # only for recording promptfilename to the result. Actual prompt is read at `llm_query_utils.py`
+        gsm_jslf:str='',
+        num_methods:int=3, # number of methods (3-> cot pal p2c / 2-> cot pal )
+
+        # llm options
+        temperature:float=0.,
+        n:int=1, # later for self-consistency
+        backbone:str='chatgpt', # [chatgpt, gpt4] # later mixtral / llama 
+        seed:int=777,
+
     ):
+    assert gsm_jslf, f'need to specify {gsm_jslf=}'
+
+    if n>1:
+        raise NotImplementedError('n>1 will serve as a self-consistency parameter, not implemented yet')
+
+
+    # load_gsm_dataset to infer on 
+    records = list(jsl.open(gsm_jslf))
+    for row in tqdm(records):
+        question = row['question']
+
+        # individual method inference: this will check if row already has individual method inferred, and if done, keep those to use.
+        ansmap, solmap = indiv_inference(
+            row,
+            num_methods = 3,
+            temperature = temperature,
+            n = n,
+            backbone = backbone,
+            seed = seed,
+        )
+        row['ansmap'] = ansmap
+        row['solmap'] = solmap
+        
+        # is there majority answer? in ansmap? (2,2,1 --> 2 is majority, can assert hard condition such as requiring unanimous votes)
+        majority_ans = get_concordant_answer(list(ansmap.values()))
+        
+        if majority_ans is None: # do selection 
+            chosen_method, selection_str = query_selection(question,
+                            backbone= backbone,
+                            cot_solution = solmap['cot'],
+                            pal_solution= solmap['pal'],
+                            p2c_plan_code_solution= solmap['p2c']
+                            )
+            row['selection_or_rims'] = {
+                'good_method': chosen_method, 
+                'good_answer': ansmap[chosen_method],
+                'good_solution': solmap[chosen_method],
+                'selection_str': selection_str,
+            }
+            row['majority_ans'] = ansmap[chosen_method]
+        else:
+            row['selection_or_rims'] = {'majority_vote': True}
+            row['majority_ans'] = majority_ans
+        row['prompt_file'] = prompt_f
+        row['inference_mode'] = f'baseline {num_methods} methods'
+        
+
+    # output directory for the inference results:
+    outdir = Path(gsm_jslf).resolve().parent/Path(prompt_f).stem # same dirname as prompt file stem 
+    if not outdir.exists():
+        outdir.mkdir(parents=True)
+    dt_string = datetime.now().strftime("%m_%d_%H_%M")
+    outpath = outdir/f"{dt_string}_{Path(gsm_jslf).stem}.jsonl"
+
+    # save the results
+    with jsl.open(outpath, 'w') as writer:
+        writer.write_all(records)
+        print(f"saved to {outpath}")
+    
+
     return 
 
 if __name__ == '__main__':

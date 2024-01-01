@@ -1,4 +1,6 @@
 ## DEC30 utils for gsm8k (3 methods)
+Readability and resusability are not in their best... but tried to make it consistent in style.
+
 1. prompt building (few-shot training from train set)
     - last week training blurb prep. below
     - src/portable/[0-4]_*.py

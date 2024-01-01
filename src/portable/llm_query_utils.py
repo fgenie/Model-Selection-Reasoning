@@ -235,13 +235,13 @@ def query_selection(question:str,
     elif backbone == 'chatgpt':
         model_name = 'gpt-3.5-turbo'
 
-    cot_pal_p2c_solution_list = [cot_solution, pal_solution, p2c_solution]
+    cot_pal_p2c_solution_list = [cot_solution, pal_solution, p2c_plan_code_solution]
     cot_pal_p2c_solution_list = [s for s in cot_pal_p2c_solution_list if s] # remove p2c if empty
     selection_message = get_select_prompt(question, 
                                               cot_solution, 
                                               pal_solution, 
                                               p2c_plan_code_solution, backbone=backbone)
-    selection_solution = openai.ChatCompletion.create(
+    select_str = openai.ChatCompletion.create(
         api_key=key,
         model=model_name,
         max_tokens=200,
@@ -252,8 +252,8 @@ def query_selection(question:str,
         top_p=1.0,
         n=1)['choices'][0]['message']['content'] 
     
-    final_answer = postprocess_selection(selection_solution)
-    return final_answer # 'pal'|'p2c'|'cot' 
+    final_answer = postprocess_selection(select_str)
+    return final_answer, select_str # 'pal'|'p2c'|'cot' 
 
 
 def query_rims_inference(question: str, 
