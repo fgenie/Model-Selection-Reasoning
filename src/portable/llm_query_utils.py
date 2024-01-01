@@ -7,6 +7,7 @@ import func_timeout
 import yaml
 
 from itertools import combinations 
+import regex
 import re
 
 
@@ -54,8 +55,8 @@ class PromptStr(str):
 
 ### llm query functions ###
 def query_cot(question:str, 
-              cot_temperature: float, 
-              backbone: str, 
+              temperature:float=0., 
+              backbone:str='chatgpt', 
               n=1, 
               seed=777):
     '''
@@ -64,7 +65,7 @@ def query_cot(question:str,
     Args:
         data: a dict containing the question and answer
         key: the OpenAI API key
-        cot_temperature: the temperature used in CoT
+        temperature: the temperature used in CoT
         backbone: ChatGPT or GPT-4
 
     Returns:
@@ -85,7 +86,7 @@ def query_cot(question:str,
             max_tokens=500,
             stop='\n\n\n',
             messages=query_message,
-            temperature=cot_temperature,
+            temperature=temperature,
             top_p=1.0,
             seed=seed,
             n=n)
@@ -168,14 +169,14 @@ def query_plancode(question:str,#data: dict,
 
 
 def query_pal(question:str,
-              pal_temperature: float, backbone: str, n=1, seed=777):
+              temperature: float, backbone: str, n=1, seed=777):
     '''
     This function is used to query OpenAI for PAL solutions.
 
     Args:
         data: a dict containing the question and answer
         key: the OpenAI API key
-        pal_temperature: the temperature used in PAL
+        temperature: the temperature used in PAL
         backbone: ChatGPT or GPT-4
 
     Returns:
@@ -194,7 +195,7 @@ def query_pal(question:str,
                                 max_tokens=500,
                                 stop='\n\n\n',
                                 messages=query_message,
-                                temperature=pal_temperature,
+                                temperature=temperature,
                                 top_p=1.0,
                                 seed=777,
                                 n=n)
@@ -261,6 +262,7 @@ def query_rims_inference(question: str,
                           backbone: str,
                           temperature: float=0.,
                           n: int=1, 
+                          max_tokens: int=2048,
                           turn_based:bool=False,
                           continue_writing_gpt_messages:list=None, # list of messages to invoke continue writing down the rims prompt format.
                           stop_tok = None, 
@@ -294,7 +296,7 @@ def query_rims_inference(question: str,
         # read the output and get what to parse 
         pattern = r"`(.*?)`:"
         to_parse = re.findall(pattern, rawqueryout)
-        to_parse = list(set(to_parse))
+        to_parse = list(set(to_parse) - {'Evaluation'})
 
         # read the output again to parse the designated fields
         parse_dd = dict() 
@@ -349,6 +351,7 @@ def query_rims_inference(question: str,
         ans_keys = sorted([k for k in parse_dd.keys() if 'Answer' in k])
         # method_keys = sorted([k for k in parse_dd.keys() if 'Method' in k])
         good_solution = parse_dd[attempts_keys[-1]]
+        did_reflect = 0 
         if 'Workaround Method' in parse_dd.keys():
             did_reflect += len(parse_dd['Workaround Method'])
             good_method = parse_method2(parse_dd['Workaround Method'][-1])
@@ -392,7 +395,8 @@ def query_rims_inference(question: str,
                 bad_ans = [get_answer_rims(s, ans=a, method=m) for s,a,m in zip(bad_solution, bad_ans, bad_method)], 
                 bad_method = bad_method, 
                 mistakes = mistakes,
-                hint = hint
+                hint = hint,
+                did_reflect = did_reflect,
         )
         return eval_friendly_d
 
@@ -422,7 +426,7 @@ def query_rims_inference(question: str,
                 # api_key=key,
                 seed=777,
                 model=model_name,
-                max_tokens=1024, 
+                max_tokens=max_tokens, 
                 stop=stop_tok, 
                 messages=messages,
                 temperature=temperature,

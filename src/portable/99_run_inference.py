@@ -91,59 +91,65 @@ def indiv_inference(
         solmap = dict()
 
     if 'cot' in missing_methods:
-        try:
-            cot_lst, _msgs = query_cot(question,
-                                temperature=temperature,
-                                n=n,
-                                backbone=backbone,
-                                seed=seed) 
-        except:
-            cot_lst, _msgs = [None], ['cot query failed']
+        # try:
+        cot_lst, _msgs = query_cot(question,
+                            temperature=temperature,
+                            n=n,
+                            backbone=backbone,
+                            seed=seed) 
+        # except Exception as e:
+        #     print(e)
+        #     cot_lst, _msgs = [None], ['cot query failed']
         cot_sol = cot_lst.pop()  # solution: str
-        try:
-            cot_ans = extract_num_turbo(cot_sol)
-        except:
-            cot_ans = None
+        # try:
+        cot_ans = extract_num_turbo(cot_sol)
+        # except Exception as e:
+        #     print(e)
+        #     cot_ans = None
         solmap['cot'] = cot_sol
         ansmap['cot'] = cot_ans
 
     if 'pal' in missing_methods:
-        try:
-            pal_lst, __msgs = query_pal(question,
-                                temperature=temperature,
-                                n=n,
-                                backbone=backbone,
-                                seed=seed)
-        except:
-            pal_lst, __msgs = [None], ['pal query failed'] 
+        # try:
+        pal_lst, __msgs = query_pal(question,
+                            temperature=temperature,
+                            n=n,
+                            backbone=backbone,
+                            seed=seed)
+        # except Exception as e:
+        #     print(e)
+        #     pal_lst, __msgs = [None], ['pal query failed'] 
         pal_sol = pal_lst.pop()
-        try:
-            pal_ans = safe_execute_turbo(pal_sol)
-        except:
-            pal_ans = None
+        # try:
+        pal_ans = safe_execute_turbo(pal_sol)
+        # except Exception as e:
+        #     print(e)
+        #     pal_ans = None
         solmap['pal'] = pal_sol
         ansmap['pal'] = pal_ans
 
     if num_methods==3:
         if 'p2c' in missing_methods:
-            try:
-                code_lst, plan_lst, ___msgs = query_plancode(question,
-                                        plan_temperature=temperature,
-                                        code_temperature=temperature,
-                                        backbone=backbone,
-                                        n=n,
-                                        seed=seed
-                                        )
-            except: 
-                code_lst, plan_lst, ___msgs = [None], [None], ['p2c query failed']
+            # try:
+            code_lst, plan_lst, ___msgs = query_plancode(question,
+                                    plan_temperature=temperature,
+                                    code_temperature=temperature,
+                                    backbone=backbone,
+                                    n=n,
+                                    seed=seed
+                                    )
+            # except Exception as e:
+            #     print(e)
+            #     code_lst, plan_lst, ___msgs = [None], [None], ['p2c query failed']
 
             plan = plan_lst.pop() 
             code = code_lst.pop()
             p2c_solution = plan + "\n" + code
-            try:
-                p2c_ans =  safe_execute_turbo(parse_python_code_from_string(code))
-            except:
-                p2c_ans = None
+            # try:
+            p2c_ans =  safe_execute_turbo(code)
+            # except Exception as e:
+            #     print(e)
+            #     p2c_ans = None
             ansmap['p2c'] = p2c_ans
             solmap['p2c'] = p2c_solution
     
@@ -205,7 +211,7 @@ def rims_inference(
                         {'role': 'user', 'content': CONTINUE_WRITING_INVOKE_PROMPT}
                     ]
                     if dbg: 
-                        eval_friendly_d, parse_dd, raw_query_out, _ = query_rims_inference(
+                        eval_friendly_d, parse_dd, raw_query_out, query_msg = query_rims_inference(
                             question, 
                             prompt_f, 
                             backbone=backbone, 
@@ -213,7 +219,7 @@ def rims_inference(
                             continue_writing_gpt_messages=gpt_msg, 
                             stop_tok=['`Mistakes`: ']) 
                     else:
-                        eval_friendly_d, parse_dd, raw_query_out, _ = do_with_tenacity(query_rims_inference(
+                        eval_friendly_d, parse_dd, raw_query_out, query_msg = do_with_tenacity(query_rims_inference(
                             question, 
                             prompt_f, 
                             backbone=backbone, 
@@ -224,16 +230,24 @@ def rims_inference(
                         
                     # check if the solution is considered correct
                     if raw_query_out.endswith('`Evaluation`: Correct'):
-                        eval_friendly_d.update({"--eval_indiv_method": (True, method)})
+                        eval_friendly_d.update({"--eval_indiv_method": (True, method), 
+                                                'raw_query_out': raw_query_out, 
+                                                "query_msg": query_msg}
+                                                )
                         row['selection_or_rims'] = eval_friendly_d
                         row['majority_ans'] = ansmap[method]
                         majority_ans = row['majority_ans']
 
-            if majority_ans is None: # problem's not done properly.
+            if majority_ans is None: # problems are not done properly.
                 if dbg:
-                    eval_friendly_d, __, raw_query_out, _ = query_rims_inference(question, prompt_f, backbone=backbone, temperature=temperature)
+                    eval_friendly_d, __, raw_query_out, query_msg = query_rims_inference(question, prompt_f, backbone=backbone, temperature=temperature)
                 else:
-                    eval_friendly_d, __, raw_query_out, _ = do_with_tenacity(query_rims_inference(question, prompt_f, backbone=backbone, temperature=temperature))
+                    eval_friendly_d, __, raw_query_out, query_msg = do_with_tenacity(query_rims_inference(question, prompt_f, backbone=backbone, temperature=temperature))
+                
+                eval_friendly_d.update({
+                                        'raw_query_out': raw_query_out, 
+                                        "query_msg": query_msg}
+                                        )
                 row['selection_or_rims'] = eval_friendly_d # this contains all we need depicted above
                 row['majority_ans'] = eval_friendly_d['good_ans']
         else:
@@ -244,11 +258,11 @@ def rims_inference(
 
 
     # output directory for the inference results:
-    outdir = Path(gsm_jslf).resolve().parent/Path(prompt_f).stem # same dirname as prompt file stem 
+    outdir = Path(gsm_jslf).resolve().parent/(Path(gsm_jslf).stem + Path(prompt_f).stem)  # same dirname as prompt file stem 
     if not outdir.exists():
         outdir.mkdir(parents=True)
     dt_string = datetime.now().strftime("%m_%d_%H_%M")
-    outpath = outdir/f"{dt_string}_{Path(gsm_jslf).stem}.jsonl"
+    outpath = outdir/f"{'dbg_' if dbg else ''}{dt_string}_{Path(gsm_jslf).stem}.jsonl"
 
     # save the results
     with jsl.open(outpath, 'w') as writer:
@@ -319,7 +333,7 @@ def baseline_inference(
         
 
     # output directory for the inference results:
-    outdir = Path(gsm_jslf).resolve().parent/Path(prompt_f).stem # same dirname as prompt file stem 
+    outdir = Path(gsm_jslf).resolve().parent/(Path(gsm_jslf).stem + Path(prompt_f).stem)  # same dirname as prompt file stem 
     if not outdir.exists():
         outdir.mkdir(parents=True)
     dt_string = datetime.now().strftime("%m_%d_%H_%M")
