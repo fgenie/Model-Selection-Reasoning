@@ -10,7 +10,7 @@ from itertools import combinations
 import regex
 import re
 
-
+from typing import Any
 import sys
 from pathlib import Path
 
@@ -226,7 +226,6 @@ def query_selection(question:str,
             '(C)': 'p2c'
         }
 
-        raise NotImplementedError('Need to parse (A) (B) (C) choice, before doing it, need to check it spits parsable output')
         return choice2method[choice]
 
     if backbone == 'gpt4':
@@ -238,12 +237,15 @@ def query_selection(question:str,
 
     cot_pal_p2c_solution_list = [cot_solution, pal_solution, p2c_plan_code_solution]
     cot_pal_p2c_solution_list = [s for s in cot_pal_p2c_solution_list if s] # remove p2c if empty
+    
+
+
+    cot_pal_p2c_solution_d = dict(zip( 'cot pal p2c'.split(), cot_pal_p2c_solution_list))
+
     selection_message = get_select_prompt(question, 
-                                              cot_solution, 
-                                              pal_solution, 
-                                              p2c_plan_code_solution, backbone=backbone)
+                                          cot_pal_p2c_solution_d, 
+                                          backbone=backbone)
     select_str = openai.ChatCompletion.create(
-        api_key=key,
         model=model_name,
         max_tokens=200,
         seed=777, # added on dec 21
@@ -257,6 +259,7 @@ def query_selection(question:str,
     return final_answer, select_str # 'pal'|'p2c'|'cot' 
 
 
+
 def query_rims_inference(question: str, 
                           prompt_f: str, 
                           backbone: str,
@@ -265,7 +268,8 @@ def query_rims_inference(question: str,
                           max_tokens: int=2048,
                           turn_based:bool=False,
                           continue_writing_gpt_messages:list=None, # list of messages to invoke continue writing down the rims prompt format.
-                          stop_tok = None, 
+                          stop_tok = None,
+                          for_eval_or_extend:bool=False, 
                           )-> tuple: 
                         #   modif_prompt:bool=True) -> tuple:
     if backbone == 'chatgpt':
@@ -302,9 +306,10 @@ def query_rims_inference(question: str,
         parse_dd = dict() 
         for fld in to_parse:
             # pattern = rf"`{fld}`:\s*(.*?)(?=`|$)"
-            pattern = rf"`{fld}`:\s*(?:```)?(.*?)(?:```)?(?=`|$)"
+            # pattern = rf"`{fld}`:\s*(?:```)?(.*?)(?:```)?(?=`|$)"
+            pattern = rf"`{fld}`:\s*(?:```)?([\s\S]*?)(?=(?:```)?\n`[A-Z]|$)"
             matches = re.findall(pattern, rawqueryout, re.DOTALL)
-            if fld in {'Mistakes', "Hint for a better Method choice", "Workaround Method"}:
+            if fld in {'Mistakes', "Hint for a better Method choice", "Workaround Method", "Method"}: # Method supposed not to appear multiple times, for chatgpt, it happens, and maybe for other plms too.
                 parse_dd[fld] = matches
             else:    
                 parse_dd[fld] = matches[0].strip()
@@ -337,44 +342,72 @@ def query_rims_inference(question: str,
                 if method == 'cot':
                     pred = parse_num_from_answer(ans)
                 elif method == 'pal':
-                    pred = safe_execute_turbo(parse_python_code_from_string(solution))
+                    pred = safe_execute_turbo(solution)
                 elif method == 'p2c':
-                    code = separate_plan_code(solution)[1].pop() # solution of p2c already processed by `postprocess_code()`
+                    code = separate_plan_code(solution)[1] # solution of p2c already processed by `postprocess_code()`
                     pred = safe_execute_turbo(code)     
                 else:
                     raise ValueError('method not in {cot, pal, p2c}, failed processing rims output ans')           
-            except:
+            except Exception as e:
+                print(e)
                 pred = None
             return pred
     
         attempts_keys = sorted([k for k in parse_dd.keys() if 'Attempt' in k])
         ans_keys = sorted([k for k in parse_dd.keys() if 'Answer' in k])
         # method_keys = sorted([k for k in parse_dd.keys() if 'Method' in k])
-        good_solution = parse_dd[attempts_keys[-1]]
-        did_reflect = 0 
-        if 'Workaround Method' in parse_dd.keys():
-            did_reflect += len(parse_dd['Workaround Method'])
-            good_method = parse_method2(parse_dd['Workaround Method'][-1])
-            bad_method = [parse_method2(parse_dd['Method'])]
-            if len(parse_dd['Workaround Method']) > 1:
-                bad_method += [parse_method2(mstr) for mstr in parse_dd['Workaround Method'][:-1]]
-            
-            
-            # ans and solutions
-            good_ans = parse_dd[ans_keys[-1]]
-            bad_ans = [parse_dd[ak] for ak in ans_keys[:-1]]
-            good_solution = parse_dd[attempts_keys[-1]]
-            bad_solution = [parse_dd[atk] for atk in attempts_keys[:-1]] 
-            
-        else: # solved at once
-            good_method = parse_method2(parse_dd['Method'])
-            bad_method = []
-            
-            good_ans = parse_dd[ans_keys[-1]]
-            bad_ans = []
+        
+        
+        if ans_keys and attempts_keys: # answer and solutions inside. additionally Method key is also in the parse_dd
+            good_solution = parse_dd[attempts_keys[-1]] if attempts_keys else None
+            did_reflect = 0 
+            if 'Workaround Method' in parse_dd.keys():
+                did_reflect += len(parse_dd['Workaround Method'])
+                good_method = parse_method2(parse_dd['Workaround Method'][-1])
+                bad_method = [parse_method2(parse_dd['Method'].pop())]
+                if len(parse_dd['Workaround Method']) > 1:
+                    bad_method += [parse_method2(mstr) for mstr in parse_dd['Workaround Method'][:-1]]
+                
+                
+                # ans and solutions
+                good_ans = parse_dd[ans_keys[-1]] 
+                bad_ans = [parse_dd[ak] for ak in ans_keys[:-1]]
 
-            good_solution = parse_dd[attempts_keys[-1]]
-            bad_solution = [] 
+                good_solution = parse_dd[attempts_keys[-1]]
+                bad_solution = [parse_dd[atk] for atk in attempts_keys[:-1]] 
+
+            elif 'Method' in parse_dd.keys():
+                if 'Mistakes' in parse_dd.keys():
+                    did_reflect += len(parse_dd['Mistakes'])
+                good_method = parse_method2(parse_dd['Method'][-1])
+                bad_method = [parse_method2(m) for m in parse_dd['Method'][:-1]]
+                
+                # ans and solutions
+                good_ans = parse_dd[ans_keys[-1]] 
+                bad_ans = [parse_dd[ak] for ak in ans_keys[:-1]]
+
+                good_solution = parse_dd[attempts_keys[-1]]
+                bad_solution = [parse_dd[atk] for atk in attempts_keys[:-1]] 
+
+            else: # solved at once
+                good_method = parse_method2(parse_dd['Method'])
+                bad_method = []
+
+                good_ans = parse_dd[ans_keys[-1]]
+                bad_ans = []
+
+                good_solution = parse_dd[attempts_keys[-1]]
+                bad_solution = [] 
+        
+        else: # rims queried for evaluation only. no answer nor solutions.
+            did_reflect=0
+            good_solution = None
+            good_method = None 
+            good_ans = None 
+            bad_solution = []
+            bad_ans = [] 
+            bad_method = []
+        
 
         mistakes = []
         hint = []
@@ -384,7 +417,7 @@ def query_rims_inference(question: str,
             hint = parse_dd['Hint for a better Method choice']
         
         if not len(bad_solution) == len(bad_ans) == len(bad_method):
-            raise ValueError(f'{bad_solution=} possibly repetition generated (chatgpt, temp 0)')
+            raise ValueError(f'{bad_solution=} possibly repetition generated (chatgpt, temp 0)') # the row will be skipped (raised when generation has Attempt 1 after Attempt 1 or similar behaviors)
 
         eval_friendly_d = dict(
                 good_solution = good_solution,
@@ -435,7 +468,11 @@ def query_rims_inference(question: str,
                 # top_p=1.0,
                 )['choices'][0]['message']['content'] # str
         if continue_writing_gpt_messages is not None:
-            raw_query_out = continue_writing_gpt_messages[-1]['content'].strip()+"\n"+raw_query_out # for the ease of parsing functions to work correctly! 
+            msgs_except_inst = continue_writing_gpt_messages[:-1]
+            if msgs_except_inst: # left outputs to prepend (for the ease of postprocessing (...? maybe?) )
+                given_as_msgs_str = "\n".join([m['content'] for m in msgs_except_inst])
+                raw_query_out = given_as_msgs_str+"\n"+raw_query_out
+                raw_query_out = raw_query_out.strip()
         parsed_dict = parse_raw_modif(raw_query_out)
         eval_friendly_d = process_rims_out_dict(parsed_dict)
         
@@ -454,7 +491,10 @@ def query_rims_inference(question: str,
                     # top_p=1.0,
                     )['choices'][i]['message']['content'] for i in range(n) ] # str
         if continue_writing_gpt_messages is not None:
-            raw_query_outs = [continue_writing_gpt_messages[-1]['content'].strip()+"\n"+rqo for rqo in raw_query_outs]
+            msgs_except_inst = continue_writing_gpt_messages[:-1]
+            if msgs_except_inst: # left outputs to prepend (for the ease of postprocessing (...? maybe?) )
+                given_as_msgs_str = "\n".join([m['content'] for m in msgs_except_inst])
+                raw_query_outs = [(given_as_msgs_str+"\n"+rqo).strip() for rqo in raw_query_outs]
         parsed_dicts = [parse_raw_modif(raw_query_out) for raw_query_out in raw_query_outs]
         eval_friendly_ds = [process_rims_out_dict(parsed_dict) for parsed_dict in parsed_dicts]
         
@@ -462,7 +502,7 @@ def query_rims_inference(question: str,
 
 
 ### getting prompts for each method ###
-def get_select_prompt(question: str, cot_pal_p2c_sln_d:dict, backbone: str):
+def get_select_prompt(question: str, cot_pal_p2c_sln_d:dict, backbone: str='chatgpt'):
     '''
     This function is used to generate the selection prompt.
     '''
@@ -487,10 +527,12 @@ def get_select_prompt(question: str, cot_pal_p2c_sln_d:dict, backbone: str):
     else:
         assert False, f"len(cot_pal_p2c_sln_d) needs to be 2 or 3 (current = {len(cot_pal_p2c_sln_d)})"
     
+    cot_solution, pal_solution, p2c_solution = cot_pal_p2c_sln_d.values()
+
     messages = get_user_assistant_messages(
         system_message, user_message, assistant_message)
 
-    try: # try to remove docstring from pal solution generated... looks unhappy but kind of needed..
+    try: # looks super unhappy, but keep this to maintain consistency of the code and results...
         pal_solution_lines_strip = [l.strip for l in pal_solution.split('\n')]
         docstring_idxs = [i for i, x in enumerate(pal_solution_lines_strip) if x == '"""' or x == "'''"]
         dsstart, dsend = min(docstring_idxs), max(docstring_idxs)
@@ -498,12 +540,12 @@ def get_select_prompt(question: str, cot_pal_p2c_sln_d:dict, backbone: str):
         pallines = [l for l in pal_solution.split('\n')]
         pal_generated = "\n".join(pallines[:dsstart] + pallines[dsend+1:])
     except Exception as e:
-        pal_generated = pal_solution[0]
+        pal_generated = pal_solution[0].strip() if isinstance(pal_solution, list) else pal_solution.strip()
 
     if cot_solution[0].startswith('Answer:'): # put 'Answer:' at the start of CoT answer generation. Original code does this but not sure what they really wanted to do with this... biasing toward CoT?
-        cot_generated = cot_solution[0]
+        cot_generated = cot_solution[0].strip() if isinstance(cot_solution, list) else cot_solution.strip() 
     else:
-        cot_generated = 'Answer:\n' + cot_solution[0]
+        cot_generated = 'Answer:\n' + cot_solution[0].strip() if isinstance(cot_solution, list) else 'Answer:\n' + cot_solution.strip()
 
     if len(cot_pal_p2c_sln_d) == 2:
         user_message = f'''Math problem: {question.strip()}
@@ -517,7 +559,7 @@ def get_select_prompt(question: str, cot_pal_p2c_sln_d:dict, backbone: str):
 Which of the above two choices can correctly answer the math problem?'''
         
     else: # len(cot_pal_p2c_sln_d)==3:
-        p2c_choice_str = f"(C)\n{p2c_solution[0].strip()}\n\nWhich of the above three choices can correctly answer the math problem?"
+        p2c_choice_str = f"(C)\n{p2c_solution[0].strip() if isinstance(p2c_solution, list) else p2c_solution.strip()}\n\nWhich of the above three choices can correctly answer the math problem?"
         user_message = user_message.replace('Which of the above two choices can correctly answer the math problem?', p2c_choice_str)
 
     messages += [{"role": "user", "content": user_message}]
@@ -859,7 +901,7 @@ def do_with_tenacity(func, *args, **kwargs):
 
 
 
-def get_concordant_answer(answers:list):
+def get_concordant_answer(answers:list, ensure_unanimity:bool=False):
     '''
     check if there is a pair of concordant answers.
     input: cot_ans, pal_ans, p2c_ans, [, ...]
@@ -867,7 +909,14 @@ def get_concordant_answer(answers:list):
 
     *recommend to put answers in the order of cot going first (usually they are intgers)
     '''
+    
     answers_no_none = [a for a in answers if a is not None]
+    if ensure_unanimity:
+        if len(set(answers_no_none)) == 1:
+            return answers_no_none.pop()
+        else:
+            return None        
+    
     if not answers_no_none:
         return None
     elif len(answers_no_none) == 1:
@@ -884,6 +933,20 @@ def get_concordant_answer(answers:list):
         return None # no concordant answers
    
 
+def solution2blurb(   method:str='', 
+                      solution:str='', 
+                      ans:Any=''):
+    '''
+    This function is for `--eval_indiv_method` option in `rims_inference` function
+    solution into blurb string  
+    '''
+    abbr2full = {
+        'cot': 'Chain-of-Thought',
+        'pal': 'Program-aided Language Modeling',
+        'p2c': 'Plan-and-then-Code',
+    }
+    blurb_str = f'`Method`: {abbr2full[method]} ({method})\n`Attempt 1`: {solution}\n`Answer 1`: {ans}'
+    return blurb_str
 
 
 

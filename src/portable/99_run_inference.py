@@ -1,9 +1,11 @@
 from fire import Fire
 import jsonlines as jsl 
 from tqdm import tqdm
+import pandas as pd 
 
 from datetime import datetime
 from typing import Any
+
 
 from llm_query_utils import *
 
@@ -41,15 +43,17 @@ row:
 
 '''
 
-def solution2blurb(   method:str='', 
-                      solution:str='', 
-                      ans:Any=''):
-    '''
-    This function is for `--eval_indiv_method` option in `rims_inference` function
-    solution into blurb string  
-    '''
-    raise NotImplementedError('solution2blurb')
-    return blurb_str
+def evaluate_result_to_md_table(records:list, 
+                                original_dataset_length:int,
+                                outdir:str='',
+                                ):
+    result_df = pd.DataFrame(records)
+    failed = original_dataset_length - len(result_df)
+
+    corrects = result_df.answer.diff(result_df.majority_ans).abs()<1e-3
+    n_correct = corrects.sum()
+    raise NotImplementedError('need to implement the rest of the metrics...')
+    return
 
 
 def indiv_inference(
@@ -143,8 +147,7 @@ def indiv_inference(
             #     code_lst, plan_lst, ___msgs = [None], [None], ['p2c query failed']
 
             plan = plan_lst.pop() 
-            code = code_lst.pop()
-            p2c_solution = plan + "\n" + code
+            p2c_solution = [plan + "\n" + code for code in code_lst]
             # try:
             p2c_ans =  safe_execute_turbo(code)
             # except Exception as e:
@@ -194,15 +197,23 @@ def rims_inference(
         )
         row['ansmap'] = ansmap
         row['solmap'] = solmap
+
         
-        # is there majority answer? in ansmap? (2,2,1 --> 2 is majority, can assert hard condition such as requiring unanimous votes)
-        majority_ans = get_concordant_answer(list(ansmap.values()))
+        # is there majority answer? in ansmap? 
+        majority_ans = get_concordant_answer(list(ansmap.values()), ensure_unanimity=False)
         
 
         # do rims
         if majority_ans is None: 
             if eval_indiv_method: # (optional) are we going to check the individual method's correctness?
+                checked_answers = set()
                 for method, sol in solmap.items():
+                    if isinstance(sol, list):
+                        sol = sol.pop()
+                        if solmap[method]:
+                            raise NotImplementedError(f'not implemented for n>1, solmap contains more than 1 solution per method {solmap[method]}')
+                    if ansmap[method] in checked_answers: 
+                        continue # do not check twice if some ans judged as wrong
                     to_eval_blurb = solution2blurb(method = method,
                                                    solution = sol,
                                                    ans = ansmap[method])
@@ -226,10 +237,10 @@ def rims_inference(
                             temperature=temperature, 
                             continue_writing_gpt_messages=gpt_msg, 
                             stop_tok=['`Mistakes`: '], 
-                            dbg=dbg))
-                        
+                            dbg=dbg)) # ends just after `Evaluation`: Wrong
+                    checked_answers.add(ansmap[method])
                     # check if the solution is considered correct
-                    if raw_query_out.endswith('`Evaluation`: Correct'):
+                    if '`Evaluation`: Correct' in raw_query_out:
                         eval_friendly_d.update({"--eval_indiv_method": (True, method), 
                                                 'raw_query_out': raw_query_out, 
                                                 "query_msg": query_msg}
@@ -284,6 +295,9 @@ def baseline_inference(
         backbone:str='chatgpt', # [chatgpt, gpt4] # later mixtral / llama 
         seed:int=777,
 
+        # dev option
+        dbg:bool=False,
+
     ):
     assert gsm_jslf, f'need to specify {gsm_jslf=}'
 
@@ -309,7 +323,8 @@ def baseline_inference(
         row['solmap'] = solmap
         
         # is there majority answer? in ansmap? (2,2,1 --> 2 is majority, can assert hard condition such as requiring unanimous votes)
-        majority_ans = get_concordant_answer(list(ansmap.values()))
+        majority_ans = get_concordant_answer(list(ansmap.values()), 
+                                             ensure_unanimity=False)
         
         if majority_ans is None: # do selection 
             chosen_method, selection_str = query_selection(question,
@@ -333,7 +348,7 @@ def baseline_inference(
         
 
     # output directory for the inference results:
-    outdir = Path(gsm_jslf).resolve().parent/(Path(gsm_jslf).stem + Path(prompt_f).stem)  # same dirname as prompt file stem 
+    outdir = Path(gsm_jslf).resolve().parent/(Path(gsm_jslf).stem + '_model_selection_baseline')  # same dirname as prompt file stem 
     if not outdir.exists():
         outdir.mkdir(parents=True)
     dt_string = datetime.now().strftime("%m_%d_%H_%M")
