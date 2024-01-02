@@ -1,11 +1,13 @@
+## this script is for understanding how things and codes work, but the actual experiment will run on the same python scripts.
+# gsm_jslf is for dataset of the same format as gsm8K_test.jsonl. It could be other (svamp, single_op,... )
+
+
+
 # model-selection-resoning baseline
 python 99_run_inference.py  baseline_inference \ 
                 --dbg \
                 --backbone chatgpt \
                 --gsm_jslf ../../dataset/dbg.jsonl 
-
-
-
 
 
 # rims algorithm run
