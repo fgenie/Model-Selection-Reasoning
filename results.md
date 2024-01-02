@@ -9,7 +9,7 @@ Readability and resusability are not in their best... but tried to make it consi
     - src/portable/5_*.py (WIP)
 3. experiment script
     - src/portable/4_ablation_remove_reflection.py
-    - src/portable/99_run_inference.py (WIP)
+    - src/portable/99_run_inference.py ~~(WIP)~~
         - rims
         - model selection  (both 3 methods cases)
 4. utils
