@@ -30,6 +30,15 @@ openai.api_key = open(key_file_path).read().strip()
 
 
 
+def exception_handler(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            print(e)
+            return None
+    return wrapper
+
 
 ### almost same to string.Template, but with custom delimiter ( [QUESTION] == ${QUESTION}, to avoid `$` used frequently in price-related questions )
 class PromptStr(str): 
@@ -781,6 +790,7 @@ def parse_num_from_answer(rawstr)->float:
     '''
     used for parsing number out from Answer (dec 4 exp)
     '''
+    rawstr =rawstr.replace(",", "")
     ptn = r'(-?\d+\.\d+|\d+)'
     nums = re.findall(ptn, rawstr)
     if not nums:
