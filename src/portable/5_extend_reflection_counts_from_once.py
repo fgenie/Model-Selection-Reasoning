@@ -46,7 +46,13 @@ BLURB_PROMPT_F= '5_extend_reflection_blurbs_prompts.json'
 reflect_once = list(Path().glob("3_reflectonce_*.txt_rm_ans"))    
 
 # each prompt will be used for extending blurb it contains 
-train_samples = list(jsl.open('gsm8k_train.jsonl'))
+# train_samples = list(jsl.open('gsm8k_train.jsonl')) # super inefficient as most of the problems will be attempted once and solved
+to_gather_files = list(Path('rims_train_out/nov25').glob('resolved*.jsonl')) # instead, perform amongst the reflect-needed ones (used in 1_*.py)
+records = [list(jsl.open(f)) for f in to_gather_files]
+
+train_samples = []
+for rec in records:
+    train_samples.extend(rec)
 
 
 # helpers  
@@ -104,7 +110,7 @@ for pf in tqdm(reflect_once):
         'extend': []
     }
     for row in (pbar:=tqdm(train_samples)):
-        tqdm_desc = " ".join([f"{k}:{len(v)}/1" for k,v in collected.items()])
+        tqdm_desc = " ".join([f"{k}:{len(v)}/1" for k,v in collected.items()]) + f"    ({pf.stem})"
         # if finish gathering all, break
         pbar.set_description(tqdm_desc)
         if all( [len(v)>1 for v in collected.values()] ):
@@ -116,7 +122,7 @@ for pf in tqdm(reflect_once):
         # check if the question already in the prompt
         if question in pf.open().read().strip():
             print(question)
-            print('already in the prompt')
+            print('already in the prompt') # do not allow duplicate questions
             continue
         # query rims inference
 
