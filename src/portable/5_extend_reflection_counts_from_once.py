@@ -36,6 +36,7 @@ from llm_query_utils import * # query_rims_prompt, PromptStr(class), etc.
 
 CONTINUE_WRITING_INVOKE_PROMPT = "Continue reaching to the correct answer, carefully following the format presented above."
 N_EXTEND_TRIALS = 5 #
+BACKBONE = 'chatgpt' # gpt4turbo
 TEMP = 0.3
 BLURB_F = '5_extend_reflection_blurbs.json'
 BLURB_PROMPT_F= '5_extend_reflection_blurbs_prompts.json'
@@ -43,7 +44,7 @@ BLURB_PROMPT_F= '5_extend_reflection_blurbs_prompts.json'
 
 
 # reflect once prompts
-reflect_once = list(Path().glob("3_reflectonce_*.txt_rm_ans"))    
+reflect_once = list(Path().glob("3_reflectonce_*.txt_rm_ans"))[1:]    
 
 # each prompt will be used for extending blurb it contains 
 # train_samples = list(jsl.open('gsm8k_train.jsonl')) # super inefficient as most of the problems will be attempted once and solved
@@ -126,7 +127,7 @@ for pf in tqdm(reflect_once):
             continue
         # query rims inference
 
-        llmout = query_rims_inference_w_skip(question, pf, backbone='gpt4turbo', temperature=TEMP)
+        llmout = query_rims_inference_w_skip(question, pf, backbone=BACKBONE, temperature=TEMP)
         if llmout is None:
             continue
         else:
@@ -146,7 +147,7 @@ for pf in tqdm(reflect_once):
                 {'role': 'user', 'content': CONTINUE_WRITING_INVOKE_PROMPT}
             ]
 
-            llmout = query_rims_inference_w_skip(question, pf, backbone='gpt4turbo', temperature=TEMP, n=N_EXTEND_TRIALS, continue_writing_gpt_messages=gpt_messages)
+            llmout = query_rims_inference_w_skip(question, pf, backbone=BACKBONE, temperature=TEMP, n=N_EXTEND_TRIALS, continue_writing_gpt_messages=gpt_messages)
             if llmout is None:
                 continue
             else:
@@ -154,15 +155,15 @@ for pf in tqdm(reflect_once):
             
             for i, d in enumerate(eval_friendly_ds):
                 newpred = d['good_ans']
-                if newpred == pred: # this will filter "only generating `Evaluation`: Correct" case
-                    print('re_reflection did not change the prediction')
-                    continue
-                else:
-                    if is_correct(newpred, gt):
-                        toappend = raw_query_outs[i]
-                        extended = f"{blurb_1_refl.strip()}\n{toappend.strip()}\n`Evaluation`: Correct"
-                        collected['extend'].append(extended)
-                        break # only one extended blurb per prompt. added. finished for this prompt.
+                # if newpred == pred: # this will filter "only generating `Evaluation`: Correct" case
+                #     print('re_reflection did not change the prediction')
+                #     continue
+                # else:
+                if is_correct(newpred, gt):
+                    toappend = raw_query_outs[i]
+                    extended = f"{blurb_1_refl.strip()}\n{toappend.strip()}\n`Evaluation`: Correct"
+                    collected['extend'].append(extended)
+                    break # only one extended blurb per prompt. added. finished for this prompt.
             
         # chance to gather one-shot correct question     
         elif is_correct(pred, gt) and not did_reflect(raw_query_out):
@@ -189,24 +190,33 @@ with open(BLURB_F, 'w') as jf:
 
 # augment the prompt with collected blurbs 
 for stem, mdict in collected_blurbs.items():
-    # 1 extended only 
-    ext_only_prompt = make_prompt(blurbs = mdict['extend'])
+    if mdict['extend']:
+        # 1 extended only 
+        ext_only_prompt = make_prompt(blurbs = mdict['extend'])
 
-    # 2 oneshot + extended 
-    method_counter = count_methods_in_blurbs(mdict['extend'])
-    least_common_method = method_counter.most_common()[-1][0].replace("(", "").replace(")", "")
-    oneshot_ext_prompt = make_prompt(blurbs = mdict[least_common_method] + mdict['extend'])
+    if any([mdict[m] for m in "cot pal p2c".split()]):
+        # 2 oneshot + extended 
+        method_counter = count_methods_in_blurbs(mdict['extend'])
+        least_common_method = method_counter.most_common()[-1][0].replace("(", "").replace(")", "")
+        if mdict[least_common_method]:
+            oneshotblurbs = mdict[least_common_method][:1]
+        else:
+            for m in "cot pal p2c".split():
+                if mdict[m]:
+                    oneshotblurbs = mdict[m][:1]
+                    break
+        oneshot_ext_prompt = make_prompt(blurbs = oneshotblurbs + mdict['extend'])
+        # 3 oneshot + extended + original
+        original_prompt=open(f"{stem}.txt_rm_ans").read().strip()
+        original_blurbs = extract_blurbs_from_prompt(promptstr = original_prompt)
+        blurbs = oneshotblurbs + mdict['extend'] + original_blurbs
         
-    # 3 oneshot + extended + original
-    original_prompt=open(f"{stem}.txt_rm_ans").read().strip()
-    original_blurbs = extract_blurbs_from_prompt(promptstr = original_prompt)
-    blurbs = mdict[least_common_method] + mdict['extend'] + original_blurbs
-    
-    everything_prompt = make_prompt(blurbs = blurbs)
-    # add to blurbdict
-    collected_blurbs[stem + "_1prompt"] = ext_only_prompt
-    collected_blurbs[stem + "_13prompt"] = oneshot_ext_prompt
-    collected_blurbs[stem + "_132prompt"] = everything_prompt
+        everything_prompt = make_prompt(blurbs = blurbs)
+        # add to blurbdict
+        collected_blurbs[stem + "_1prompt"] = ext_only_prompt
+        collected_blurbs[stem + "_13prompt"] = oneshot_ext_prompt
+        collected_blurbs[stem + "_132prompt"] = everything_prompt
+
 # save the indiv prompts into a txt file
 for k, v in collected_blurbs.items():
     if k.endswith('_prompt'):
