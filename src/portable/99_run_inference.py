@@ -164,8 +164,7 @@ def indiv_inference(
 def rims_inference(
         prompt_f:str='', 
         gsm_jslf:str='',
-        eval_indiv_method:bool=False, # yet to implement. might work for openai gpt
-
+        eval_indiv_method:bool=False, 
         # llm options
         temperature:float=0.,
         n:int=1, # later for self-consistency
@@ -236,8 +235,7 @@ def rims_inference(
                             backbone=backbone, 
                             temperature=temperature, 
                             continue_writing_gpt_messages=gpt_msg, 
-                            stop_tok=['`Mistakes`: '], 
-                            dbg=dbg)) # ends just after `Evaluation`: Wrong
+                            stop_tok=['`Mistakes`: '])) # ends just after `Evaluation`: Wrong
                     checked_answers.add(ansmap[method])
                     # check if the solution is considered correct
                     if '`Evaluation`: Correct' in raw_query_out:
@@ -250,10 +248,10 @@ def rims_inference(
                         majority_ans = row['majority_ans']
 
             if majority_ans is None: # problems are not done properly.
-                if dbg:
-                    eval_friendly_d, __, raw_query_out, query_msg = query_rims_inference(question, prompt_f, backbone=backbone, temperature=temperature)
-                else:
-                    eval_friendly_d, __, raw_query_out, query_msg = do_with_tenacity(query_rims_inference(question, prompt_f, backbone=backbone, temperature=temperature))
+                # if dbg:
+                eval_friendly_d, __, raw_query_out, query_msg = query_rims_inference(question, prompt_f, backbone=backbone, temperature=temperature)
+                # else:
+                #     eval_friendly_d, __, raw_query_out, query_msg = do_with_tenacity(query_rims_inference(question, prompt_f, backbone=backbone, temperature=temperature))
                 
                 eval_friendly_d.update({
                                         'raw_query_out': raw_query_out, 
@@ -269,11 +267,11 @@ def rims_inference(
 
 
     # output directory for the inference results:
-    outdir = Path(gsm_jslf).resolve().parent/(Path(gsm_jslf).stem + Path(prompt_f).stem)  # same dirname as prompt file stem 
+    outdir = Path(gsm_jslf).resolve().parent/(Path(gsm_jslf).stem +"_"+ Path(prompt_f).stem)  # same dirname as prompt file stem 
     if not outdir.exists():
         outdir.mkdir(parents=True)
     dt_string = datetime.now().strftime("%m_%d_%H_%M")
-    outpath = outdir/f"{'dbg_' if dbg else ''}{dt_string}_{Path(gsm_jslf).stem}.jsonl"
+    outpath = outdir/f"{'dbg_' if dbg else ''}{backbone}_rims{'_eval_indiv' if eval_indiv_method else ''}_{dt_string}.jsonl"
 
     # save the results
     with jsl.open(outpath, 'w') as writer:
@@ -352,7 +350,7 @@ def baseline_inference(
     if not outdir.exists():
         outdir.mkdir(parents=True)
     dt_string = datetime.now().strftime("%m_%d_%H_%M")
-    outpath = outdir/f"{dt_string}_{Path(gsm_jslf).stem}.jsonl"
+    outpath = outdir/f"{backbone}_{dt_string}_model_selection{num_methods}.jsonl"
 
     # save the results
     with jsl.open(outpath, 'w') as writer:
