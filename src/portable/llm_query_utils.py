@@ -304,14 +304,18 @@ def query_rims_inference(question: str,
 
         # read the output again to parse the designated fields
         parse_dd = dict() 
+
+        duplicated = 1
+
         for fld in to_parse:
             # pattern = rf"`{fld}`:\s*(.*?)(?=`|$)"
             # pattern = rf"`{fld}`:\s*(?:```)?(.*?)(?:```)?(?=`|$)"
             pattern = rf"`{fld}`:\s*(?:```)?([\s\S]*?)(?=(?:```)?\n`[A-Z]|$)"
             matches = re.findall(pattern, rawqueryout, re.DOTALL)
             if fld in {'Mistakes', "Hint for a better Method choice", "Workaround Method", "Method"}: # Method supposed not to appear multiple times, for chatgpt, it happens, and maybe for other plms too.
-                parse_dd[fld] = matches
+                parse_dd[fld] = matches[::duplicated]
             else:    
+                duplicated = max(duplicated, len(matches))
                 parse_dd[fld] = matches[0].strip()
         return parse_dd 
 
@@ -417,6 +421,8 @@ def query_rims_inference(question: str,
             hint = parse_dd['Hint for a better Method choice']
         
         if not len(bad_solution) == len(bad_ans) == len(bad_method):
+            print(f'{bad_solution=}', f'{bad_ans=}', f'{bad_method=}')
+            print(f'{good_solution=}', f'{good_ans=}', f'{good_method=}')
             raise ValueError(f'{bad_solution=} possibly repetition generated (chatgpt, temp 0)') # the row will be skipped (raised when generation has Attempt 1 after Attempt 1 or similar behaviors)
 
         eval_friendly_d = dict(
@@ -474,9 +480,15 @@ def query_rims_inference(question: str,
                 raw_query_out = given_as_msgs_str+"\n"+raw_query_out
                 raw_query_out = raw_query_out.strip()
         parsed_dict = parse_raw_modif(raw_query_out)
-        eval_friendly_d = process_rims_out_dict(parsed_dict)
+        try:
+            eval_friendly_d = process_rims_out_dict(parsed_dict)
+        except:
+            print(f"{raw_query_out=}")
+            print(f"{parsed_dict=}")
+            raise ValueError('failed processing rims output')
         
         return eval_friendly_d, parsed_dict, raw_query_out, messages
+    
     else: # later unify into the below format. --> Need to correct the code uses inside `src/portable/`
         raw_query_outs = [
                 openai.ChatCompletion.create(
@@ -801,43 +813,53 @@ def parse_python_code_from_string(unparsed_txt: str):
         return None
     
 
+def get_func_name_from_string(codestring:str)->str:
+    match = re.search(r'def (\w+)\(', codestring)
+    if match:
+        funcname = match.group(1)
+        # print(funcname)
+    else:
+        funcname = ''
+    return funcname
+    
+
+def execute(x, code_return, keys):
+    try:
+        exec('import math\n' + 'import datetime\n', globals())
+
+        exec(x)
+        print(locals())
+        locals_ = locals()
+        if keys is not None:
+            return [locals_.get(k, None) for k in keys]
+
+        solution_func = locals_.get('solution', None)
+        funcname = get_func_name_from_string(x) # for nontrivial code naming
+
+        print(solution_func, funcname)
+
+        if solution_func is not None:
+            return solution_func()
+        elif funcname: # if any function name appears
+            solution_func = locals_.get(funcname, None)
+            return solution_func()
+        else:
+            executed_code = 'import math\n' + 'import datetime\n' + \
+                '\n'.join([xx[4:]
+                            for xx in x.strip().split('\n')[1:-1]])
+            exec(executed_code)
+            locals_ = locals()
+            return locals_.get(code_return, None)
+
+    except Exception as exp:
+        print('Executing code error', exp)
+        return None
+
+    
+
 ### executing a code
 def safe_execute_turbo(code_string: str, keys=None):
-    def get_func_name_from_string(codestring:str)->str:
-        match = re.search(r'def (\w+)\(', codestring)
-        if match:
-            funcname = match.group(1)
-            # print(funcname)
-        else:
-            funcname = ''
-        return funcname
-    def execute(x, code_return):
-        try:
-            exec(x)
-            locals_ = locals()
-            if keys is not None:
-                return [locals_.get(k, None) for k in keys]
-
-            solution = locals_.get('solution', None)
-            funcname = get_func_name_from_string(x) # for nontrivial code naming
-            if solution is not None:
-                return solution()
-            elif funcname: # if any function name appears
-                exec(x)
-                solution = locals_.get(funcname, None)
-                return solution()
-            else:
-                executed_code = 'import math\n' + 'import datetime\n' + \
-                    '\n'.join([xx[4:]
-                                for xx in x.strip().split('\n')[1:-1]])
-                exec(executed_code)
-                locals_ = locals()
-                return locals_.get(code_return, None)
-
-        except Exception as exp:
-            print('Executing code error', exp)
-            return None
-
+   
     # === find code snippets between def solution(): and return ===
     try:
         code_list = code_string.strip().split('\n')
@@ -857,10 +879,17 @@ def safe_execute_turbo(code_string: str, keys=None):
                         code_return = code_list[j].split('return ')[1].strip()
                 all_codes.append('\n'.join(new_code_list))
                 new_code_list = []
+
         new_code = all_codes[-1]
-        # ans = execute(new_code, code_return) 
-        ans = func_timeout.func_timeout(
-            3, execute, args=(new_code, code_return,))
+
+        exec('import math\n' + 'import datetime\n')
+        ans = execute(new_code, code_return, keys) 
+        # ans = func_timeout.func_timeout(
+        #     3, execute, args=(new_code, code_return,))
+        
+        if ans is None:
+            print(new_code)
+
         ans = ans if ans is not None else ans
     except func_timeout.FunctionTimedOut:
         ans = None
@@ -917,13 +946,13 @@ def get_concordant_answer(answers:list, ensure_unanimity:bool=False):
         else:
             return None        
     
-    if not answers_no_none:
+    if len(answers_no_none) == 0:
         return None
     elif len(answers_no_none) == 1:
         return answers_no_none.pop()
     elif len(answers_no_none) == 2:
-        if abs(answers[0]-answers[1])<1e-3:
-            return answers[0]
+        if abs(answers_no_none[0]-answers_no_none[1])<1e-3:
+            return answers_no_none[0]
         else:
             return None
     else: # >=3

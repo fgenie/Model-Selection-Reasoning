@@ -148,6 +148,8 @@ def indiv_inference(
 
             plan = plan_lst.pop() 
             p2c_solution = [plan + "\n" + code for code in code_lst]
+
+            code = code_lst.pop()
             # try:
             p2c_ans =  safe_execute_turbo(code)
             # except Exception as e:
@@ -321,6 +323,8 @@ def baseline_inference(
         )
         row['ansmap'] = ansmap
         row['solmap'] = solmap
+
+        # import pdb; pdb.set_trace()
         
         # is there majority answer? in ansmap? (2,2,1 --> 2 is majority, can assert hard condition such as requiring unanimous votes)
         majority_ans = get_concordant_answer(list(ansmap.values()), 
