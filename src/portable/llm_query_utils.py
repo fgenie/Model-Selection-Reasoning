@@ -880,6 +880,8 @@ def safe_execute_turbo(code_string: str, keys=None):
                 all_codes.append('\n'.join(new_code_list))
                 new_code_list = []
 
+        if len(all_codes) == 0:
+
         new_code = all_codes[-1]
 
         exec('import math\n' + 'import datetime\n')
@@ -891,7 +893,7 @@ def safe_execute_turbo(code_string: str, keys=None):
             print(new_code)
 
         ans = ans if ans is not None else ans
-    except func_timeout.FunctionTimedOut:
+    except func_timeout.FunctionTimedOut or IndexError:
         ans = None
 
     try:
