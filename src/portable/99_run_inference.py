@@ -147,11 +147,14 @@ def indiv_inference(
             #     code_lst, plan_lst, ___msgs = [None], [None], ['p2c query failed']
 
             plan = plan_lst.pop() 
-            p2c_solution = [plan + "\n" + code for code in code_lst]
+            p2c_solution = [plan + "\n" + code for code in code_lst if code is not None]
 
             code = code_lst.pop()
             # try:
-            p2c_ans =  safe_execute_turbo(code)
+            if code is not None:
+                p2c_ans =  safe_execute_turbo(code)
+            else:
+                p2c_ans = None
             # except Exception as e:
             #     print(e)
             #     p2c_ans = None

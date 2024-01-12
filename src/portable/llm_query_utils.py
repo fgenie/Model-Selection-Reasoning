@@ -316,11 +316,16 @@ def query_rims_inference(question: str,
                 parse_dd[fld] = matches[::duplicated]
             else:    
                 duplicated = max(duplicated, len(matches))
-                parse_dd[fld] = matches[0].strip()
+                if len(matches) > 0:
+                    parse_dd[fld] = matches[0].strip()
+                else:
+                    parse_dd[fld] = ''
         return parse_dd 
 
     
     def process_rims_out_dict(parse_dd:dict)->dict:
+        import pdb
+        pdb.set_trace()
 
         '''
         in:
@@ -485,6 +490,7 @@ def query_rims_inference(question: str,
         except:
             print(f"{raw_query_out=}")
             print(f"{parsed_dict=}")
+            print()
             raise ValueError('failed processing rims output')
         
         return eval_friendly_d, parsed_dict, raw_query_out, messages
@@ -825,18 +831,15 @@ def get_func_name_from_string(codestring:str)->str:
 
 def execute(x, code_return, keys):
     try:
-        exec('import math\n' + 'import datetime\n', globals())
+        exec('import math\n' + 'import datetime\n' + 'import sympy as sp\n' + 'import numpy as np\n', globals())
 
         exec(x)
-        print(locals())
         locals_ = locals()
         if keys is not None:
             return [locals_.get(k, None) for k in keys]
 
         solution_func = locals_.get('solution', None)
         funcname = get_func_name_from_string(x) # for nontrivial code naming
-
-        print(solution_func, funcname)
 
         if solution_func is not None:
             return solution_func()
@@ -880,19 +883,19 @@ def safe_execute_turbo(code_string: str, keys=None):
                 all_codes.append('\n'.join(new_code_list))
                 new_code_list = []
 
-        if len(all_codes) == 0:
 
-        new_code = all_codes[-1]
+        ans = None
+        if len(all_codes) > 0:
+            new_code = all_codes[-1]
 
-        exec('import math\n' + 'import datetime\n')
-        ans = execute(new_code, code_return, keys) 
-        # ans = func_timeout.func_timeout(
-        #     3, execute, args=(new_code, code_return,))
+            exec('import math\n' + 'import datetime\n')
+            # ans = execute(new_code, code_return, keys) 
+            ans = func_timeout.func_timeout(
+                3, execute, args=(new_code, code_return,keys))
         
-        if ans is None:
-            print(new_code)
+            if ans is None:
+                print(new_code)
 
-        ans = ans if ans is not None else ans
     except func_timeout.FunctionTimedOut or IndexError:
         ans = None
 
