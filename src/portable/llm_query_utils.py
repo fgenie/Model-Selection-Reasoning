@@ -872,9 +872,9 @@ def safe_execute_turbo(code_string: str, keys=None):
         ans = func_timeout.func_timeout(
             3, execute, args=(new_code, code_return,))
         ans = ans if ans is not None else ans
-    except func_timeout.FunctionTimedOut:
-        ans = None
-
+    except Exception as e:
+        print(e)
+    
     try:
         ans = float(ans) if ans is not None else ans
     except:
@@ -932,8 +932,8 @@ def get_concordant_answer(answers:list, ensure_unanimity:bool=False):
     elif len(answers_no_none) == 1:
         return answers_no_none.pop()
     elif len(answers_no_none) == 2:
-        if abs(answers[0]-answers[1])<1e-3:
-            return answers[0]
+        if abs(answers_no_none[0]-answers_no_none[1])<1e-3:
+            return answers_no_none[0]
         else:
             return None
     else: # >=3
