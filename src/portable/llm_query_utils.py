@@ -823,7 +823,6 @@ def safe_execute_turbo(code_string: str, keys=None):
         return funcname
     def execute(x, code_return):
         try:
-            exec(x)
             locals_ = locals()
             if keys is not None:
                 return [locals_.get(k, None) for k in keys]
