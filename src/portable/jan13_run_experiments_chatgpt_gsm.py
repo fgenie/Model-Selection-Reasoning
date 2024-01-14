@@ -5,7 +5,7 @@ import jsonlines as jsl
 
 
 # run baseline gsm
-cmd = 'python 99_run_inference.py baseline_inference --backbone chatgpt --gsm_jslf /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/dataset/gsm8K_test.jsonl --start_idx 211'
+cmd = 'python 99_run_inference.py baseline_inference --backbone chatgpt --gsm_jslf /Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/dataset/gsm8K_test.jsonl --start_idx 474'
 print(cmd)
 sb.call(cmd, shell=True)
 
@@ -16,7 +16,7 @@ chatgpt_gsm_conflicts_only_f = '../../dataset/conflict_only_gsm_chatgpt_jan14.js
 INFERRED_F = '/Users/seonils/dev/llm-reasoners/examples/Model-Selection-Reasoning/dataset/gsm8K_test_model_selection_baseline/chatgpt_*_model_selection3.jsonl'
 conflict_only_records = []
 inferred_f_wildcard = Path(INFERRED_F)
-fs = inferred_f_wildcard.parent.glob(inferred_f_wildcard.name)
+fs = list(inferred_f_wildcard.parent.glob(inferred_f_wildcard.name))
 records_lst = [list(jsl.open(f)) for f in fs]
 records = []
 for r in records_lst:
@@ -29,7 +29,9 @@ for row in records:
         conflict_only_records.append(row)
     elif 'error' in row['selection_or_rims'] or 'majority_vote' not in row['selection_or_rims']:
         conflict_only_records.append(row)
-with open(chatgpt_gsm_conflicts_only_f, 'w') as writer:
+    elif row['majority_ans'] is None:
+        conflict_only_records.append(row)
+with jsl.open(chatgpt_gsm_conflicts_only_f, 'w') as writer:
     writer.write_all(conflict_only_records)
     print(f'wrote to {conflict_only_records}')
 

@@ -867,10 +867,10 @@ def safe_execute_turbo(code_string: str, keys=None):
                 all_codes.append('\n'.join(new_code_list))
                 new_code_list = []
         new_code = all_codes[-1]
-        # ans = execute(new_code, code_return) 
-        ans = func_timeout.func_timeout(
-            3, execute, args=(new_code, code_return,))
-        ans = ans if ans is not None else ans
+        ans = execute(new_code, code_return) 
+        # ans = func_timeout.func_timeout(
+        #     3, execute, args=(new_code, code_return,))
+        ans = ans if ans is not None else None
     except Exception as e:
         print(e)
     
