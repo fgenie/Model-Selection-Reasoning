@@ -821,30 +821,46 @@ def safe_execute_turbo(code_string: str, keys=None):
         else:
             funcname = ''
         return funcname
-    def execute(x, code_return):
+
+    def execute(code, code_return: str):
+        import math
+        import random
+        import itertools
+        import sympy
+        import sympy as sp
+        from fractions import Fraction
+        from sympy import Symbol, symbols
+        from sympy import isprime as is_prime
+
         try:
             locals_ = locals()
             if keys is not None:
                 return [locals_.get(k, None) for k in keys]
 
-            solution = locals_.get('solution', None)
-            funcname = get_func_name_from_string(x) # for nontrivial code naming
+            solution = locals_.get("solution", None)
+            funcname = get_func_name_from_string(code)  # for nontrivial code naming
+
             if solution is not None:
                 return solution()
-            elif funcname: # if any function name appears
-                exec(x)
-                solution = locals_.get(funcname, None)
-                return solution()
+            elif funcname:  # if any function name appears
+                new_code = "import math\n" + code + f"\nresult = {funcname}()"
+                loc = {}
+                exec(new_code, locals(), loc)
+
+                result = loc["result"]
+                return result
             else:
-                executed_code = 'import math\n' + 'import datetime\n' + \
-                    '\n'.join([xx[4:]
-                                for xx in x.strip().split('\n')[1:-1]])
-                exec(executed_code)
+                executed_code = (
+                    "import math\n"
+                    + "import datetime\n"
+                    + "\n".join([xx[4:] for xx in code.strip().split("\n")[1:-1]])
+                )
+                exec(executed_code, {}, locals())
                 locals_ = locals()
                 return locals_.get(code_return, None)
 
         except Exception as exp:
-            print('Executing code error', exp)
+            print("Executing code error", exp)
             return None
 
     # === find code snippets between def solution(): and return ===
