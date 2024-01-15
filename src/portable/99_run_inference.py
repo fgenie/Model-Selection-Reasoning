@@ -1,6 +1,7 @@
 from fire import Fire
 import jsonlines as jsl
 from tqdm import tqdm
+from pqdm.threads import pqdm
 import pandas as pd
 
 from datetime import datetime
@@ -347,48 +348,57 @@ def baseline_inference(
     dt_string = datetime.now().strftime("%m_%d_%H_%M")
     outpath = outdir / f"{backbone}_{dt_string}_model_selection{num_methods}.jsonl"
 
+    def complete_row(row: dict):
+        question = row["question"]
+
+        # individual method inference: this will check if row already has individual method inferred, and if done, keep those to use.
+        ansmap, solmap = indiv_inference(
+            row,
+            num_methods=3,
+            temperature=temperature,
+            n=n,
+            backbone=backbone,
+            seed=seed,
+        )
+        row["ansmap"] = ansmap
+        row["solmap"] = solmap
+
+        # is there majority answer? in ansmap? (2,2,1 --> 2 is majority, can assert hard condition such as requiring unanimous votes)
+        majority_ans = get_concordant_answer(
+            list(ansmap.values()), ensure_unanimity=False
+        )
+
+        if majority_ans is None:  # do selection
+            chosen_method, selection_str = query_selection(
+                question,
+                backbone=backbone,
+                cot_solution=solmap["cot"],
+                pal_solution=solmap["pal"],
+                p2c_plan_code_solution=solmap["p2c"],
+            )
+            row["selection_or_rims"] = {
+                "good_method": chosen_method,
+                "good_answer": ansmap[chosen_method],
+                "good_solution": solmap[chosen_method],
+                "selection_str": selection_str,
+            }
+            row["majority_ans"] = ansmap[chosen_method]
+        else:
+            row["selection_or_rims"] = {"majority_vote": True}
+            row["majority_ans"] = majority_ans
+        row["prompt_file"] = prompt_f
+        row["inference_mode"] = f"baseline {num_methods} methods"
+
+        return row
+
+    # for row in tqdm(records):
+    #     row = complete_row(row)
+
+    records = pqdm(records, complete_row, n_jobs=8)
+
     print(f"writing to {outpath}")
     with jsl.open(outpath, "w") as writer:
-        for row in tqdm(records):
-            question = row["question"]
-
-            # individual method inference: this will check if row already has individual method inferred, and if done, keep those to use.
-            ansmap, solmap = indiv_inference(
-                row,
-                num_methods=3,
-                temperature=temperature,
-                n=n,
-                backbone=backbone,
-                seed=seed,
-            )
-            row["ansmap"] = ansmap
-            row["solmap"] = solmap
-
-            # is there majority answer? in ansmap? (2,2,1 --> 2 is majority, can assert hard condition such as requiring unanimous votes)
-            majority_ans = get_concordant_answer(
-                list(ansmap.values()), ensure_unanimity=False
-            )
-
-            if majority_ans is None:  # do selection
-                chosen_method, selection_str = query_selection(
-                    question,
-                    backbone=backbone,
-                    cot_solution=solmap["cot"],
-                    pal_solution=solmap["pal"],
-                    p2c_plan_code_solution=solmap["p2c"],
-                )
-                row["selection_or_rims"] = {
-                    "good_method": chosen_method,
-                    "good_answer": ansmap[chosen_method],
-                    "good_solution": solmap[chosen_method],
-                    "selection_str": selection_str,
-                }
-                row["majority_ans"] = ansmap[chosen_method]
-            else:
-                row["selection_or_rims"] = {"majority_vote": True}
-                row["majority_ans"] = majority_ans
-            row["prompt_file"] = prompt_f
-            row["inference_mode"] = f"baseline {num_methods} methods"
+        for row in records:
             writer.write(row)
 
         return
