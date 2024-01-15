@@ -3,3 +3,4 @@ openai==0.28.0
 func_timeout
 regex
 sympy
+pqdm
