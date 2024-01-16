@@ -30,6 +30,15 @@ openai.api_key = open(key_file_path).read().strip()
 
 
 
+def exception_handler(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            print(e)
+            return None
+    return wrapper
+
 
 ### almost same to string.Template, but with custom delimiter ( [QUESTION] == ${QUESTION}, to avoid `$` used frequently in price-related questions )
 class PromptStr(str): 
@@ -799,6 +808,7 @@ def parse_num_from_answer(rawstr)->float:
     '''
     used for parsing number out from Answer (dec 4 exp)
     '''
+    rawstr =rawstr.replace(",", "")
     ptn = r'(-?\d+\.\d+|\d+)'
     nums = re.findall(ptn, rawstr)
     if not nums:
@@ -823,46 +833,50 @@ def get_func_name_from_string(codestring:str)->str:
     match = re.search(r'def (\w+)\(', codestring)
     if match:
         funcname = match.group(1)
-        # print(funcname)
-    else:
-        funcname = ''
     return funcname
-    
 
-def execute(x, code_return, keys):
+def _execute(code, code_return: str):
+    import math
+    import random
+    import itertools
+    import sympy
+    import sympy as sp
+    from fractions import Fraction
+    from sympy import Symbol, symbols
+    from sympy import isprime as is_prime # these imports are for locals() (to provide `global() context` to exec() )
+
     try:
-        exec('import math\n' + 'import datetime\n' + 'import sympy as sp\n' + 'import numpy as np\n', globals())
-
-        exec(x)
         locals_ = locals()
-        if keys is not None:
-            return [locals_.get(k, None) for k in keys]
+        solution = locals_.get("solution", None)
+        funcname = get_func_name_from_string(code)  # for nontrivial function names
 
-        solution_func = locals_.get('solution', None)
-        funcname = get_func_name_from_string(x) # for nontrivial code naming
+        if solution is not None:
+            return solution()
+        elif funcname:  # if any function name appears
+            new_code = "import math\n" + code + f"\nresult = {funcname}()"
+            loc = {}
+            exec(new_code, locals(), loc)
 
-        if solution_func is not None:
-            return solution_func()
-        elif funcname: # if any function name appears
-            solution_func = locals_.get(funcname, None)
-            return solution_func()
+            result = loc["result"]
+            return result
         else:
-            executed_code = 'import math\n' + 'import datetime\n' + \
-                '\n'.join([xx[4:]
-                            for xx in x.strip().split('\n')[1:-1]])
-            exec(executed_code)
+            executed_code = (
+                "import math\n"
+                + "import datetime\n"
+                + "\n".join([xx[4:] for xx in code.strip().split("\n")[1:-1]])
+            )
+            exec(executed_code, {}, locals())
             locals_ = locals()
             return locals_.get(code_return, None)
 
     except Exception as exp:
-        print('Executing code error', exp)
+        print("Executing code error", exp)
         return None
 
-    
+
 
 ### executing a code
-def safe_execute_turbo(code_string: str, keys=None):
-   
+def safe_execute_turbo(code_string: str):
     # === find code snippets between def solution(): and return ===
     try:
         code_list = code_string.strip().split('\n')
@@ -880,31 +894,28 @@ def safe_execute_turbo(code_string: str, keys=None):
                         new_code_list.append(code_list[j])
                     if code_list[j].startswith('    return '): # affirms outtermost return
                         code_return = code_list[j].split('return ')[1].strip()
+                        break # it could possibly miss the return if the function written with if-elif-else return at the end, which might be scarce.
                 all_codes.append('\n'.join(new_code_list))
                 new_code_list = []
 
-
-        ans = None
-        if len(all_codes) > 0:
+        if all_codes:
             new_code = all_codes[-1]
-
-            exec('import math\n' + 'import datetime\n')
-            # ans = execute(new_code, code_return, keys) 
-            ans = func_timeout.func_timeout(
-                3, execute, args=(new_code, code_return,keys))
         
-            if ans is None:
-                print(new_code)
-
-    except func_timeout.FunctionTimedOut or IndexError:
+            ans = func_timeout.func_timeout(
+                  3, _execute, args=(new_code, code_return,))
+        else:
+             ans = None
+    except (func_timeout.FunctionTimedOut, IndexError):
         ans = None
-
+    
     try:
-        ans = float(ans) if ans is not None else ans
+        ans = float(ans) if ans is not None or  else ans 
     except:
-        ans = None
+        ans = None 
 
     return ans
+
+
 
 
 # parsing (executing) cot result into a float
