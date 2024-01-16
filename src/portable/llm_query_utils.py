@@ -313,19 +313,28 @@ def query_rims_inference(question: str,
 
         # read the output again to parse the designated fields
         parse_dd = dict() 
+
+        duplicated = 1
+
         for fld in to_parse:
             # pattern = rf"`{fld}`:\s*(.*?)(?=`|$)"
             # pattern = rf"`{fld}`:\s*(?:```)?(.*?)(?:```)?(?=`|$)"
             pattern = rf"`{fld}`:\s*(?:```)?([\s\S]*?)(?=(?:```)?\n`[A-Z]|$)"
             matches = re.findall(pattern, rawqueryout, re.DOTALL)
             if fld in {'Mistakes', "Hint for a better Method choice", "Workaround Method", "Method"}: # Method supposed not to appear multiple times, for chatgpt, it happens, and maybe for other plms too.
-                parse_dd[fld] = matches
+                parse_dd[fld] = matches[::duplicated]
             else:    
-                parse_dd[fld] = matches[0].strip()
+                duplicated = max(duplicated, len(matches))
+                if len(matches) > 0:
+                    parse_dd[fld] = matches[0].strip()
+                else:
+                    parse_dd[fld] = ''
         return parse_dd 
 
     
     def process_rims_out_dict(parse_dd:dict)->dict:
+        import pdb
+        pdb.set_trace()
 
         '''
         in:
@@ -426,6 +435,8 @@ def query_rims_inference(question: str,
             hint = parse_dd['Hint for a better Method choice']
         
         if not len(bad_solution) == len(bad_ans) == len(bad_method):
+            print(f'{bad_solution=}', f'{bad_ans=}', f'{bad_method=}')
+            print(f'{good_solution=}', f'{good_ans=}', f'{good_method=}')
             raise ValueError(f'{bad_solution=} possibly repetition generated (chatgpt, temp 0)') # the row will be skipped (raised when generation has Attempt 1 after Attempt 1 or similar behaviors)
 
         eval_friendly_d = dict(
@@ -483,9 +494,16 @@ def query_rims_inference(question: str,
                 raw_query_out = given_as_msgs_str+"\n"+raw_query_out
                 raw_query_out = raw_query_out.strip()
         parsed_dict = parse_raw_modif(raw_query_out)
-        eval_friendly_d = process_rims_out_dict(parsed_dict)
+        try:
+            eval_friendly_d = process_rims_out_dict(parsed_dict)
+        except:
+            print(f"{raw_query_out=}")
+            print(f"{parsed_dict=}")
+            print()
+            raise ValueError('failed processing rims output')
         
         return eval_friendly_d, parsed_dict, raw_query_out, messages
+    
     else: # later unify into the below format. --> Need to correct the code uses inside `src/portable/`
         raw_query_outs = [
                 openai.ChatCompletion.create(
@@ -811,58 +829,54 @@ def parse_python_code_from_string(unparsed_txt: str):
         return None
     
 
-### executing a code
-def safe_execute_turbo(code_string: str, keys=None):
-    def get_func_name_from_string(codestring:str)->str:
-        match = re.search(r'def (\w+)\(', codestring)
-        if match:
-            funcname = match.group(1)
-            # print(funcname)
+def get_func_name_from_string(codestring:str)->str:
+    match = re.search(r'def (\w+)\(', codestring)
+    if match:
+        funcname = match.group(1)
+    return funcname
+
+def _execute(code, code_return: str):
+    import math
+    import random
+    import itertools
+    import sympy
+    import sympy as sp
+    from fractions import Fraction
+    from sympy import Symbol, symbols
+    from sympy import isprime as is_prime # these imports are for locals() (to provide `global() context` to exec() )
+
+    try:
+        locals_ = locals()
+        solution = locals_.get("solution", None)
+        funcname = get_func_name_from_string(code)  # for nontrivial function names
+
+        if solution is not None:
+            return solution()
+        elif funcname:  # if any function name appears
+            new_code = "import math\n" + code + f"\nresult = {funcname}()"
+            loc = {}
+            exec(new_code, locals(), loc)
+
+            result = loc["result"]
+            return result
         else:
-            funcname = ''
-        return funcname
-
-    def execute(code, code_return: str):
-        import math
-        import random
-        import itertools
-        import sympy
-        import sympy as sp
-        from fractions import Fraction
-        from sympy import Symbol, symbols
-        from sympy import isprime as is_prime
-
-        try:
+            executed_code = (
+                "import math\n"
+                + "import datetime\n"
+                + "\n".join([xx[4:] for xx in code.strip().split("\n")[1:-1]])
+            )
+            exec(executed_code, {}, locals())
             locals_ = locals()
-            if keys is not None:
-                return [locals_.get(k, None) for k in keys]
+            return locals_.get(code_return, None)
 
-            solution = locals_.get("solution", None)
-            funcname = get_func_name_from_string(code)  # for nontrivial code naming
+    except Exception as exp:
+        print("Executing code error", exp)
+        return None
 
-            if solution is not None:
-                return solution()
-            elif funcname:  # if any function name appears
-                new_code = "import math\n" + code + f"\nresult = {funcname}()"
-                loc = {}
-                exec(new_code, locals(), loc)
 
-                result = loc["result"]
-                return result
-            else:
-                executed_code = (
-                    "import math\n"
-                    + "import datetime\n"
-                    + "\n".join([xx[4:] for xx in code.strip().split("\n")[1:-1]])
-                )
-                exec(executed_code, {}, locals())
-                locals_ = locals()
-                return locals_.get(code_return, None)
 
-        except Exception as exp:
-            print("Executing code error", exp)
-            return None
-
+### executing a code
+def safe_execute_turbo(code_string: str):
     # === find code snippets between def solution(): and return ===
     try:
         code_list = code_string.strip().split('\n')
@@ -880,22 +894,28 @@ def safe_execute_turbo(code_string: str, keys=None):
                         new_code_list.append(code_list[j])
                     if code_list[j].startswith('    return '): # affirms outtermost return
                         code_return = code_list[j].split('return ')[1].strip()
+                        break # it could possibly miss the return if the function written with if-elif-else return at the end, which might be scarce.
                 all_codes.append('\n'.join(new_code_list))
                 new_code_list = []
-        new_code = all_codes[-1]
-        ans = execute(new_code, code_return) 
-        # ans = func_timeout.func_timeout(
-        #     3, execute, args=(new_code, code_return,))
-        ans = ans if ans is not None else None
-    except Exception as e:
-        print(e)
+
+        if all_codes:
+            new_code = all_codes[-1]
+        
+            ans = func_timeout.func_timeout(
+                  3, _execute, args=(new_code, code_return,))
+        else:
+             ans = None
+    except (func_timeout.FunctionTimedOut, IndexError):
+        ans = None
     
     try:
-        ans = float(ans) if ans is not None else ans
+        ans = float(ans) if ans is not None or  else ans 
     except:
-        ans = None
+        ans = None 
 
     return ans
+
+
 
 
 # parsing (executing) cot result into a float
@@ -942,7 +962,7 @@ def get_concordant_answer(answers:list, ensure_unanimity:bool=False):
         else:
             return None        
     
-    if not answers_no_none:
+    if len(answers_no_none) == 0:
         return None
     elif len(answers_no_none) == 1:
         return answers_no_none.pop()

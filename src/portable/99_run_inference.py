@@ -143,18 +143,18 @@ def indiv_inference(
                 n=n,
                 seed=seed,
             )
-            # except Exception as e:
-            #     print(e)
-            #     code_lst, plan_lst, ___msgs = [None], [None], ['p2c query failed']
 
-            plan = plan_lst.pop()
-            p2c_solution = [plan + "\n" + code for code in code_lst]
-            code = code_lst.pop()
-            # try:
-            p2c_ans = safe_execute_turbo(code)
-            # except Exception as e:
-            #     print(e)
-            #     p2c_ans = None
+
+            plan = plan_lst.pop() 
+            p2c_solution = [plan + "\n" + code for code in code_lst if code is not None]
+            if code_lst:
+                code = code_lst.pop()
+            if code is not None:
+                p2c_ans =  safe_execute_turbo(code)
+            else:
+                p2c_ans = None
+
+
             ansmap["p2c"] = p2c_ans
             solmap["p2c"] = p2c_solution
 
@@ -360,8 +360,10 @@ def baseline_inference(
             backbone=backbone,
             seed=seed,
         )
+
         row["ansmap"] = ansmap
         row["solmap"] = solmap
+
 
         # is there majority answer? in ansmap? (2,2,1 --> 2 is majority, can assert hard condition such as requiring unanimous votes)
         majority_ans = get_concordant_answer(
